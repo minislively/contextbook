@@ -1,36 +1,65 @@
-import type { ConceptRecord, EvidenceLevel } from '../types.js';
+import type { ConceptRecord, EvidenceLevel, LearnerPreferences } from '../types.js';
 import { conceptMetadata } from '../concepts/mapper.js';
+import { defaultPreferences } from '../storage/user-store.js';
 import { bullet } from './markdown.js';
 
 export function formatLearningMoments(concepts: ConceptRecord[]): string {
   if (concepts.length === 0) {
-    return '# Learning Moments\n\n아직 프로젝트 근거를 찾지 못했습니다. `contextbook scan` 후 다시 시도하거나, 코드에 개념 신호가 있는지 확인해 주세요.\n';
+    return '# Daily Learning Card\n\n아직 프로젝트 근거를 찾지 못했습니다. `contextbook scan` 후 다시 시도하거나, 코드에 개념 신호가 있는지 확인해 주세요.\n';
   }
   const selected = concepts.slice(0, 3);
-  return `# Learning Moments\n\n${selected.map((concept, index) => formatMoment(concept, index + 1)).join('\n\n')}`;
+  return `# Daily Learning Card\n\n오늘 코드에서 뽑은 Learning Moments입니다.\n\n${selected.map((concept, index) => formatMoment(concept, index + 1)).join('\n\n')}`;
 }
 
 function formatMoment(concept: ConceptRecord, index: number): string {
   const files = [...new Set(concept.signals.map((signal) => signal.file).filter(Boolean))] as string[];
-  return `## ${index}. ${concept.label}\n\n근거 수준: ${concept.evidenceLevel}\n근거 파일: ${files.length ? files.join(', ') : '없음'}\n\n이 프로젝트에서는 ${concept.signals[0]?.reason ?? '관련 신호'} 때문에 이 개념을 학습할 수 있습니다.\n\n연결되는 개념:\n${bullet(concept.connectedConcepts)}\n\n면접 질문:\n${concept.interviewQuestion}`;
+  const changed = concept.signals.some((signal) => signal.changed) ? '\n변경 파일 근거: yes' : '';
+  return `## ${index}. ${concept.label}\n\n근거 수준: ${concept.evidenceLevel}\n근거 파일: ${files.length ? files.join(', ') : '없음'}${changed}\n\n이 프로젝트에서는 ${concept.signals[0]?.reason ?? '관련 신호'} 때문에 이 개념을 학습할 수 있습니다.\n\n연결되는 개념:\n${bullet(concept.connectedConcepts)}\n\n면접 질문:\n${concept.interviewQuestion}`;
 }
 
-export function formatWhyAnswer(question: string, concept: ConceptRecord | undefined, fallback: ReturnType<typeof conceptMetadata> | undefined): string {
+export function formatWhyAnswer(
+  question: string,
+  concept: ConceptRecord | undefined,
+  fallback: ReturnType<typeof conceptMetadata> | undefined,
+  preferences: LearnerPreferences = defaultPreferences
+): string {
   const metadata = concept ? conceptMetadata(concept.id) : fallback;
   const label = concept?.label ?? metadata?.label ?? question;
   const evidenceLevel: EvidenceLevel = concept?.evidenceLevel ?? 'general';
   const files = concept ? [...new Set(concept.signals.map((signal) => signal.file).filter(Boolean))] as string[] : [];
-  const directReason = concept?.signals[0]?.reason;
   const projectText = concept
     ? `현재 프로젝트에서 \`${concept.signals[0]?.signal}\` 신호를 찾았습니다${files[0] ? ` (${files[0]})` : ''}. 그래서 \`${label}\` 개념을 이 코드 기준으로 설명할 수 있습니다.`
     : `현재 프로젝트에서 이 질문에 대한 직접 근거를 찾지 못했습니다. 따라서 일반 개념으로 설명하고, 적용 가능성이 있는 지점은 다음 scan 결과를 기준으로 다시 확인해야 합니다.`;
 
-  const plain = plainExplanation(metadata?.id ?? concept?.id ?? 'general');
-  const developer = developerExplanation(metadata?.id ?? concept?.id ?? 'general', label);
-  const cs = csExplanation(metadata?.id ?? concept?.id ?? 'general');
-  const interview = interviewSentence(metadata?.id ?? concept?.id ?? 'general', label);
+  const id = metadata?.id ?? concept?.id ?? 'general';
+  const sections: Record<string, string> = {
+    project: `## 프로젝트 말로 설명\n${projectText}`,
+    plain: `## 쉬운 말\n${plainExplanation(id)}`,
+    'developer-term': `## 개발자 용어\n${developerExplanation(id, label)}`,
+    'cs-link': `## CS 연결\n${csExplanation(id)}`,
+    'interview-sentence': `## 면접 문장\n${interviewSentence(id, label)}`
+  };
+  const order = normalizeOrder(preferences.explanationOrder);
+  const orderedSections = order.map((key) => sections[key]).filter(Boolean);
 
-  return `## 근거 수준\n${evidenceLevel}\n\n## 프로젝트 말로 설명\n${projectText}\n\n## 쉬운 말\n${plain}\n\n## 개발자 용어\n${developer}\n\n## CS 연결\n${cs}\n\n## 면접 문장\n${interview}\n\n## 근거 파일\n${files.length ? files.join('\n') : '프로젝트 근거 없음'}\n`;
+  return `## 근거 수준\n${evidenceLevel}\n\n${orderedSections.join('\n\n')}\n\n## 근거 파일\n${files.length ? files.join('\n') : '프로젝트 근거 없음'}\n`;
+}
+
+function normalizeOrder(order: string[]): string[] {
+  const canonical = ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'];
+  const aliases: Record<string, string> = {
+    'project-context': 'project',
+    developer: 'developer-term',
+    cs: 'cs-link',
+    interview: 'interview-sentence'
+  };
+  const seen = new Set<string>();
+  const normalized = order.map((key) => aliases[key] ?? key).filter((key) => canonical.includes(key));
+  return [...normalized, ...canonical].filter((key) => {
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function plainExplanation(id: string): string {

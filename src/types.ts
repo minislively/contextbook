@@ -8,6 +8,8 @@ export interface EvidenceRecord {
   signal: string;
   reason: string;
   detectedAt: string;
+  changed?: boolean;
+  source?: 'content' | 'package' | 'file-name' | 'function-name';
 }
 
 export interface ConceptRecord {
