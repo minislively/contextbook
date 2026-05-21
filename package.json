@@ -1,0 +1,27 @@
+{
+  "name": "contextbook",
+  "version": "0.1.0",
+  "description": "Turn your codebase and learning conversations into a personalized knowledge book.",
+  "type": "module",
+  "bin": {
+    "contextbook": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "test": "npm run build && node scripts/smoke-test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^24.10.1"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md"
+  ],
+  "license": "MIT"
+}
