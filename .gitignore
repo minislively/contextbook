@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+coverage/
+
+# Local runtime/state
+.omx/
+.contextbook/
+
+# Internal planning docs
+# Keep launch package/repo focused; use README.md for public docs.
+docs/private/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS/editor noise
+.DS_Store
+.idea/
+.vscode/
