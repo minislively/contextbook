@@ -1,4 +1,4 @@
-import { adapterIds, getAdapter, type AdapterId } from '../adapters/index.js';
+import { adapterIds, getAdapter, type AdapterId } from '../integrations/registry.js';
 import type { InstallAction, InstallResult } from '../install/types.js';
 
 export async function installCommand(args: string[]): Promise<void> {

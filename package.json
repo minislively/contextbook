@@ -15,7 +15,7 @@
   },
   "types": "./dist/core/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc",
     "start": "node dist/cli.js",
     "test": "npm run build && node scripts/smoke-test.mjs"
   },
