@@ -29,7 +29,8 @@
   "files": [
     "dist",
     "templates",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "license": "MIT"
 }
