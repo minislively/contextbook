@@ -54,6 +54,38 @@ export interface ProjectScanRun {
   warnings: ProjectScanWarning[];
 }
 
+export type ProjectFileIndexStatus = 'scanned' | 'skipped';
+
+export type ProjectFileIndexKind = 'file' | 'directory';
+
+export type ProjectFileSkipReason =
+  | 'hidden-dir'
+  | 'ignored-dir'
+  | 'unsupported-extension'
+  | 'large-file'
+  | 'unreadable-file'
+  | 'max-files-reached';
+
+export interface ProjectFileIndexEntry {
+  path: string;
+  kind: ProjectFileIndexKind;
+  status: ProjectFileIndexStatus;
+  sizeBytes?: number;
+  reason?: ProjectFileSkipReason;
+}
+
+export interface ProjectFileIndex {
+  schemaVersion: 1;
+  generatedAt?: string;
+  rootName?: string;
+  totals: {
+    scanned: number;
+    skipped: number;
+    bytesScanned: number;
+  };
+  files: ProjectFileIndexEntry[];
+}
+
 export interface LearnerPreferences {
   explanationOrder: string[];
   avoid: string[];
