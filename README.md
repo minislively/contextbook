@@ -74,11 +74,11 @@ It stores how you learn:
 
 This is intentionally outside the repo so personal learning data is not committed with project code.
 
-### 3. Conversation Signals
+### 3. Conversation Memory
 
-Conversation and answer signals are append-only files under learner memory. They help Contextbook remember that, for example, project-first explanations or interview-style summaries work better for you.
+Conversation Memory is the append-only event layer under learner memory. It records structured learning interactions such as `scan.completed`, `learn.generated`, `why.answered`, and profile commands.
 
-v0.1 keeps this deterministic and inspectable. It does not silently judge the user or infer personality traits.
+This is not a raw chat transcript. v0.1 stores only small, inspectable events: command, concept/question when relevant, evidence level, evidence files, and safe metadata. It does not silently judge the user, infer personality traits, or auto-update the learner profile.
 
 ## Step-by-step workflow
 
@@ -266,7 +266,7 @@ contextbook init                   # initialize .contextbook and learner memory
 contextbook scan                   # scan project evidence
 contextbook learn                  # generate 1-3 learning moments
 contextbook why "<question>"       # answer a concept question with evidence level
-contextbook profile                # view learner profile
+contextbook profile                # view learner profile + conversation memory summary
 contextbook profile diff           # view profile-related update history
 contextbook profile edit           # open learner profile in $EDITOR
 contextbook profile reset          # reset learner profile to default
@@ -298,7 +298,7 @@ Contextbook v0.1 intentionally does not include:
 - perfect whole-codebase understanding
 - team-shared learner memory
 
-The goal of v0.1 is simple: scan a real project, find learning moments, explain them with visible evidence, and make that flow easy to use from a CLI or coding agent.
+The goal of v0.1 is simple: scan a real project, find learning moments, explain them with visible evidence, keep local learning interactions inspectable, and make that flow easy to use from a CLI or coding agent.
 
 ## License
 

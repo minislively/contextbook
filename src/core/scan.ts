@@ -3,7 +3,7 @@ import { changedFiles } from '../scan/git-diff.js';
 import { readPackageJson } from '../scan/package-json.js';
 import { readProjectFiles } from '../scan/read-files.js';
 import { ensureProjectStore, writeConcepts, writeEvidence } from '../storage/project-store.js';
-import { recordSignal } from '../storage/user-store.js';
+import { recordConversationSignal } from '../learner/conversation-memory.js';
 import type { ContextbookRuntimeOptions, ScanResult } from '../types.js';
 
 export async function scanProject(options: ContextbookRuntimeOptions = {}): Promise<ScanResult> {
@@ -17,7 +17,13 @@ export async function scanProject(options: ContextbookRuntimeOptions = {}): Prom
 
   await writeConcepts(concepts, root);
   await writeEvidence(evidence, root);
-  await recordSignal({ type: 'scan', concepts: concepts.length, evidence: evidence.length, changedFiles: changed.size }, learner);
+  await recordConversationSignal({
+    signalType: 'scan.completed',
+    command: 'scan',
+    learner,
+    conceptCount: concepts.length,
+    metadata: { evidence: evidence.length, changedFiles: changed.size, filesScanned: files.length }
+  });
 
   return {
     filesScanned: files.length,

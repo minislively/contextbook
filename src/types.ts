@@ -43,6 +43,38 @@ export interface WeakTermRecord {
 
 export type WeakTerms = Record<string, WeakTermRecord>;
 
+export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset';
+
+export type ConversationSignalType =
+  | 'scan.completed'
+  | 'learn.generated'
+  | 'why.answered'
+  | 'profile.viewed'
+  | 'profile.diff.viewed'
+  | 'profile.edit.path-shown'
+  | 'profile.edited'
+  | 'profile.reset';
+
+export interface ConversationMemoryEvent {
+  schemaVersion: 1;
+  kind: 'conversation-memory';
+  signalType: ConversationSignalType;
+  /** Backward-compatible alias used by v0.1 JSONL readers before structured conversation memory. */
+  type?: string;
+  command: ConversationCommand;
+  learner: string;
+  question?: string;
+  conceptId?: string;
+  conceptLabel?: string;
+  /** Backward-compatible alias for answers.jsonl readers. */
+  concept?: string;
+  evidenceLevel?: EvidenceLevel;
+  evidenceFiles?: string[];
+  conceptCount?: number;
+  metadata?: Record<string, string | number | boolean | null>;
+  recordedAt?: string;
+}
+
 export interface ContextbookRuntimeOptions {
   root?: string;
   learner?: string;
