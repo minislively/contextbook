@@ -4,15 +4,23 @@ Learn the concepts behind the code you just touched.
 
 Contextbook is a deterministic-first local CLI that scans a project, finds development/CS concepts grounded in code evidence, and explains them in a learner-friendly format.
 
-## Install
+## Quickstart
 
 ```bash
 npm install -g contextbook
+contextbook setup
+contextbook init
+contextbook scan
+contextbook learn
+contextbook why "cleanup 왜 해야 돼?"
 ```
+
+`contextbook setup` installs local helper files for both Codex and Claude Code so coding agents know how to call the deterministic CLI instead of inventing project evidence.
 
 ## Commands
 
 ```bash
+contextbook setup
 contextbook init
 contextbook scan
 contextbook learn
@@ -21,27 +29,21 @@ contextbook profile
 contextbook profile diff
 contextbook profile edit
 contextbook profile reset
-contextbook install codex --dry-run
-contextbook install codex
-contextbook install claude-code --dry-run
-contextbook install claude-code
 ```
 
 ## Codex / Claude Code integration
 
-Contextbook can generate local helper files so coding agents know how to call the deterministic CLI instead of inventing project evidence.
+Global npm installation does not mutate Codex or Claude Code config automatically. Run the explicit setup command so target paths, backups, and dry-run behavior stay visible.
 
 ```bash
-contextbook install codex --dry-run
-contextbook install codex
-
-contextbook install claude-code --dry-run
-contextbook install claude-code
+contextbook setup --dry-run
+contextbook setup
 ```
 
 Generated files:
 
-- Codex skill: `~/.codex/skills/contextbook/SKILL.md`
+- Codex skill: `~/.codex/skills/contextbook/SKILL.md` by default for the current Codex/OMX user skill root
+- Codex historical compatibility: `~/.agents/skills/contextbook/SKILL.md` only when using `--codex-path agents` or `--codex-path both`
 - Claude Code skill: `~/.claude/skills/contextbook/SKILL.md`
 - Claude Code slash-command compatibility:
   - `~/.claude/commands/contextbook-learn.md`
@@ -49,10 +51,34 @@ Generated files:
 
 Safety rules:
 
-- `--dry-run` previews planned writes and writes nothing.
+- `contextbook setup` installs both Codex and Claude Code helper files in one explicit step.
+- `contextbook setup --dry-run` previews planned writes and writes nothing.
 - Existing identical files are skipped.
 - Existing different files are backed up with `.bak-<timestamp>` before Contextbook writes the managed file.
 - The installer does not call external LLM APIs, ask for API keys, or launch Codex/Claude sessions.
+
+### Advanced install options
+
+Use these only when you need platform-specific setup or a specific Codex discovery path:
+
+```bash
+contextbook install all --dry-run
+contextbook install all
+contextbook install all --codex-path codex --dry-run
+contextbook install codex --dry-run
+contextbook install codex --codex-path agents --dry-run
+contextbook install codex --codex-path codex --dry-run
+contextbook install codex --codex-path both --dry-run
+contextbook install claude-code --dry-run
+contextbook install claude-code
+```
+
+`--codex-path` values:
+
+- `auto` — default; write `~/.codex/skills/contextbook/SKILL.md` for the current Codex/OMX user skill root
+- `agents` — write historical `~/.agents/skills/contextbook/SKILL.md` compatibility path
+- `codex` — write canonical `~/.codex/skills/contextbook/SKILL.md`
+- `both` — write both paths intentionally
 
 ## Adapter-ready core
 

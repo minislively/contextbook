@@ -1,20 +1,43 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { installFiles } from '../install/file-writer.js';
-import type { InstallFile, InstallOptions, InstallResult } from '../install/types.js';
+import type { CodexSkillPathMode, InstallFile, InstallOptions, InstallResult } from '../install/types.js';
 
 export async function installCodex(options: InstallOptions = {}): Promise<InstallResult> {
-  return installFiles('codex', codexFiles(options.homeDir ?? homedir()), options);
+  return installFiles('codex', codexFiles(options.homeDir ?? homedir(), options.codexSkillPathMode), options);
 }
 
-export function codexFiles(homeDir = homedir()): InstallFile[] {
-  return [
-    {
-      path: join(homeDir, '.codex', 'skills', 'contextbook', 'SKILL.md'),
-      description: 'Codex user skill for Contextbook learning workflows',
-      content: codexSkillContent()
-    }
-  ];
+export function codexFiles(homeDir = homedir(), mode: CodexSkillPathMode = 'auto'): InstallFile[] {
+  return resolveCodexSkillPaths(homeDir, mode).map((target) => ({
+    path: target.path,
+    description: target.description,
+    content: codexSkillContent()
+  }));
+}
+
+function resolveCodexSkillPaths(homeDir: string, mode: CodexSkillPathMode): { path: string; description: string }[] {
+  const agentsPath = join(homeDir, '.agents', 'skills', 'contextbook', 'SKILL.md');
+  const codexPath = join(homeDir, '.codex', 'skills', 'contextbook', 'SKILL.md');
+
+  if (mode === 'agents') return [legacyAgentsTarget(agentsPath)];
+  if (mode === 'codex') return [canonicalCodexTarget(codexPath)];
+  if (mode === 'both') return [canonicalCodexTarget(codexPath), legacyAgentsTarget(agentsPath)];
+
+  return [canonicalCodexTarget(codexPath)];
+}
+
+function canonicalCodexTarget(path: string): { path: string; description: string } {
+  return {
+    path,
+    description: 'Codex user skill for Contextbook learning workflows (canonical Codex/OMX path)'
+  };
+}
+
+function legacyAgentsTarget(path: string): { path: string; description: string } {
+  return {
+    path,
+    description: 'Codex user skill for Contextbook learning workflows (historical ~/.agents compatibility path)'
+  };
 }
 
 function codexSkillContent(): string {
