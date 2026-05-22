@@ -44,6 +44,10 @@ async function readJsonl(path) {
   return raw.split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 }
 
+async function readJson(path) {
+  return JSON.parse(await readFile(path, 'utf8'));
+}
+
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
   for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
@@ -68,6 +72,21 @@ try {
   git(['commit', '-m', 'baseline']);
 
   run(['init']);
+  const initialFileIndex = await readJson(join(root, '.contextbook', 'project', 'file-index.json'));
+  assert(initialFileIndex.schemaVersion === 1, 'initial file index missing schema version');
+  assert(initialFileIndex.totals.scanned === 0 && initialFileIndex.totals.skipped === 0, 'initial file index should have zero totals');
+  assert(Array.isArray(initialFileIndex.files) && initialFileIndex.files.length === 0, 'initial file index should have no files');
+
+  await mkdir(join(root, 'src', 'assets'), { recursive: true });
+  await mkdir(join(root, 'zz-unsupported'), { recursive: true });
+  await mkdir(join(root, 'dist'), { recursive: true });
+  await writeFile(join(root, '.env'), 'SECRET_TOKEN=should-not-leak\n', 'utf8');
+  await writeFile(join(root, 'src', 'assets', 'logo.png'), 'unsupported image placeholder\n', 'utf8');
+  await writeFile(join(root, 'src', 'hooks', 'large-fixture.ts'), 'x'.repeat(300_001), 'utf8');
+  await writeFile(join(root, 'dist', 'generated.js'), 'export const hidden = "ignored";\n', 'utf8');
+  for (let index = 0; index < 1010; index += 1) {
+    await writeFile(join(root, 'zz-unsupported', `unsupported-${index}.bin`), 'unsupported\n', 'utf8');
+  }
   await writeFile(join(root, 'src', 'hooks', 'useWorkflowSSE.ts'), `import { useEffect } from 'react';\nexport function useWorkflowSSE(url: string) {\n  useEffect(() => {\n    const source = new EventSource(url);\n    return () => source.close();\n  }, [url]);\n}\n`, 'utf8');
 
   run(['scan']);
@@ -81,6 +100,27 @@ try {
   assert(evidence.some((item) => item.source === 'package'), 'missing package evidence');
   assert(evidence.some((item) => item.source === 'file-name' || item.source === 'function-name'), 'missing file/function evidence');
   assert(evidence.some((item) => item.changed === true), 'missing changed-file evidence');
+  const fileIndex = await readJson(join(root, '.contextbook', 'project', 'file-index.json'));
+  assert(fileIndex.schemaVersion === 1, 'file index missing schema version');
+  assert(typeof fileIndex.generatedAt === 'string' && !Number.isNaN(Date.parse(fileIndex.generatedAt)), 'file index missing generated timestamp');
+  assert(fileIndex.rootName && !fileIndex.rootName.includes('/'), 'file index root name should be basename only');
+  assert(fileIndex.totals.scanned > 0 && fileIndex.totals.bytesScanned > 0, 'file index missing scan totals');
+  assert(fileIndex.totals.skipped > 0, 'file index missing skipped totals');
+  assert(fileIndex.files.some((item) => item.path === 'README.md' && item.status === 'scanned'), 'file index missing README scanned entry');
+  assert(fileIndex.files.some((item) => item.path === 'package.json' && item.status === 'scanned'), 'file index missing package scanned entry');
+  assert(fileIndex.files.some((item) => item.path === 'src/hooks/useWorkflowSSE.ts' && item.status === 'scanned'), 'file index missing hook scanned entry');
+  assert(fileIndex.files.some((item) => item.path === '.fooks/' && item.kind === 'directory' && item.status === 'skipped' && item.reason === 'hidden-dir'), 'file index missing hidden directory skip');
+  assert(fileIndex.files.some((item) => item.path === 'dist/' && item.kind === 'directory' && item.status === 'skipped' && item.reason === 'ignored-dir'), 'file index missing ignored directory skip');
+  assert(fileIndex.files.some((item) => item.path === 'src/assets/logo.png' && item.status === 'skipped' && item.reason === 'unsupported-extension'), 'file index missing unsupported extension skip');
+  assert(fileIndex.files.some((item) => item.path === 'src/hooks/large-fixture.ts' && item.status === 'skipped' && item.reason === 'large-file'), 'file index missing large file skip');
+  assert(!fileIndex.files.some((item) => item.path === '.fooks/sessions/hidden-runtime.json'), 'file index enumerated hidden directory contents');
+  assert(fileIndex.files.filter((item) => item.status === 'skipped').length <= 1000, 'file index should cap skipped entries');
+  assert(!fileIndex.files.some((item) => item.path === '.env'), 'file index recorded hidden file name');
+  const fileIndexJson = JSON.stringify(fileIndex);
+  assert(!fileIndexJson.includes(root) && !fileIndexJson.includes(home), 'file index stored absolute local path');
+  assert(!fileIndexJson.includes('EventSource should be ignored'), 'file index stored hidden file content');
+  assert(!fileIndexJson.includes('SECRET_TOKEN') && !fileIndexJson.includes('should-not-leak'), 'file index stored hidden file content');
+  assert(!fileIndexJson.includes('conversation-memory') && !fileIndexJson.includes('profile.view'), 'file index stored learner/conversation data');
   const scanRuns = await readJsonl(join(root, '.contextbook', 'project', 'scan-runs.jsonl'));
   assert(scanRuns.length === 1, 'scan should append exactly one scan run record');
   const scanRun = scanRuns[0];
@@ -91,11 +131,18 @@ try {
   assert(scanRun.changedFiles >= 1, 'scan run missing changed-file count');
   assert(scanRun.conceptsDetected >= 1 && scanRun.evidenceDetected >= 1, 'scan run missing detection counts');
   assert(Array.isArray(scanRun.warnings), 'scan run warnings should be an array');
+  assert(scanRun.warnings.some((warning) => warning.code === 'scan-partial' && warning.message.includes('hidden file')), 'scan run missing hidden file privacy warning');
+  assert(scanRun.warnings.some((warning) => warning.code === 'scan-partial' && warning.message.includes('truncated')), 'scan run missing file index truncation warning');
+  assert(scanRun.scannedAt === fileIndex.generatedAt, 'scan run timestamp should align with file index');
+  assert(scanRun.filesScanned === fileIndex.totals.scanned, 'scan run filesScanned should align with file index');
+  assert(scanRun.bytesScanned === fileIndex.totals.bytesScanned, 'scan run bytesScanned should align with file index');
   const scanRunJson = JSON.stringify(scanRun);
   assert(!scanRunJson.includes(root) && !scanRunJson.includes(home), 'scan run stored absolute local path');
   run(['scan']);
   const scanRunsAfterSecondScan = await readJsonl(join(root, '.contextbook', 'project', 'scan-runs.jsonl'));
   assert(scanRunsAfterSecondScan.length === 2, 'scan should append one scan run record per invocation');
+  const fileIndexAfterSecondScan = await readJson(join(root, '.contextbook', 'project', 'file-index.json'));
+  assert(fileIndexAfterSecondScan.generatedAt === scanRunsAfterSecondScan[1].scannedAt, 'file index should be replaced with latest scan snapshot');
 
   const learn = run(['learn']);
   assert(learn.includes('# Daily Learning Card'), 'learn did not frame output as daily card');
