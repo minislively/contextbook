@@ -85,7 +85,7 @@ function fileAndFunctionEvidence(item: { file: string; content: string }, now: s
       source
     });
   };
-  if (/sse|eventsource|event-source/.test(haystack)) add('sse', 'file/function name mentions SSE/EventSource', 'File or function naming suggests SSE/event handling responsibility.', haystack.includes(item.file.toLowerCase()) ? 'file-name' : 'function-name');
+  if (/sse($|[^a-z])|(^|[^a-z])sse|eventsource|event-source/.test(haystack)) add('sse', 'file/function name mentions SSE/EventSource', 'File or function naming suggests SSE/event handling responsibility.', haystack.includes(item.file.toLowerCase()) ? 'file-name' : 'function-name');
   if (/websocket|web-socket/.test(haystack)) add('websocket', 'file/function name mentions WebSocket', 'File or function naming suggests WebSocket realtime communication.', 'file-name');
   if (/cleanup|lifecycle|dispose|unsubscribe/.test(haystack)) add('use-effect-cleanup', 'file/function name mentions cleanup/lifecycle', 'File or function naming suggests cleanup or resource lifecycle responsibility.', 'function-name');
   if (/node|edge|graph|dag/.test(haystack) && (/nodes/.test(item.content) || /edges/.test(item.content) || /graph|dag/.test(haystack))) add('graph-dag', 'file/function name mentions graph nodes/edges', 'File or function naming suggests graph or dependency modeling.', 'file-name');

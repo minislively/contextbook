@@ -61,6 +61,8 @@ try {
   await writeFile(join(root, 'README.md'), '# Smoke project\n', 'utf8');
   await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { zustand: '^5.0.0' } }, null, 2), 'utf8');
   await mkdir(join(root, 'src', 'hooks'), { recursive: true });
+  await mkdir(join(root, '.fooks', 'sessions'), { recursive: true });
+  await writeFile(join(root, '.fooks', 'sessions', 'hidden-runtime.json'), JSON.stringify({ event: 'EventSource should be ignored' }), 'utf8');
   await writeFile(join(root, 'src', 'hooks', 'useWorkflowSSE.ts'), `export function useWorkflowSSE(url: string) {\n  return url;\n}\n`, 'utf8');
   git(['add', '.']);
   git(['commit', '-m', 'baseline']);
@@ -75,6 +77,7 @@ try {
   assert(Array.isArray(coreLearn.concepts), 'core learn contract did not return concepts');
   const evidence = await readJsonl(join(root, '.contextbook', 'project', 'evidence.jsonl'));
   assert(evidence.some((item) => item.source === 'content'), 'missing content evidence');
+  assert(!evidence.some((item) => item.file?.startsWith('.fooks/')), 'scanner included hidden runtime directory evidence');
   assert(evidence.some((item) => item.source === 'package'), 'missing package evidence');
   assert(evidence.some((item) => item.source === 'file-name' || item.source === 'function-name'), 'missing file/function evidence');
   assert(evidence.some((item) => item.changed === true), 'missing changed-file evidence');
