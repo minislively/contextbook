@@ -120,8 +120,8 @@ try {
   const projectEvidence = await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8');
   assert(!projectEvidence.includes('profile.view') && !projectEvidence.includes('profile.reset'), 'project memory contains learner signals');
 
-  const codexSkill = join(home, '.agents', 'skills', 'contextbook', 'SKILL.md');
-  const codexLegacySkill = join(home, '.codex', 'skills', 'contextbook', 'SKILL.md');
+  const codexSkill = join(home, '.codex', 'skills', 'contextbook', 'SKILL.md');
+  const codexLegacySkill = join(home, '.agents', 'skills', 'contextbook', 'SKILL.md');
   const claudeSkill = join(home, '.claude', 'skills', 'contextbook', 'SKILL.md');
   const claudeLearn = join(home, '.claude', 'commands', 'contextbook-learn.md');
   const claudeWhy = join(home, '.claude', 'commands', 'contextbook-why.md');
@@ -129,27 +129,27 @@ try {
   const setupDryRun = run(['setup', '--dry-run']);
   assert(setupDryRun.includes('# Contextbook setup (dry run)'), 'setup dry-run did not show setup heading');
   assert(setupDryRun.includes('# Contextbook codex install (dry run)') && setupDryRun.includes('# Contextbook claude-code install (dry run)'), 'setup dry-run did not preview both adapters');
-  assert(setupDryRun.includes('.agents') && setupDryRun.includes('.claude'), 'setup dry-run did not show codex and claude target paths');
+  assert(setupDryRun.includes('.codex') && setupDryRun.includes('.claude'), 'setup dry-run did not show codex and claude target paths');
   assert(!existsSync(codexSkill) && !existsSync(claudeSkill), 'setup dry-run wrote files');
 
   const allDryRun = run(['install', 'all', '--dry-run']);
   assert(allDryRun.includes('# Contextbook codex install (dry run)') && allDryRun.includes('# Contextbook claude-code install (dry run)'), 'install all dry-run did not preview both adapters');
-  assert(allDryRun.includes('.agents') && allDryRun.includes('.claude'), 'install all dry-run did not show codex and claude target paths');
+  assert(allDryRun.includes('.codex') && allDryRun.includes('.claude'), 'install all dry-run did not show codex and claude target paths');
   assert(!existsSync(codexSkill) && !existsSync(claudeSkill), 'install all dry-run wrote files');
 
   const codexDryRun = run(['install', 'codex', '--dry-run']);
   assert(codexDryRun.includes('would create'), 'codex dry-run did not preview create');
-  assert(codexDryRun.includes('.agents'), 'codex dry-run did not default to official Agent Skills path');
+  assert(codexDryRun.includes('.codex'), 'codex dry-run did not default to canonical Codex/OMX skills path');
   assert(!existsSync(codexSkill), 'codex dry-run wrote a file');
-  const codexLegacyDryRun = run(['install', 'codex', '--codex-path', 'codex', '--dry-run']);
-  assert(codexLegacyDryRun.includes('.codex'), 'codex legacy dry-run did not preview .codex compatibility path');
+  const codexLegacyDryRun = run(['install', 'codex', '--codex-path', 'agents', '--dry-run']);
+  assert(codexLegacyDryRun.includes('.agents'), 'codex historical agents dry-run did not preview .agents compatibility path');
   assert(!existsSync(codexLegacySkill), 'codex legacy dry-run wrote a file');
   const codexBothDryRun = run(['install', 'codex', '--codex-path=both', '--dry-run']);
   assert(codexBothDryRun.includes('.agents') && codexBothDryRun.includes('.codex'), 'codex both dry-run did not preview both paths');
   assert(!existsSync(codexSkill) && !existsSync(codexLegacySkill), 'codex both dry-run wrote a file');
   const legacyAutoHome = join(home, 'legacy-auto-home');
   await mkdir(join(legacyAutoHome, '.codex', 'skills'), { recursive: true });
-  assert(core.codexFiles(legacyAutoHome)[0].path.includes('.codex'), 'codex auto mode did not preserve existing legacy .codex skills path');
+  assert(core.codexFiles(legacyAutoHome)[0].path.includes('.codex'), 'codex auto mode did not default to canonical .codex skills path');
   const claudeDryRun = run(['install', 'claude-code', '--dry-run']);
   assert(claudeDryRun.includes('would create'), 'claude dry-run did not preview create');
   assert(!existsSync(claudeSkill) && !existsSync(claudeLearn) && !existsSync(claudeWhy), 'claude dry-run wrote files');
@@ -164,8 +164,8 @@ try {
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook learn'), 'codex skill missing learn guidance');
   const codexInstallAgain = run(['install', 'codex']);
   assert(codexInstallAgain.includes('skipped identical'), 'codex reinstall did not skip identical file');
-  const codexLegacyInstall = run(['install', 'codex', '--codex-path', 'codex']);
-  assert(codexLegacyInstall.includes('created'), 'codex explicit legacy install did not create compatibility file');
+  const codexLegacyInstall = run(['install', 'codex', '--codex-path', 'agents']);
+  assert(codexLegacyInstall.includes('created'), 'codex explicit historical agents install did not create compatibility file');
   assert((await readFile(codexLegacySkill, 'utf8')).includes('contextbook learn'), 'codex legacy skill missing learn guidance');
 
   const claudeInstall = run(['install', 'claude-code']);

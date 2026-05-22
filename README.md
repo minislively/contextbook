@@ -42,8 +42,8 @@ contextbook setup
 
 Generated files:
 
-- Codex skill: `~/.agents/skills/contextbook/SKILL.md` by default for current OpenAI Agent Skills docs
-- Codex legacy compatibility: `~/.codex/skills/contextbook/SKILL.md` when `~/.codex/skills` already exists and `~/.agents/skills` does not
+- Codex skill: `~/.codex/skills/contextbook/SKILL.md` by default for the current Codex/OMX user skill root
+- Codex historical compatibility: `~/.agents/skills/contextbook/SKILL.md` only when using `--codex-path agents` or `--codex-path both`
 - Claude Code skill: `~/.claude/skills/contextbook/SKILL.md`
 - Claude Code slash-command compatibility:
   - `~/.claude/commands/contextbook-learn.md`
@@ -75,9 +75,9 @@ contextbook install claude-code
 
 `--codex-path` values:
 
-- `auto` — default; use `~/.agents/skills`, unless only legacy `~/.codex/skills` already exists
-- `agents` — write `~/.agents/skills/contextbook/SKILL.md`
-- `codex` — write `~/.codex/skills/contextbook/SKILL.md`
+- `auto` — default; write `~/.codex/skills/contextbook/SKILL.md` for the current Codex/OMX user skill root
+- `agents` — write historical `~/.agents/skills/contextbook/SKILL.md` compatibility path
+- `codex` — write canonical `~/.codex/skills/contextbook/SKILL.md`
 - `both` — write both paths intentionally
 
 ## Adapter-ready core

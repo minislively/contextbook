@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { installFiles } from '../install/file-writer.js';
@@ -20,27 +19,24 @@ function resolveCodexSkillPaths(homeDir: string, mode: CodexSkillPathMode): { pa
   const agentsPath = join(homeDir, '.agents', 'skills', 'contextbook', 'SKILL.md');
   const codexPath = join(homeDir, '.codex', 'skills', 'contextbook', 'SKILL.md');
 
-  if (mode === 'agents') return [officialAgentsTarget(agentsPath)];
-  if (mode === 'codex') return [legacyCodexTarget(codexPath)];
-  if (mode === 'both') return [officialAgentsTarget(agentsPath), legacyCodexTarget(codexPath)];
+  if (mode === 'agents') return [legacyAgentsTarget(agentsPath)];
+  if (mode === 'codex') return [canonicalCodexTarget(codexPath)];
+  if (mode === 'both') return [canonicalCodexTarget(codexPath), legacyAgentsTarget(agentsPath)];
 
-  const hasLegacyCodexSkills = existsSync(join(homeDir, '.codex', 'skills'));
-  const hasOfficialAgentsSkills = existsSync(join(homeDir, '.agents', 'skills'));
-  if (hasLegacyCodexSkills && !hasOfficialAgentsSkills) return [legacyCodexTarget(codexPath)];
-  return [officialAgentsTarget(agentsPath)];
+  return [canonicalCodexTarget(codexPath)];
 }
 
-function officialAgentsTarget(path: string): { path: string; description: string } {
+function canonicalCodexTarget(path: string): { path: string; description: string } {
   return {
     path,
-    description: 'Codex user skill for Contextbook learning workflows (official Agent Skills path)'
+    description: 'Codex user skill for Contextbook learning workflows (canonical Codex/OMX path)'
   };
 }
 
-function legacyCodexTarget(path: string): { path: string; description: string } {
+function legacyAgentsTarget(path: string): { path: string; description: string } {
   return {
     path,
-    description: 'Codex user skill for Contextbook learning workflows (legacy Codex CLI/OMX compatibility path)'
+    description: 'Codex user skill for Contextbook learning workflows (historical ~/.agents compatibility path)'
   };
 }
 
