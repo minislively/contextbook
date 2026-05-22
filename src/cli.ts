@@ -4,9 +4,10 @@ import { learnCommand } from './commands/learn.js';
 import { profileCommand } from './commands/profile.js';
 import { scanCommand } from './commands/scan.js';
 import { whyCommand } from './commands/why.js';
+import { installCommand } from './commands/install.js';
 
 function help(): string {
-  return `Contextbook — Learn the concepts behind the code you just touched.\n\nUsage:\n  contextbook init\n  contextbook scan\n  contextbook learn\n  contextbook why "<question>"\n  contextbook profile\n  contextbook profile diff\n  contextbook profile edit\n  contextbook profile reset\n`;
+  return `Contextbook — Learn the concepts behind the code you just touched.\n\nUsage:\n  contextbook init\n  contextbook scan\n  contextbook learn\n  contextbook why "<question>"\n  contextbook profile\n  contextbook profile diff\n  contextbook profile edit\n  contextbook profile reset\n  contextbook install codex [--dry-run]\n  contextbook install claude-code [--dry-run]\n`;
 }
 
 async function main(argv: string[]): Promise<void> {
@@ -32,6 +33,9 @@ async function main(argv: string[]): Promise<void> {
       return;
     case 'profile':
       await profileCommand(args);
+      return;
+    case 'install':
+      await installCommand(args);
       return;
     default:
       throw new Error(`Unknown command: ${command}\n\n${help()}`);

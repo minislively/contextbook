@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile, mkdir, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, writeFile, mkdir, rm, readFile, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join } from 'node:path';
@@ -46,12 +46,12 @@ async function readJsonl(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset']) {
+  for (const text of ['contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install codex --dry-run', 'contextbook install claude-code --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset']) {
+  for (const text of ['contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install codex [--dry-run]', 'contextbook install claude-code [--dry-run]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -116,6 +116,36 @@ try {
   assert(profileUpdates.some((item) => item.type === 'profile.reset'), 'profile-updates missing reset');
   const projectEvidence = await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8');
   assert(!projectEvidence.includes('profile.view') && !projectEvidence.includes('profile.reset'), 'project memory contains learner signals');
+
+  const codexSkill = join(home, '.codex', 'skills', 'contextbook', 'SKILL.md');
+  const claudeSkill = join(home, '.claude', 'skills', 'contextbook', 'SKILL.md');
+  const claudeLearn = join(home, '.claude', 'commands', 'contextbook-learn.md');
+  const claudeWhy = join(home, '.claude', 'commands', 'contextbook-why.md');
+
+  const codexDryRun = run(['install', 'codex', '--dry-run']);
+  assert(codexDryRun.includes('would create'), 'codex dry-run did not preview create');
+  assert(!existsSync(codexSkill), 'codex dry-run wrote a file');
+  const claudeDryRun = run(['install', 'claude-code', '--dry-run']);
+  assert(claudeDryRun.includes('would create'), 'claude dry-run did not preview create');
+  assert(!existsSync(claudeSkill) && !existsSync(claudeLearn) && !existsSync(claudeWhy), 'claude dry-run wrote files');
+
+  const codexInstall = run(['install', 'codex']);
+  assert(codexInstall.includes('created'), 'codex install did not create file');
+  assert((await readFile(codexSkill, 'utf8')).includes('contextbook learn'), 'codex skill missing learn guidance');
+  const codexInstallAgain = run(['install', 'codex']);
+  assert(codexInstallAgain.includes('skipped identical'), 'codex reinstall did not skip identical file');
+
+  const claudeInstall = run(['install', 'claude-code']);
+  assert(claudeInstall.includes('created'), 'claude install did not create files');
+  assert((await readFile(claudeSkill, 'utf8')).includes('contextbook why'), 'claude skill missing why guidance');
+  assert((await readFile(claudeLearn, 'utf8')).includes('contextbook learn'), 'claude learn command missing CLI guidance');
+  assert((await readFile(claudeWhy, 'utf8')).includes('$ARGUMENTS'), 'claude why command missing argument placeholder');
+
+  await writeFile(claudeWhy, 'custom user command\n', 'utf8');
+  const claudeUpdate = run(['install', 'claude-code']);
+  assert(claudeUpdate.includes('updated with backup'), 'claude changed file was not backed up before update');
+  const commandDirEntries = await readdir(join(home, '.claude', 'commands'));
+  assert(commandDirEntries.some((entry) => entry.startsWith('contextbook-why.md.bak-')), 'backup file missing for changed claude command');
 
   const pack = spawnSync('npm', ['pack', '--dry-run'], { cwd: repoRoot, encoding: 'utf8' });
   if (pack.status !== 0) {

@@ -21,7 +21,38 @@ contextbook profile
 contextbook profile diff
 contextbook profile edit
 contextbook profile reset
+contextbook install codex --dry-run
+contextbook install codex
+contextbook install claude-code --dry-run
+contextbook install claude-code
 ```
+
+## Codex / Claude Code integration
+
+Contextbook can generate local helper files so coding agents know how to call the deterministic CLI instead of inventing project evidence.
+
+```bash
+contextbook install codex --dry-run
+contextbook install codex
+
+contextbook install claude-code --dry-run
+contextbook install claude-code
+```
+
+Generated files:
+
+- Codex skill: `~/.codex/skills/contextbook/SKILL.md`
+- Claude Code skill: `~/.claude/skills/contextbook/SKILL.md`
+- Claude Code slash-command compatibility:
+  - `~/.claude/commands/contextbook-learn.md`
+  - `~/.claude/commands/contextbook-why.md`
+
+Safety rules:
+
+- `--dry-run` previews planned writes and writes nothing.
+- Existing identical files are skipped.
+- Existing different files are backed up with `.bak-<timestamp>` before Contextbook writes the managed file.
+- The installer does not call external LLM APIs, ask for API keys, or launch Codex/Claude sessions.
 
 ## Adapter-ready core
 
@@ -37,8 +68,6 @@ const why = await answerWhy('cleanup 왜 해야 돼?', { root: process.cwd() });
 console.log(learn.markdown);
 console.log(why.markdown);
 ```
-
-v0.1 does not install or generate real Codex/Claude adapter files yet.
 
 ## MVP behavior
 
