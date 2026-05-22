@@ -101,7 +101,9 @@ try {
   }
   assert(why.indexOf('## 면접 문장') < why.indexOf('## 프로젝트 말로 설명'), 'why did not apply learner preference ordering');
 
-  run(['profile']);
+  const profileOutput = run(['profile']);
+  assert(profileOutput.includes('## Conversation Memory'), 'profile did not expose conversation memory summary');
+  assert(profileOutput.includes('원문 전체 대화 저장 없음'), 'profile did not show conversation memory safety boundary');
   run(['profile', 'diff']);
   const editNoEditor = run(['profile', 'edit']);
   assert(editNoEditor.includes('Profile path'), 'profile edit without EDITOR did not show path guidance');
@@ -109,14 +111,20 @@ try {
   run(['profile', 'reset']);
 
   const signals = await readJsonl(join(learnerDir, 'signals.jsonl'));
-  for (const type of ['scan', 'why', 'profile.view', 'profile.diff', 'profile.edit.path-shown', 'profile.edit', 'profile.reset']) {
+  for (const type of ['scan', 'learn', 'why', 'profile.view', 'profile.diff', 'profile.edit.path-shown', 'profile.edit', 'profile.reset']) {
     assert(signals.some((item) => item.type === type), `signals.jsonl missing ${type}`);
   }
+  for (const signalType of ['scan.completed', 'learn.generated', 'why.answered', 'profile.viewed']) {
+    assert(signals.some((item) => item.schemaVersion === 1 && item.kind === 'conversation-memory' && item.signalType === signalType), `signals.jsonl missing structured ${signalType}`);
+  }
+  assert(!signals.some((item) => /beginner|low ability|이해력이 낮/.test(JSON.stringify(item))), 'signals include unsafe learner judgment');
   const answers = await readJsonl(join(learnerDir, 'answers.jsonl'));
   assert(answers.some((item) => item.question?.includes('cleanup')), 'answers.jsonl missing why answer');
+  assert(answers.some((item) => item.schemaVersion === 1 && item.kind === 'conversation-memory' && item.signalType === 'why.answered'), 'answers.jsonl missing structured why answer');
   const profileUpdates = await readJsonl(join(learnerDir, 'profile-updates.jsonl'));
   assert(profileUpdates.some((item) => item.type === 'profile.edit'), 'profile-updates missing edit');
   assert(profileUpdates.some((item) => item.type === 'profile.reset'), 'profile-updates missing reset');
+  assert(profileUpdates.every((item) => item.kind === 'conversation-memory'), 'profile-updates should use structured conversation memory events');
   const projectEvidence = await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8');
   assert(!projectEvidence.includes('profile.view') && !projectEvidence.includes('profile.reset'), 'project memory contains learner signals');
 
