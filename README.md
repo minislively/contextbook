@@ -19,12 +19,12 @@ Most study material explains those concepts generically. Contextbook starts from
 
 ```bash
 npm install -g contextbook
-contextbook setup
+contextbook setup   # installs both Codex and Claude Code helpers
 ```
 
 Requires Node.js 20 or newer.
 
-`contextbook setup` installs local helper files for Codex and Claude Code so coding agents know how to call the deterministic CLI instead of inventing project evidence. npm global install does not mutate Codex or Claude Code config automatically; setup is the explicit second step.
+`contextbook setup` is the default agent integration step. It installs both Codex and Claude Code helper files without making you choose a platform. If you want to preview the writes first, run `contextbook setup --dry-run`.
 
 ## Quickstart
 
@@ -125,11 +125,16 @@ Evidence levels:
 
 ## Codex / Claude Code integration
 
-Global npm installation does not mutate Codex or Claude Code config automatically. Run setup explicitly so target paths, backups, and dry-run behavior stay visible.
+Run the default setup once after global install. It installs both Codex and Claude Code helper files.
+
+```bash
+contextbook setup
+```
+
+Optional preview:
 
 ```bash
 contextbook setup --dry-run
-contextbook setup
 ```
 
 Generated files:
@@ -142,8 +147,8 @@ Generated files:
 
 Safety rules:
 
-- `contextbook setup` installs both Codex and Claude Code helper files in one explicit step.
-- `contextbook setup --dry-run` previews planned writes and writes nothing.
+- `contextbook setup` installs both Codex and Claude Code helper files by default.
+- `contextbook setup --dry-run` is optional and previews planned writes without writing files.
 - Existing identical files are skipped.
 - Existing different files are backed up with `.bak-<timestamp>` before Contextbook writes the managed file.
 - The installer does not call external LLM APIs, ask for API keys, or launch Codex/Claude sessions.
