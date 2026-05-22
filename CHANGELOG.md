@@ -14,8 +14,6 @@ Initial MVP release.
 - `contextbook why "<question>"` fixed-format concept explanation.
 - Evidence levels: `direct`, `related`, and `general`.
 - Learner profile commands: `profile`, `profile diff`, `profile edit`, `profile reset`.
-- Structured Conversation Memory events for `scan`, `learn`, `why`, and `profile` flows.
-- Conversation Memory summary in `contextbook profile`.
 - `contextbook setup` for explicit Codex/OMX and Claude Code helper installation.
 - Advanced platform install commands for Codex and Claude Code.
 - Adapter-ready core exports for `scanProject`, `buildLearningMoments`, and `answerWhy`.

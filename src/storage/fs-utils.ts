@@ -32,16 +32,6 @@ export async function writeIfMissing(path: string, content: string): Promise<voi
   await writeFile(path, content, 'utf8');
 }
 
-
-export async function readJsonl<T = unknown>(path: string): Promise<T[]> {
-  if (!(await exists(path))) return [];
-  const raw = await readFile(path, 'utf8');
-  return raw
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as T);
-}
-
 export async function appendJsonl(path: string, value: unknown): Promise<void> {
   await ensureDir(dirname(path));
   await appendFile(path, `${JSON.stringify(value)}\n`, 'utf8');
