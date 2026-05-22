@@ -10,6 +10,7 @@ Initial MVP release.
 - Project initialization with `.contextbook/` project memory.
 - Learner memory under `~/.contextbook/learners/default/`.
 - Project scanner for package, docs, diff, file/function names, imports, and keyword signals.
+- Project scan provenance in `.contextbook/project/scan-runs.jsonl`.
 - `contextbook learn` daily learning card with 1-3 project-grounded learning moments.
 - `contextbook why "<question>"` fixed-format concept explanation.
 - Evidence levels: `direct`, `related`, and `general`.

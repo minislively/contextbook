@@ -81,6 +81,21 @@ try {
   assert(evidence.some((item) => item.source === 'package'), 'missing package evidence');
   assert(evidence.some((item) => item.source === 'file-name' || item.source === 'function-name'), 'missing file/function evidence');
   assert(evidence.some((item) => item.changed === true), 'missing changed-file evidence');
+  const scanRuns = await readJsonl(join(root, '.contextbook', 'project', 'scan-runs.jsonl'));
+  assert(scanRuns.length === 1, 'scan should append exactly one scan run record');
+  const scanRun = scanRuns[0];
+  assert(scanRun.schemaVersion === 1, 'scan run missing schema version');
+  assert(typeof scanRun.scanId === 'string' && scanRun.scanId.startsWith('scan-'), 'scan run missing id');
+  assert(typeof scanRun.scannedAt === 'string' && !Number.isNaN(Date.parse(scanRun.scannedAt)), 'scan run missing timestamp');
+  assert(scanRun.filesScanned > 0 && scanRun.bytesScanned > 0, 'scan run missing scan size fields');
+  assert(scanRun.changedFiles >= 1, 'scan run missing changed-file count');
+  assert(scanRun.conceptsDetected >= 1 && scanRun.evidenceDetected >= 1, 'scan run missing detection counts');
+  assert(Array.isArray(scanRun.warnings), 'scan run warnings should be an array');
+  const scanRunJson = JSON.stringify(scanRun);
+  assert(!scanRunJson.includes(root) && !scanRunJson.includes(home), 'scan run stored absolute local path');
+  run(['scan']);
+  const scanRunsAfterSecondScan = await readJsonl(join(root, '.contextbook', 'project', 'scan-runs.jsonl'));
+  assert(scanRunsAfterSecondScan.length === 2, 'scan should append one scan run record per invocation');
 
   const learn = run(['learn']);
   assert(learn.includes('# Daily Learning Card'), 'learn did not frame output as daily card');
