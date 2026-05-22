@@ -1,21 +1,27 @@
-import { installClaudeCode, installCodex, type InstallAction, type InstallResult } from '../install/installer.js';
+import { adapterIds, getAdapter, type AdapterId } from '../adapters/index.js';
+import type { InstallAction, InstallResult } from '../install/types.js';
 
 export async function installCommand(args: string[]): Promise<void> {
   const { target, dryRun } = parseArgs(args);
-  const result = target === 'codex'
-    ? await installCodex({ dryRun })
-    : await installClaudeCode({ dryRun });
+  const adapter = getAdapter(target);
+  if (!adapter) throw new Error(`Unknown adapter: ${target}\n\n${usage()}`);
+
+  const result = await adapter.install({ dryRun });
   console.log(formatInstallResult(result));
 }
 
-function parseArgs(args: string[]): { target: 'codex' | 'claude-code'; dryRun: boolean } {
+function parseArgs(args: string[]): { target: AdapterId; dryRun: boolean } {
   const dryRun = args.includes('--dry-run');
   const positional = args.filter((arg) => arg !== '--dry-run');
   const [target, ...rest] = positional;
-  if (rest.length > 0 || (target !== 'codex' && target !== 'claude-code')) {
-    throw new Error(`Usage: contextbook install <codex|claude-code> [--dry-run]`);
+  if (rest.length > 0 || !target || !adapterIds.includes(target as AdapterId)) {
+    throw new Error(usage());
   }
-  return { target, dryRun };
+  return { target: target as AdapterId, dryRun };
+}
+
+function usage(): string {
+  return `Usage: contextbook install <${adapterIds.join('|')}> [--dry-run]`;
 }
 
 function formatInstallResult(result: InstallResult): string {
