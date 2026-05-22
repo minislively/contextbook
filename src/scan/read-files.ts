@@ -1,18 +1,39 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 
-const ignoredDirs = new Set(['.git', 'node_modules', 'dist', '.contextbook', '.omx', 'coverage', '.next']);
+const ignoredDirs = new Set(['node_modules', 'dist', 'coverage']);
 const allowedExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.md', '.mdx']);
 const allowedNames = new Set(['README', 'README.md', 'package.json']);
+const entryPriority: Record<string, number> = {
+  'package.json': 0,
+  README: 1,
+  'README.md': 1,
+  src: 2,
+  app: 3,
+  lib: 4,
+  packages: 5,
+  docs: 6,
+  test: 7,
+  tests: 7,
+  benchmarks: 20
+};
 
 function ext(path: string): string {
   const index = path.lastIndexOf('.');
   return index >= 0 ? path.slice(index) : '';
 }
 
+function priority(name: string): number {
+  return entryPriority[name] ?? 10;
+}
+
 function shouldRead(path: string): boolean {
   const name = path.split('/').pop() ?? path;
   return allowedNames.has(name) || allowedExtensions.has(ext(path));
+}
+
+function shouldSkipDir(name: string): boolean {
+  return ignoredDirs.has(name) || name.startsWith('.');
 }
 
 export async function readProjectFiles(root = process.cwd(), maxFiles = 500): Promise<{ file: string; content: string }[]> {
@@ -26,12 +47,13 @@ export async function readProjectFiles(root = process.cwd(), maxFiles = 500): Pr
     } catch {
       return;
     }
+    entries.sort((a, b) => priority(a.name) - priority(b.name) || a.name.localeCompare(b.name));
     for (const entry of entries) {
       if (results.length >= maxFiles) return;
       const full = join(dir, entry.name);
       const rel = relative(root, full).replaceAll('\\', '/');
       if (entry.isDirectory()) {
-        if (!ignoredDirs.has(entry.name)) await walk(full);
+        if (!shouldSkipDir(entry.name)) await walk(full);
         continue;
       }
       if (!entry.isFile() || !shouldRead(rel)) continue;
