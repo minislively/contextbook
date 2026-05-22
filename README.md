@@ -23,6 +23,23 @@ contextbook profile edit
 contextbook profile reset
 ```
 
+## Adapter-ready core
+
+The CLI is a thin adapter over the deterministic core. Future Codex/Claude adapters can import the same contract without scraping CLI output:
+
+```ts
+import { answerWhy, buildLearningMoments, scanProject } from 'contextbook';
+
+await scanProject({ root: process.cwd(), learner: 'default' });
+const learn = await buildLearningMoments({ root: process.cwd() });
+const why = await answerWhy('cleanup 왜 해야 돼?', { root: process.cwd() });
+
+console.log(learn.markdown);
+console.log(why.markdown);
+```
+
+v0.1 does not install or generate real Codex/Claude adapter files yet.
+
 ## MVP behavior
 
 - Project memory: `.contextbook/`

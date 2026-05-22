@@ -42,3 +42,30 @@ export interface WeakTermRecord {
 }
 
 export type WeakTerms = Record<string, WeakTermRecord>;
+
+export interface ContextbookRuntimeOptions {
+  root?: string;
+  learner?: string;
+}
+
+export interface ScanResult {
+  filesScanned: number;
+  conceptsDetected: number;
+  evidenceDetected: number;
+  changedFiles: number;
+  concepts: ConceptRecord[];
+  evidence: EvidenceRecord[];
+}
+
+export interface LearnResult {
+  concepts: ConceptRecord[];
+  changedFiles: string[];
+  markdown: string;
+}
+
+export interface WhyResult {
+  question: string;
+  concept: string;
+  evidenceLevel: EvidenceLevel;
+  markdown: string;
+}

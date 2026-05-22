@@ -69,6 +69,10 @@ try {
   await writeFile(join(root, 'src', 'hooks', 'useWorkflowSSE.ts'), `import { useEffect } from 'react';\nexport function useWorkflowSSE(url: string) {\n  useEffect(() => {\n    const source = new EventSource(url);\n    return () => source.close();\n  }, [url]);\n}\n`, 'utf8');
 
   run(['scan']);
+  const core = await import('../dist/core/index.js');
+  const coreLearn = await core.buildLearningMoments({ root, learner: 'default' });
+  assert(coreLearn.markdown.includes('# Daily Learning Card'), 'core learn contract did not return markdown');
+  assert(Array.isArray(coreLearn.concepts), 'core learn contract did not return concepts');
   const evidence = await readJsonl(join(root, '.contextbook', 'project', 'evidence.jsonl'));
   assert(evidence.some((item) => item.source === 'content'), 'missing content evidence');
   assert(evidence.some((item) => item.source === 'package'), 'missing package evidence');
@@ -86,6 +90,9 @@ try {
     avoid: []
   }, null, 2), 'utf8');
   const why = run(['why', 'cleanup 왜 해야 돼?']);
+  const coreWhy = await core.answerWhy('cleanup 왜 해야 돼?', { root, learner: 'default' });
+  assert(coreWhy.markdown.includes('## 근거 수준'), 'core why contract did not return markdown');
+  assert(coreWhy.evidenceLevel === 'direct' || coreWhy.evidenceLevel === 'related', 'core why contract did not return project evidence level');
   for (const heading of ['## 근거 수준', '## 프로젝트 말로 설명', '## 쉬운 말', '## 개발자 용어', '## CS 연결', '## 면접 문장', '## 근거 파일']) {
     assert(why.includes(heading), `why missing ${heading}`);
   }

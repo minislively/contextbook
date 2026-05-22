@@ -6,6 +6,14 @@
   "bin": {
     "contextbook": "dist/cli.js"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./cli": "./dist/cli.js"
+  },
+  "types": "./dist/core/index.d.ts",
   "scripts": {
     "build": "tsc",
     "start": "node dist/cli.js",
