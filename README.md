@@ -34,6 +34,7 @@ Project Memory lives inside the repository:
     config.json
     concepts.json
     evidence.jsonl
+    scan-runs.jsonl
   prompts/
     learn.md
     why.md
@@ -131,7 +132,10 @@ The scanner reads local project signals and writes:
 ```txt
 .contextbook/project/concepts.json
 .contextbook/project/evidence.jsonl
+.contextbook/project/scan-runs.jsonl
 ```
+
+`scan-runs.jsonl` is an append-only provenance log for scan runs. It records when a scan happened, how many files/bytes were scanned, how many concepts/evidence records were detected, and whether there were scan warnings. It stores repo-relative/project-safe metadata only, not absolute local paths.
 
 It is deterministic-first and does not call an external LLM API.
 

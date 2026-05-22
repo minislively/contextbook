@@ -28,6 +28,32 @@ export interface ProjectConfig {
   createdAt: string;
 }
 
+export type ProjectScanWarningCode =
+  | 'max-files-reached'
+  | 'unreadable-file'
+  | 'large-file-skipped'
+  | 'binary-or-invalid-utf8'
+  | 'scan-partial';
+
+export interface ProjectScanWarning {
+  code: ProjectScanWarningCode;
+  message: string;
+  file?: string;
+}
+
+export interface ProjectScanRun {
+  schemaVersion: 1;
+  scanId: string;
+  scannedAt: string;
+  rootName?: string;
+  filesScanned: number;
+  bytesScanned: number;
+  changedFiles: number;
+  conceptsDetected: number;
+  evidenceDetected: number;
+  warnings: ProjectScanWarning[];
+}
+
 export interface LearnerPreferences {
   explanationOrder: string[];
   avoid: string[];
