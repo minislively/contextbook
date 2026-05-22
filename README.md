@@ -2,45 +2,31 @@
 
 **Learn the concepts behind the code you just touched.**
 
-Contextbook turns your codebase and learning conversations into a personalized knowledge book. It is a deterministic-first local CLI that scans project evidence, finds development/CS concepts in the code, and explains them in a learner-friendly format.
+Contextbook turns your codebase and learning conversations into a personalized knowledge book. It helps you turn real project work into CS/development concepts you can understand, remember, and explain.
 
-## Why Contextbook?
+## What is Contextbook?
 
-Developers often meet concepts like `useEffect` cleanup, SSE, WebSocket, stale closures, Zustand, Context API, graphs/DAGs, cache invalidation, and resource lifecycle while working on real projects.
+Contextbook is not a generic code explainer.
 
-Most study material explains those concepts generically. Contextbook starts from your project instead:
+Most tools answer:
 
-- What can I learn from the code I just touched?
-- How does this concept show up in my project?
-- How can I explain it in developer/CS/interview language?
-- Is this answer grounded in project evidence or general knowledge?
+> What does this function do?
 
-## Install
+Contextbook answers:
 
-```bash
-npm install -g contextbook
-contextbook setup   # installs both Codex and Claude Code helpers
-```
+> What can I learn from the code I just touched?
+> How does this concept appear in my project?
+> How can I explain it in plain language, developer terms, CS terms, and interview language?
 
-Requires Node.js 20 or newer.
+It is built for developers who have used things like `useEffect` cleanup, SSE, WebSocket, Zustand, Context API, graph/DAG structures, cache invalidation, or resource lifecycle in real projects but want clearer words for them.
 
-`contextbook setup` is the default agent integration step. It installs both Codex and Claude Code helper files without making you choose a platform. If you want to preview the writes first, run `contextbook setup --dry-run`.
+## The core idea: three kinds of memory
 
-## Quickstart
+Contextbook separates project facts from personal learning signals.
 
-```bash
-cd your-project
-contextbook init
-contextbook scan
-contextbook learn
-contextbook why "cleanup 왜 해야 돼?"
-```
+### 1. Project Memory
 
-> Contextbook v0.1 does not require an LLM API key. The scanner and formatter are local and deterministic-first.
-
-## What it creates
-
-Project memory is stored inside the current repo:
+Project Memory lives inside the repository:
 
 ```txt
 .contextbook/
@@ -53,7 +39,18 @@ Project memory is stored inside the current repo:
     why.md
 ```
 
-Learner memory is stored outside the repo:
+It stores what Contextbook found in this project:
+
+- framework/library signals
+- package dependencies
+- changed files
+- imports
+- file/function/hook names
+- concept evidence such as `EventSource`, `useEffect` cleanup, `zustand`, `nodes` + `edges`
+
+### 2. Learner Memory
+
+Learner Memory lives outside the repository:
 
 ```txt
 ~/.contextbook/
@@ -67,24 +64,86 @@ Learner memory is stored outside the repo:
       profile-updates.jsonl
 ```
 
-This keeps personal learning signals out of project commits.
+It stores how you learn:
 
-## Core commands
+- preferred explanation order
+- weak or repeated terms
+- answer history
+- profile edits/resets
+- lightweight learning signals
+
+This is intentionally outside the repo so personal learning data is not committed with project code.
+
+### 3. Conversation Signals
+
+Conversation and answer signals are append-only files under learner memory. They help Contextbook remember that, for example, project-first explanations or interview-style summaries work better for you.
+
+v0.1 keeps this deterministic and inspectable. It does not silently judge the user or infer personality traits.
+
+## Step-by-step workflow
+
+Contextbook is designed as a simple learning loop.
+
+### Step 1. Install once
 
 ```bash
-contextbook setup                  # install Codex + Claude Code helper files
-contextbook setup --dry-run        # preview helper file writes
-contextbook init                   # initialize .contextbook and learner memory
-contextbook scan                   # scan project evidence
-contextbook learn                  # generate 1-3 learning moments
-contextbook why "<question>"       # answer a concept question with evidence level
-contextbook profile                # view learner profile
-contextbook profile diff           # view profile-related update history
-contextbook profile edit           # open learner profile in $EDITOR
-contextbook profile reset          # reset learner profile to default
+npm install -g contextbook
+contextbook setup
 ```
 
-## Example output
+`contextbook setup` installs both Codex and Claude Code helper files by default:
+
+```txt
+Codex/OMX:
+~/.codex/skills/contextbook/SKILL.md
+
+Claude Code:
+~/.claude/skills/contextbook/SKILL.md
+~/.claude/commands/contextbook-learn.md
+~/.claude/commands/contextbook-why.md
+```
+
+If you want to preview the writes first:
+
+```bash
+contextbook setup --dry-run
+```
+
+Requires Node.js 20 or newer.
+
+### Step 2. Initialize a project
+
+```bash
+cd your-project
+contextbook init
+```
+
+This creates `.contextbook/` project memory and the default learner profile if needed.
+
+### Step 3. Scan project evidence
+
+```bash
+contextbook scan
+```
+
+The scanner reads local project signals and writes:
+
+```txt
+.contextbook/project/concepts.json
+.contextbook/project/evidence.jsonl
+```
+
+It is deterministic-first and does not call an external LLM API.
+
+### Step 4. Get learning moments
+
+```bash
+contextbook learn
+```
+
+This returns 1-3 concepts worth learning from the current project/diff.
+
+Example:
 
 ```md
 # Daily Learning Card
@@ -105,7 +164,13 @@ contextbook profile reset          # reset learner profile to default
 React에서 SSE 연결을 사용할 때 cleanup이 필요한 이유는 무엇인가요?
 ```
 
-`contextbook why "cleanup 왜 해야 돼?"` uses a fixed learning-friendly format:
+### Step 5. Ask why a concept matters
+
+```bash
+contextbook why "cleanup 왜 해야 돼?"
+```
+
+`why` always uses a fixed format:
 
 ```md
 ## 근거 수준
@@ -117,64 +182,17 @@ React에서 SSE 연결을 사용할 때 cleanup이 필요한 이유는 무엇인
 ## 근거 파일
 ```
 
-Evidence levels:
+This is the key Contextbook output: project-grounded explanation → plain language → developer term → CS concept → interview sentence.
 
-- `direct` — project evidence was found directly
-- `related` — related project structure was found
+## Evidence levels
+
+Contextbook always tells you how strong the project evidence is.
+
+- `direct` — direct evidence was found in this project
+- `related` — related structure was found, but not the exact concept
 - `general` — no project evidence was found; answer is general guidance
 
-## Codex / Claude Code integration
-
-Run the default setup once after global install. It installs both Codex and Claude Code helper files.
-
-```bash
-contextbook setup
-```
-
-Optional preview:
-
-```bash
-contextbook setup --dry-run
-```
-
-Generated files:
-
-- Codex/OMX skill: `~/.codex/skills/contextbook/SKILL.md`
-- Claude Code skill: `~/.claude/skills/contextbook/SKILL.md`
-- Claude Code slash-command compatibility:
-  - `~/.claude/commands/contextbook-learn.md`
-  - `~/.claude/commands/contextbook-why.md`
-
-Safety rules:
-
-- `contextbook setup` installs both Codex and Claude Code helper files by default.
-- `contextbook setup --dry-run` is optional and previews planned writes without writing files.
-- Existing identical files are skipped.
-- Existing different files are backed up with `.bak-<timestamp>` before Contextbook writes the managed file.
-- The installer does not call external LLM APIs, ask for API keys, or launch Codex/Claude sessions.
-
-### Advanced install options
-
-Use these only when you need platform-specific setup or a specific Codex discovery path:
-
-```bash
-contextbook install all --dry-run
-contextbook install all
-contextbook install all --codex-path codex --dry-run
-contextbook install codex --dry-run
-contextbook install codex --codex-path agents --dry-run
-contextbook install codex --codex-path codex --dry-run
-contextbook install codex --codex-path both --dry-run
-contextbook install claude-code --dry-run
-contextbook install claude-code
-```
-
-`--codex-path` values:
-
-- `auto` — default; write `~/.codex/skills/contextbook/SKILL.md` for the current Codex/OMX user skill root
-- `codex` — write canonical `~/.codex/skills/contextbook/SKILL.md`
-- `agents` — write historical `~/.agents/skills/contextbook/SKILL.md` compatibility path
-- `both` — write both paths intentionally
+This prevents the tool from pretending it found something in your code when it did not.
 
 ## What Contextbook scans in v0.1
 
@@ -202,6 +220,58 @@ Initial concept patterns include:
 
 Hidden/runtime directories such as `.git`, `.contextbook`, `.omx`, `.codex`, `.claude`, and `.fooks` are ignored by default.
 
+## Agent integration
+
+After `contextbook setup`, Codex/OMX and Claude Code can call the local CLI instead of guessing from the chat context.
+
+Typical agent flow:
+
+```bash
+contextbook scan
+contextbook learn
+contextbook why "<question>"
+```
+
+The helper files only teach the agent how to use Contextbook. They do not call external APIs, launch agent sessions, or require API keys.
+
+### Advanced install options
+
+Use these only when you need platform-specific setup or a specific Codex discovery path:
+
+```bash
+contextbook install all --dry-run
+contextbook install all
+contextbook install all --codex-path codex --dry-run
+contextbook install codex --dry-run
+contextbook install codex --codex-path agents --dry-run
+contextbook install codex --codex-path codex --dry-run
+contextbook install codex --codex-path both --dry-run
+contextbook install claude-code --dry-run
+contextbook install claude-code
+```
+
+`--codex-path` values:
+
+- `auto` — default; write `~/.codex/skills/contextbook/SKILL.md` for the current Codex/OMX user skill root
+- `codex` — write canonical `~/.codex/skills/contextbook/SKILL.md`
+- `agents` — write historical `~/.agents/skills/contextbook/SKILL.md` compatibility path
+- `both` — write both paths intentionally
+
+## Commands
+
+```bash
+contextbook setup                  # install Codex + Claude Code helper files
+contextbook setup --dry-run        # preview helper file writes
+contextbook init                   # initialize .contextbook and learner memory
+contextbook scan                   # scan project evidence
+contextbook learn                  # generate 1-3 learning moments
+contextbook why "<question>"       # answer a concept question with evidence level
+contextbook profile                # view learner profile
+contextbook profile diff           # view profile-related update history
+contextbook profile edit           # open learner profile in $EDITOR
+contextbook profile reset          # reset learner profile to default
+```
+
 ## Adapter-ready core
 
 The CLI is a thin adapter over the deterministic core. Future Codex/Claude adapters can import the same contract without scraping CLI output:
@@ -217,16 +287,18 @@ console.log(learn.markdown);
 console.log(why.markdown);
 ```
 
-## Scope
+## Scope of v0.1
 
 Contextbook v0.1 intentionally does not include:
 
 - web dashboard
 - external LLM/API calls
-- full automatic personalization
+- fully automatic personalization
 - complex knowledge tracing
 - perfect whole-codebase understanding
 - team-shared learner memory
+
+The goal of v0.1 is simple: scan a real project, find learning moments, explain them with visible evidence, and make that flow easy to use from a CLI or coding agent.
 
 ## License
 
