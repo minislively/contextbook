@@ -5,9 +5,10 @@ import { profileCommand } from './commands/profile.js';
 import { scanCommand } from './commands/scan.js';
 import { whyCommand } from './commands/why.js';
 import { installCommand } from './commands/install.js';
+import { setupCommand } from './commands/setup.js';
 
 function help(): string {
-  return `Contextbook — Learn the concepts behind the code you just touched.\n\nUsage:\n  contextbook init\n  contextbook scan\n  contextbook learn\n  contextbook why "<question>"\n  contextbook profile\n  contextbook profile diff\n  contextbook profile edit\n  contextbook profile reset\n  contextbook install codex [--dry-run]\n  contextbook install claude-code [--dry-run]\n`;
+  return `Contextbook — Learn the concepts behind the code you just touched.\n\nUsage:\n  contextbook init\n  contextbook scan\n  contextbook learn\n  contextbook why "<question>"\n  contextbook profile\n  contextbook profile diff\n  contextbook profile edit\n  contextbook profile reset\n  contextbook setup\n  contextbook setup --dry-run\n  contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]\n  contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]\n  contextbook install claude-code [--dry-run]\n`;
 }
 
 async function main(argv: string[]): Promise<void> {
@@ -33,6 +34,9 @@ async function main(argv: string[]): Promise<void> {
       return;
     case 'profile':
       await profileCommand(args);
+      return;
+    case 'setup':
+      await setupCommand(args);
       return;
     case 'install':
       await installCommand(args);

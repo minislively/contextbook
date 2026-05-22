@@ -46,12 +46,12 @@ async function readJsonl(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install codex --dry-run', 'contextbook install claude-code --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install codex [--dry-run]', 'contextbook install claude-code [--dry-run]']) {
+  for (const text of ['contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -120,26 +120,56 @@ try {
   const projectEvidence = await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8');
   assert(!projectEvidence.includes('profile.view') && !projectEvidence.includes('profile.reset'), 'project memory contains learner signals');
 
-  const codexSkill = join(home, '.codex', 'skills', 'contextbook', 'SKILL.md');
+  const codexSkill = join(home, '.agents', 'skills', 'contextbook', 'SKILL.md');
+  const codexLegacySkill = join(home, '.codex', 'skills', 'contextbook', 'SKILL.md');
   const claudeSkill = join(home, '.claude', 'skills', 'contextbook', 'SKILL.md');
   const claudeLearn = join(home, '.claude', 'commands', 'contextbook-learn.md');
   const claudeWhy = join(home, '.claude', 'commands', 'contextbook-why.md');
 
+  const setupDryRun = run(['setup', '--dry-run']);
+  assert(setupDryRun.includes('# Contextbook setup (dry run)'), 'setup dry-run did not show setup heading');
+  assert(setupDryRun.includes('# Contextbook codex install (dry run)') && setupDryRun.includes('# Contextbook claude-code install (dry run)'), 'setup dry-run did not preview both adapters');
+  assert(setupDryRun.includes('.agents') && setupDryRun.includes('.claude'), 'setup dry-run did not show codex and claude target paths');
+  assert(!existsSync(codexSkill) && !existsSync(claudeSkill), 'setup dry-run wrote files');
+
+  const allDryRun = run(['install', 'all', '--dry-run']);
+  assert(allDryRun.includes('# Contextbook codex install (dry run)') && allDryRun.includes('# Contextbook claude-code install (dry run)'), 'install all dry-run did not preview both adapters');
+  assert(allDryRun.includes('.agents') && allDryRun.includes('.claude'), 'install all dry-run did not show codex and claude target paths');
+  assert(!existsSync(codexSkill) && !existsSync(claudeSkill), 'install all dry-run wrote files');
+
   const codexDryRun = run(['install', 'codex', '--dry-run']);
   assert(codexDryRun.includes('would create'), 'codex dry-run did not preview create');
+  assert(codexDryRun.includes('.agents'), 'codex dry-run did not default to official Agent Skills path');
   assert(!existsSync(codexSkill), 'codex dry-run wrote a file');
+  const codexLegacyDryRun = run(['install', 'codex', '--codex-path', 'codex', '--dry-run']);
+  assert(codexLegacyDryRun.includes('.codex'), 'codex legacy dry-run did not preview .codex compatibility path');
+  assert(!existsSync(codexLegacySkill), 'codex legacy dry-run wrote a file');
+  const codexBothDryRun = run(['install', 'codex', '--codex-path=both', '--dry-run']);
+  assert(codexBothDryRun.includes('.agents') && codexBothDryRun.includes('.codex'), 'codex both dry-run did not preview both paths');
+  assert(!existsSync(codexSkill) && !existsSync(codexLegacySkill), 'codex both dry-run wrote a file');
+  const legacyAutoHome = join(home, 'legacy-auto-home');
+  await mkdir(join(legacyAutoHome, '.codex', 'skills'), { recursive: true });
+  assert(core.codexFiles(legacyAutoHome)[0].path.includes('.codex'), 'codex auto mode did not preserve existing legacy .codex skills path');
   const claudeDryRun = run(['install', 'claude-code', '--dry-run']);
   assert(claudeDryRun.includes('would create'), 'claude dry-run did not preview create');
   assert(!existsSync(claudeSkill) && !existsSync(claudeLearn) && !existsSync(claudeWhy), 'claude dry-run wrote files');
 
+  const setupInstall = run(['setup']);
+  assert(setupInstall.includes('# Contextbook setup') && setupInstall.includes('created'), 'setup did not install helper files');
+  assert((await readFile(codexSkill, 'utf8')).includes('contextbook learn'), 'setup codex skill missing learn guidance');
+  assert((await readFile(claudeSkill, 'utf8')).includes('contextbook why'), 'setup claude skill missing why guidance');
+
   const codexInstall = run(['install', 'codex']);
-  assert(codexInstall.includes('created'), 'codex install did not create file');
+  assert(codexInstall.includes('skipped identical'), 'codex install after setup did not skip identical file');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook learn'), 'codex skill missing learn guidance');
   const codexInstallAgain = run(['install', 'codex']);
   assert(codexInstallAgain.includes('skipped identical'), 'codex reinstall did not skip identical file');
+  const codexLegacyInstall = run(['install', 'codex', '--codex-path', 'codex']);
+  assert(codexLegacyInstall.includes('created'), 'codex explicit legacy install did not create compatibility file');
+  assert((await readFile(codexLegacySkill, 'utf8')).includes('contextbook learn'), 'codex legacy skill missing learn guidance');
 
   const claudeInstall = run(['install', 'claude-code']);
-  assert(claudeInstall.includes('created'), 'claude install did not create files');
+  assert(claudeInstall.includes('skipped identical'), 'claude install after setup did not skip identical files');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook why'), 'claude skill missing why guidance');
   assert((await readFile(claudeLearn, 'utf8')).includes('contextbook learn'), 'claude learn command missing CLI guidance');
   assert((await readFile(claudeWhy, 'utf8')).includes('$ARGUMENTS'), 'claude why command missing argument placeholder');

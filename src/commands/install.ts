@@ -1,27 +1,75 @@
-import { adapterIds, getAdapter, type AdapterId } from '../integrations/registry.js';
-import type { InstallAction, InstallResult } from '../install/types.js';
+import { adapters, adapterIds, getAdapter, type AdapterId } from '../integrations/registry.js';
+import type { CodexSkillPathMode, InstallAction, InstallOptions, InstallResult } from '../install/types.js';
+
+type InstallTargetArg = AdapterId | 'all';
 
 export async function installCommand(args: string[]): Promise<void> {
-  const { target, dryRun } = parseArgs(args);
+  const { target, options } = parseArgs(args);
+  if (target === 'all') {
+    console.log(formatInstallResults(await installAll(options)));
+    return;
+  }
+
   const adapter = getAdapter(target);
   if (!adapter) throw new Error(`Unknown adapter: ${target}\n\n${usage()}`);
 
-  const result = await adapter.install({ dryRun });
+  const result = await adapter.install(options);
   console.log(formatInstallResult(result));
 }
 
-function parseArgs(args: string[]): { target: AdapterId; dryRun: boolean } {
-  const dryRun = args.includes('--dry-run');
-  const positional = args.filter((arg) => arg !== '--dry-run');
-  const [target, ...rest] = positional;
-  if (rest.length > 0 || !target || !adapterIds.includes(target as AdapterId)) {
-    throw new Error(usage());
+export async function installAll(options: InstallOptions): Promise<InstallResult[]> {
+  return Promise.all(adapters.map((adapter) => adapter.install(options)));
+}
+
+export function formatInstallResults(results: InstallResult[]): string {
+  return results.map(formatInstallResult).join('\n\n');
+}
+
+function parseArgs(args: string[]): { target: InstallTargetArg; options: InstallOptions } {
+  const [target, ...rest] = args;
+  if (!target || !isInstallTargetArg(target)) throw new Error(usage());
+
+  const options: InstallOptions = { dryRun: false };
+  for (let index = 0; index < rest.length; index += 1) {
+    const arg = rest[index];
+    if (arg === '--dry-run') {
+      options.dryRun = true;
+      continue;
+    }
+    if (arg === '--codex-path') {
+      const value = rest[index + 1];
+      assertCodexPathSupported(target, value);
+      options.codexSkillPathMode = value;
+      index += 1;
+      continue;
+    }
+    if (arg?.startsWith('--codex-path=')) {
+      const value = arg.slice('--codex-path='.length);
+      assertCodexPathSupported(target, value);
+      options.codexSkillPathMode = value;
+      continue;
+    }
+    throw new Error(`Unknown install option: ${arg}\n\n${usage()}`);
   }
-  return { target: target as AdapterId, dryRun };
+
+  return { target, options };
+}
+
+function isInstallTargetArg(value: string): value is InstallTargetArg {
+  return value === 'all' || adapterIds.includes(value as AdapterId);
+}
+
+function assertCodexPathSupported(target: InstallTargetArg, value: string | undefined): asserts value is CodexSkillPathMode {
+  if (target !== 'codex' && target !== 'all') throw new Error(`--codex-path is only supported for codex or all installs\n\n${usage()}`);
+  if (!isCodexSkillPathMode(value)) throw new Error(`Invalid --codex-path value: ${value ?? '<missing>'}\n\n${usage()}`);
+}
+
+function isCodexSkillPathMode(value: string | undefined): value is CodexSkillPathMode {
+  return value === 'auto' || value === 'agents' || value === 'codex' || value === 'both';
 }
 
 function usage(): string {
-  return `Usage: contextbook install <${adapterIds.join('|')}> [--dry-run]`;
+  return `Usage: contextbook install <all|${adapterIds.join('|')}> [--dry-run]\n       contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]\n       contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]`;
 }
 
 function formatInstallResult(result: InstallResult): string {
