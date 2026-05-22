@@ -19,22 +19,22 @@ Most study material explains those concepts generically. Contextbook starts from
 
 ```bash
 npm install -g contextbook
+contextbook setup
 ```
 
 Requires Node.js 20 or newer.
 
+`contextbook setup` installs local helper files for Codex and Claude Code so coding agents know how to call the deterministic CLI instead of inventing project evidence. npm global install does not mutate Codex or Claude Code config automatically; setup is the explicit second step.
+
 ## Quickstart
 
 ```bash
-contextbook setup
 cd your-project
 contextbook init
 contextbook scan
 contextbook learn
 contextbook why "cleanup 왜 해야 돼?"
 ```
-
-`contextbook setup` installs local helper files for Codex and Claude Code so coding agents know how to call the deterministic CLI instead of inventing project evidence.
 
 > Contextbook v0.1 does not require an LLM API key. The scanner and formatter are local and deterministic-first.
 
