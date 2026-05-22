@@ -1,5 +1,5 @@
-import { codexFiles, installCodex } from '../install/codex.js';
-import type { ContextbookAdapter } from './types.js';
+import { codexFiles, installCodex } from './install.js';
+import type { ContextbookAdapter } from '../integrations/types.js';
 
 export const codexAdapter: ContextbookAdapter = {
   id: 'codex',

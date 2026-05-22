@@ -1,5 +1,5 @@
-import { claudeCodeAdapter } from './claude-code.js';
-import { codexAdapter } from './codex.js';
+import { claudeCodeAdapter } from '../claude-code/adapter.js';
+import { codexAdapter } from '../codex/adapter.js';
 import type { AdapterId, ContextbookAdapter } from './types.js';
 
 export const adapters = [codexAdapter, claudeCodeAdapter] as const satisfies readonly ContextbookAdapter[];
@@ -9,6 +9,6 @@ export function getAdapter(id: string): ContextbookAdapter | undefined {
   return adapters.find((adapter) => adapter.id === id);
 }
 
-export { claudeCodeAdapter } from './claude-code.js';
-export { codexAdapter } from './codex.js';
+export { claudeCodeAdapter } from '../claude-code/adapter.js';
+export { codexAdapter } from '../codex/adapter.js';
 export type { AdapterId, ContextbookAdapter } from './types.js';

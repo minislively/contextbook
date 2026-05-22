@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { installFiles } from './file-writer.js';
-import type { InstallFile, InstallOptions, InstallResult } from './types.js';
+import { installFiles } from '../install/file-writer.js';
+import type { InstallFile, InstallOptions, InstallResult } from '../install/types.js';
 
 export async function installCodex(options: InstallOptions = {}): Promise<InstallResult> {
   return installFiles('codex', codexFiles(options.homeDir ?? homedir()), options);
