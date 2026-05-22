@@ -9,7 +9,7 @@ coverage/
 .omx/
 .contextbook/
 
-# Internal planning docs
+# Internal planning/research docs (local-only)
 # Keep launch package/repo focused; use README.md for public docs.
 docs/private/
 
