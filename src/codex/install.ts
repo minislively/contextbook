@@ -71,17 +71,22 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
    \`\`\`bash
    contextbook learner --json
    \`\`\`
-5. For learning moments, run:
+5. To inspect recent explicit memory signals, run:
+   \`\`\`bash
+   contextbook memory signals --json
+   \`\`\`
+6. To record explicit user feedback as append-only Learner Memory, run \`contextbook memory add-signal --type <allowed-type> --concept "<concept>"\` only when the user clearly expresses feedback. Do not infer ability or mutate profile.
+7. For learning moments, run:
    \`\`\`bash
    contextbook learn
    \`\`\`
-6. For concept questions, run:
+8. For concept questions, run:
    \`\`\`bash
    contextbook why \"<question>\"
    \`\`\`
-7. Preserve Contextbook's evidence level: \`direct\`, \`related\`, or \`general\`.
-8. Do not claim stronger project evidence than the CLI output provides.
-9. Do not ask for API keys; Contextbook v0.1 is local and deterministic-first.
+9. Preserve Contextbook's evidence level: \`direct\`, \`related\`, or \`general\`.
+10. Do not claim stronger project evidence than the CLI output provides.
+11. Do not ask for API keys; Contextbook v0.1 is local and deterministic-first.
 
 ## Useful commands
 
@@ -89,6 +94,8 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
 - \`contextbook scan\` — refresh local project evidence.
 - \`contextbook project --json\` — inspect Project Memory in a stable AI-readable shape.
 - \`contextbook learner --json\` — inspect Learner Memory in a stable AI-readable shape.
+- \`contextbook memory signals --json\` — inspect recent explicit memory signals.
+- \`contextbook memory add-signal --type feedback.confused --concept "event loop"\` — record explicit feedback only.
 - \`contextbook learn\` — produce 1-3 learning moments.
 - \`contextbook why \"cleanup 왜 해야 돼?\"\` — answer with project context, plain language, developer term, CS link, interview sentence, and evidence files.
 - \`contextbook profile\` — inspect the learner profile.

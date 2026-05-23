@@ -230,7 +230,7 @@ export interface LearnerSummary extends Omit<LearnerSummaryJson, 'schemaVersion'
   markdown: string;
 }
 
-export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset';
+export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.signals';
 
 export type ConversationSignalType =
   | 'scan.completed'
@@ -240,7 +240,34 @@ export type ConversationSignalType =
   | 'profile.diff.viewed'
   | 'profile.edit.path-shown'
   | 'profile.edited'
-  | 'profile.reset';
+  | 'profile.reset'
+  | 'feedback.positive'
+  | 'feedback.confused'
+  | 'format.requested'
+  | 'analogy.accepted'
+  | 'analogy.rejected'
+  | 'term.repeated';
+
+
+export interface MemorySignalsSafety {
+  rawTranscriptIncluded: false;
+  absolutePathsIncluded: false;
+  profileMutated: false;
+  weakTermsMutated: false;
+  unsafeJudgmentIncluded: false;
+}
+
+export interface MemorySignalsJson {
+  schemaVersion: 1;
+  generatedAt: string;
+  learner: string;
+  signalTypes: ConversationSignalType[];
+  recentSignals: ConversationMemoryEvent[];
+  eventCounts: {
+    signals: number;
+  };
+  safety: MemorySignalsSafety;
+}
 
 export interface ConversationMemoryEvent {
   schemaVersion: 1;

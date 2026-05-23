@@ -184,7 +184,27 @@ It shows:
 
 The default output is Markdown for humans. `--json` returns a compact agent-readable contract with safety flags such as `rawTranscriptIncluded: false`, `profileMutated: false`, and `unsafeJudgmentIncluded: false`.
 
-### Step 6. Get learning moments
+### Step 6. Record explicit memory signals
+
+```bash
+contextbook memory add-signal --type feedback.confused --concept "event loop" --note "too abstract"
+contextbook memory signals
+# or, for agents:
+contextbook memory signals --json
+```
+
+Memory signals are append-only learning events for explicit feedback such as confusion, positive feedback, format requests, or analogy fit. They do not update your profile or weak terms automatically.
+
+Allowed v1 signal types:
+
+- `feedback.positive`
+- `feedback.confused`
+- `format.requested`
+- `analogy.accepted`
+- `analogy.rejected`
+- `term.repeated`
+
+### Step 7. Get learning moments
 
 ```bash
 contextbook learn
@@ -285,6 +305,7 @@ Typical agent flow:
 contextbook scan
 contextbook project --json
 contextbook learner --json
+contextbook memory signals --json
 contextbook learn
 contextbook why "<question>"
 ```
@@ -325,6 +346,9 @@ contextbook project                # inspect existing project memory
 contextbook project --json         # inspect project memory as structured agent context
 contextbook learner                # inspect learner memory
 contextbook learner --json         # inspect learner memory as structured agent context
+contextbook memory add-signal --type feedback.confused --concept "event loop" --note "too abstract"
+contextbook memory signals         # inspect recent learner/conversation signals
+contextbook memory signals --json  # inspect recent signals as structured agent context
 contextbook learn                  # generate 1-3 learning moments
 contextbook why "<question>"       # answer a concept question with evidence level
 contextbook profile                # view learner profile + conversation memory summary
