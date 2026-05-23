@@ -50,12 +50,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook project', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
+  for (const text of ['contextbook project', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -70,6 +70,12 @@ try {
   await writeFile(join(root, 'src', 'hooks', 'useWorkflowSSE.ts'), `export function useWorkflowSSE(url: string) {\n  return url;\n}\n`, 'utf8');
   git(['add', '.']);
   git(['commit', '-m', 'baseline']);
+
+  const projectBeforeInit = run(['project']);
+  assert(projectBeforeInit.includes('# Project Memory'), 'project before init missing heading');
+  assert(projectBeforeInit.includes('Contextbook 메모리를 찾지 못했습니다'), 'project before init should explain missing memory');
+  assert(projectBeforeInit.includes('contextbook init') && projectBeforeInit.includes('contextbook scan'), 'project before init missing next action hints');
+  assert(!existsSync(join(root, '.contextbook')), 'project command should be read-only before init');
 
   run(['init']);
   const initialFileIndex = await readJson(join(root, '.contextbook', 'project', 'file-index.json'));
@@ -206,6 +212,24 @@ try {
   assert(scanRun.bytesScanned === fileIndex.totals.bytesScanned, 'scan run bytesScanned should align with file index');
   const scanRunJson = JSON.stringify(scanRun);
   assert(!scanRunJson.includes(root) && !scanRunJson.includes(home), 'scan run stored absolute local path');
+
+  const coreProject = await core.buildProjectSummary({ root });
+  assert(coreProject.markdown.includes('# Project Memory'), 'core project contract did not return markdown');
+  assert(Array.isArray(coreProject.memoryFiles) && coreProject.memoryFiles.length >= 5, 'core project contract missing memory file statuses');
+  assert(coreProject.memoryFiles.every((file) => !file.path.includes(root) && file.path.startsWith('.contextbook/project/')), 'project memory status should use safe relative paths');
+  assert(coreProject.concepts.length >= 1, 'core project summary missing concepts');
+  assert(coreProject.recentScanRuns.length === 1, 'core project summary missing recent scan run');
+  assert(coreProject.evidenceCount >= 1, 'core project summary missing evidence count');
+  const project = run(['project']);
+  for (const heading of ['# Project Memory', '## Memory Files', '## Top Concepts', '## Recent Scan Runs', '## Next Action Hints']) {
+    assert(project.includes(heading), `project missing ${heading}`);
+  }
+  assert(project.includes('useEffect cleanup') || project.includes('SSE'), 'project did not include expected concepts');
+  assert(project.includes('warnings'), 'project did not surface scan warning count');
+  assert(!project.includes(root) && !project.includes(home), 'project output included absolute local path');
+  assert(!project.includes('SECRET_TOKEN') && !project.includes('should-not-leak'), 'project output included hidden file content');
+  assert(!existsSync(join(root, '.contextbook', 'project', 'summary.json')), 'project created a persisted summary artifact');
+
   run(['scan']);
   const scanRunsAfterSecondScan = await readJsonl(join(root, '.contextbook', 'project', 'scan-runs.jsonl'));
   assert(scanRunsAfterSecondScan.length === 2, 'scan should append one scan run record per invocation');
