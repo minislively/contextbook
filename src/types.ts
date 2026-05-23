@@ -249,11 +249,66 @@ export interface WeakTermSuggestionsJson {
   safety: WeakTermSuggestionsSafety;
 }
 
+export type ProfileUpdateCandidateTarget = 'Preferred Explanation' | 'Avoid' | 'Analogy Notes';
+
+export type ProfileUpdateCandidateReasonCode =
+  | 'project-first-requested'
+  | 'abstract-confusion'
+  | 'format-requested'
+  | 'analogy-accepted'
+  | 'analogy-rejected'
+  | 'positive-feedback';
+
+export interface ProfileUpdateCandidateReason {
+  code: ProfileUpdateCandidateReasonCode;
+  signalType?: ConversationSignalType;
+  detail: string;
+  count: number;
+}
+
+export interface ProfileUpdateCandidate {
+  targetSection: ProfileUpdateCandidateTarget;
+  suggestion: string;
+  confidence: 'low' | 'medium' | 'high';
+  signalCount: number;
+  lastSeenAt?: string;
+  currentContext: {
+    explanationOrder: string[];
+    avoid: string[];
+    profileSections: string[];
+  };
+  reasons: ProfileUpdateCandidateReason[];
+  recommendedActions: LearnerRecommendedAction[];
+}
+
+export interface ProfileUpdateCandidatesSafety {
+  rawTranscriptIncluded: false;
+  absolutePathsIncluded: false;
+  profileMutated: false;
+  preferencesMutated: false;
+  weakTermsMutated: false;
+  profileUpdatesMutated: false;
+  unsafeJudgmentIncluded: false;
+}
+
+export interface ProfileUpdateCandidatesJson {
+  schemaVersion: 1;
+  generatedAt: string;
+  learner: string;
+  candidates: ProfileUpdateCandidate[];
+  eventCounts: {
+    signals: number;
+  };
+  safety: ProfileUpdateCandidatesSafety;
+}
+
 export interface LearnerSummarySafety {
   rawTranscriptIncluded: false;
   absolutePathsIncluded: false;
   profileMutated: false;
+  preferencesMutated: false;
   weakTermsMutated: false;
+  profileUpdatesMutated: false;
   unsafeJudgmentIncluded: false;
 }
 
@@ -266,6 +321,7 @@ export interface LearnerSummaryJson {
   profileSections: string[];
   topWeakTerms: LearnerWeakTermSummary[];
   weakTermSuggestions: WeakTermSuggestionCandidate[];
+  profileUpdateCandidates: ProfileUpdateCandidate[];
   recentSignals: ConversationMemoryEvent[];
   eventCounts: {
     signals: number;
@@ -280,7 +336,7 @@ export interface LearnerSummary extends Omit<LearnerSummaryJson, 'schemaVersion'
   markdown: string;
 }
 
-export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.signals' | 'memory.suggest-weak-terms';
+export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.signals' | 'memory.suggest-weak-terms' | 'memory.suggest-profile-updates';
 
 export type ConversationSignalType =
   | 'scan.completed'

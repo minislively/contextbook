@@ -259,7 +259,8 @@ function isConversationCommand(value: unknown): value is ConversationCommand {
     || value === 'profile.reset'
     || value === 'memory.add-signal'
     || value === 'memory.signals'
-    || value === 'memory.suggest-weak-terms';
+    || value === 'memory.suggest-weak-terms'
+    || value === 'memory.suggest-profile-updates';
 }
 
 function isEvidenceLevel(value: unknown): value is EvidenceLevel {

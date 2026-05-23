@@ -1,4 +1,5 @@
 import { addExplicitMemorySignal, formatMemorySignalsSummary, memorySignalsJson, memorySignalTypes } from '../learner/conversation-memory.js';
+import { formatProfileUpdateCandidatesSummary, profileUpdateCandidatesJson } from '../learner/profile-update-candidates.js';
 import { formatWeakTermSuggestionsSummary, weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
 
 export async function memoryCommand(args: string[] = []): Promise<void> {
@@ -28,6 +29,16 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
         return;
       }
       console.log(formatWeakTermSuggestionsSummary(result));
+      return;
+    }
+    case 'suggest-profile-updates': {
+      const json = parseSignals(rest);
+      const result = await profileUpdateCandidatesJson('default');
+      if (json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatProfileUpdateCandidatesSummary(result));
       return;
     }
     default:
@@ -80,6 +91,7 @@ function memoryUsage(): string {
     '  contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>] [--format <format>]',
     '  contextbook memory signals [--json]',
     '  contextbook memory suggest-weak-terms [--json]',
+    '  contextbook memory suggest-profile-updates [--json]',
     '',
     `Allowed types: ${memorySignalTypes.join(', ')}`
   ].join('\n');

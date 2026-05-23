@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { defaultPreferences, ensureLearnerStore, learnerPaths, readPreferences, readWeakTerms } from '../storage/user-store.js';
 import { exists, readJsonl } from '../storage/fs-utils.js';
 import { formatLearnerSummary } from '../format/learner.js';
+import { buildProfileUpdateCandidates } from '../learner/profile-update-candidates.js';
 import { buildWeakTermSuggestions } from '../learner/weak-term-suggestions.js';
 import type { ConversationMemoryEvent, LearnerMemoryFileName, LearnerMemoryFileStatus, LearnerRecommendedAction, LearnerSummary, LearnerSummaryJson, LearnerSummarySafety, LearnerWeakTermSummary } from '../types.js';
 
@@ -37,6 +38,13 @@ export async function buildLearnerSummary(learner = 'default'): Promise<LearnerS
     .sort((a, b) => String(b.recordedAt ?? b.answeredAt ?? '').localeCompare(String(a.recordedAt ?? a.answeredAt ?? '')));
   const recentSignals = eventRecords.slice(0, MAX_RECENT_SIGNALS).map(toRecentSignal);
   const weakTermSuggestions = buildWeakTermSuggestions(signals, weakTerms);
+  const profileSections = extractProfileSections(profileText);
+  const activePreferences = preferences ?? defaultPreferences;
+  const profileUpdateCandidates = buildProfileUpdateCandidates(signals, {
+    explanationOrder: activePreferences.explanationOrder,
+    avoid: activePreferences.avoid,
+    profileSections
+  });
   const memoryFiles = await buildMemoryFiles(learner, {
     profile: 1,
     preferences: 1,
@@ -50,10 +58,11 @@ export async function buildLearnerSummary(learner = 'default'): Promise<LearnerS
     generatedAt: new Date().toISOString(),
     learner,
     memoryFiles,
-    preferences: preferences ?? defaultPreferences,
-    profileSections: extractProfileSections(profileText),
+    preferences: activePreferences,
+    profileSections,
     topWeakTerms,
     weakTermSuggestions,
+    profileUpdateCandidates,
     recentSignals,
     eventCounts: {
       signals: signals.length,
@@ -80,6 +89,7 @@ export function toLearnerSummaryJson(summary: LearnerSummary): LearnerSummaryJso
     profileSections: summary.profileSections,
     topWeakTerms: summary.topWeakTerms,
     weakTermSuggestions: summary.weakTermSuggestions,
+    profileUpdateCandidates: summary.profileUpdateCandidates,
     recentSignals: summary.recentSignals,
     eventCounts: summary.eventCounts,
     recommendedActions: summary.recommendedActions,
@@ -158,7 +168,9 @@ function learnerSafety(): LearnerSummarySafety {
     rawTranscriptIncluded: false,
     absolutePathsIncluded: false,
     profileMutated: false,
+    preferencesMutated: false,
     weakTermsMutated: false,
+    profileUpdatesMutated: false,
     unsafeJudgmentIncluded: false
   };
 }
@@ -190,7 +202,8 @@ function isConversationCommand(value: unknown): value is ConversationMemoryEvent
     || value === 'profile.reset'
     || value === 'memory.add-signal'
     || value === 'memory.signals'
-    || value === 'memory.suggest-weak-terms';
+    || value === 'memory.suggest-weak-terms'
+    || value === 'memory.suggest-profile-updates';
 }
 
 function isEvidenceLevel(value: unknown): value is ConversationMemoryEvent['evidenceLevel'] {

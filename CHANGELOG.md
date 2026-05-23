@@ -19,6 +19,7 @@ Initial MVP release.
 - `contextbook memory add-signal` for explicit append-only learner/conversation feedback signals.
 - `contextbook memory signals` and `contextbook memory signals --json` for recent signal inspection.
 - `contextbook memory suggest-weak-terms` and `--json` for suggestion-only weak-term review candidates from learner signals.
+- `contextbook memory suggest-profile-updates` and `--json` for suggestion-only learner profile update candidates from explicit signals.
 - `contextbook learn` daily learning card with 1-3 project-grounded learning moments and deterministic recommendation reasons.
 - `contextbook why "<question>"` fixed-format concept explanation.
 - Evidence levels: `direct`, `related`, and `general`.
@@ -29,6 +30,7 @@ Initial MVP release.
 - Advanced platform install commands for Codex and Claude Code.
 - Adapter-ready core exports for `scanProject`, `buildProjectSummary`, `toProjectSummaryJson`, `buildLearnerSummary`, `toLearnerSummaryJson`, `buildLearningMoments`, and `answerWhy`.
 - Adapter-ready weak-term suggestion exports for `weakTermSuggestionsJson` and `buildWeakTermSuggestions`.
+- Adapter-ready profile update candidate exports for `profileUpdateCandidatesJson` and `buildProfileUpdateCandidates`.
 
 ### Safety
 
