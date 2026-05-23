@@ -106,6 +106,24 @@ export interface ProjectFileIndex {
   files: ProjectFileIndexEntry[];
 }
 
+export type ProjectMemoryFileName = 'config' | 'concepts' | 'evidence' | 'fileIndex' | 'scanRuns';
+
+export interface ProjectMemoryFileStatus {
+  name: ProjectMemoryFileName;
+  path: string;
+  exists: boolean;
+  records?: number;
+}
+
+export interface ProjectSummary {
+  memoryFiles: ProjectMemoryFileStatus[];
+  concepts: ConceptRecord[];
+  recentScanRuns: ProjectScanRun[];
+  fileIndex: ProjectFileIndex;
+  evidenceCount: number;
+  markdown: string;
+}
+
 export interface LearnerPreferences {
   explanationOrder: string[];
   avoid: string[];

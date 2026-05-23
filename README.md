@@ -143,7 +143,24 @@ The scanner reads local project signals and writes:
 
 It is deterministic-first and does not call an external LLM API.
 
-### Step 4. Get learning moments
+### Step 4. Inspect Project Memory
+
+```bash
+contextbook project
+```
+
+This is a read-only Project Memory summary. It does not create a new summary file and does not update your learner profile.
+
+It shows:
+
+- whether expected `.contextbook/project/*` files exist
+- top detected concepts and their evidence strength
+- recent scan runs and warnings
+- next action hints such as `contextbook scan`, `contextbook learn`, or `contextbook why`
+
+Use this when you want to check what Contextbook actually knows about the current repository before asking for a learning card.
+
+### Step 5. Get learning moments
 
 ```bash
 contextbook learn
@@ -178,7 +195,7 @@ React에서 SSE 연결을 사용할 때 cleanup이 필요한 이유는 무엇인
 
 The recommendation reasons are computed locally at learn time. Contextbook does not create a separate ranking history file or call an external ranking API.
 
-### Step 5. Ask why a concept matters
+### Step 6. Ask why a concept matters
 
 ```bash
 contextbook why "cleanup 왜 해야 돼?"
@@ -242,6 +259,7 @@ Typical agent flow:
 
 ```bash
 contextbook scan
+contextbook project
 contextbook learn
 contextbook why "<question>"
 ```
@@ -278,6 +296,7 @@ contextbook setup                  # install Codex + Claude Code helper files
 contextbook setup --dry-run        # preview helper file writes
 contextbook init                   # initialize .contextbook and learner memory
 contextbook scan                   # scan project evidence
+contextbook project                # inspect existing project memory
 contextbook learn                  # generate 1-3 learning moments
 contextbook why "<question>"       # answer a concept question with evidence level
 contextbook profile                # view learner profile + conversation memory summary
@@ -291,12 +310,14 @@ contextbook profile reset          # reset learner profile to default
 The CLI is a thin adapter over the deterministic core. Future Codex/Claude adapters can import the same contract without scraping CLI output:
 
 ```ts
-import { answerWhy, buildLearningMoments, scanProject } from 'contextbook';
+import { answerWhy, buildLearningMoments, buildProjectSummary, scanProject } from 'contextbook';
 
 await scanProject({ root: process.cwd(), learner: 'default' });
+const project = await buildProjectSummary({ root: process.cwd() });
 const learn = await buildLearningMoments({ root: process.cwd() });
 const why = await answerWhy('cleanup 왜 해야 돼?', { root: process.cwd() });
 
+console.log(project.markdown);
 console.log(learn.markdown);
 console.log(why.markdown);
 ```

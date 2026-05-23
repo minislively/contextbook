@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { ConceptRecord, EvidenceRecord, ProjectConfig, ProjectFileIndex, ProjectScanRun } from '../types.js';
-import { appendJsonl, ensureDir, readJson, writeIfMissing, writeJson } from './fs-utils.js';
+import { appendJsonl, ensureDir, readJson, readJsonl, writeIfMissing, writeJson } from './fs-utils.js';
 
 export function projectRoot(): string {
   return process.cwd();
@@ -42,6 +42,18 @@ export async function ensureProjectStore(root = projectRoot()): Promise<void> {
 
 export async function readConcepts(root = projectRoot()): Promise<ConceptRecord[]> {
   return readJson<ConceptRecord[]>(projectPaths(root).concepts, []);
+}
+
+export async function readEvidence(root = projectRoot()): Promise<EvidenceRecord[]> {
+  return readJsonl<EvidenceRecord>(projectPaths(root).evidence);
+}
+
+export async function readFileIndex(root = projectRoot()): Promise<ProjectFileIndex> {
+  return readJson<ProjectFileIndex>(projectPaths(root).fileIndex, defaultFileIndex());
+}
+
+export async function readScanRuns(root = projectRoot()): Promise<ProjectScanRun[]> {
+  return readJsonl<ProjectScanRun>(projectPaths(root).scanRuns);
 }
 
 export async function writeConcepts(concepts: ConceptRecord[], root = projectRoot()): Promise<void> {

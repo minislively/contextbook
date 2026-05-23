@@ -12,6 +12,7 @@ Initial MVP release.
 - Project scanner for package, docs, diff, file/function names, imports, and keyword signals.
 - Project file index snapshot in `.contextbook/project/file-index.json`.
 - Project scan provenance in `.contextbook/project/scan-runs.jsonl`.
+- `contextbook project` read-only Project Memory summary with file status, top concepts, recent scan runs, and next action hints.
 - `contextbook learn` daily learning card with 1-3 project-grounded learning moments and deterministic recommendation reasons.
 - `contextbook why "<question>"` fixed-format concept explanation.
 - Evidence levels: `direct`, `related`, and `general`.
@@ -20,7 +21,7 @@ Initial MVP release.
 - Conversation Memory summary in `contextbook profile`.
 - `contextbook setup` for explicit Codex/OMX and Claude Code helper installation.
 - Advanced platform install commands for Codex and Claude Code.
-- Adapter-ready core exports for `scanProject`, `buildLearningMoments`, and `answerWhy`.
+- Adapter-ready core exports for `scanProject`, `buildProjectSummary`, `buildLearningMoments`, and `answerWhy`.
 
 ### Safety
 
