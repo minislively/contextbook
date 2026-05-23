@@ -22,6 +22,26 @@ export interface ConceptRecord {
   updatedAt: string;
 }
 
+export type LearningMomentReasonCode =
+  | 'changed-file'
+  | 'direct-evidence'
+  | 'related-evidence'
+  | 'multiple-signals'
+  | 'source-variety'
+  | 'stable-fallback';
+
+export interface LearningMomentReason {
+  code: LearningMomentReasonCode;
+  label: string;
+  detail: string;
+}
+
+export interface RankedLearningMoment {
+  concept: ConceptRecord;
+  score: number;
+  reasons: LearningMomentReason[];
+}
+
 export interface ProjectConfig {
   version: string;
   learner: string;
@@ -149,6 +169,7 @@ export interface ScanResult {
 
 export interface LearnResult {
   concepts: ConceptRecord[];
+  moments: RankedLearningMoment[];
   changedFiles: string[];
   markdown: string;
 }

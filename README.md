@@ -161,6 +161,10 @@ Example:
 근거 수준: direct
 근거 파일: src/hooks/useWorkflowSSE.ts
 
+추천 이유:
+- 변경 파일 근거: 최근 변경된 파일에서 이 개념 신호가 발견됐습니다.
+- 직접 근거: 프로젝트에서 직접적인 코드 신호를 찾았습니다.
+
 이 프로젝트에서는 EventSource 연결을 만들고 있기 때문에 cleanup이 중요합니다.
 
 연결되는 개념:
@@ -171,6 +175,8 @@ Example:
 면접 질문:
 React에서 SSE 연결을 사용할 때 cleanup이 필요한 이유는 무엇인가요?
 ```
+
+The recommendation reasons are computed locally at learn time. Contextbook does not create a separate ranking history file or call an external ranking API.
 
 ### Step 5. Ask why a concept matters
 

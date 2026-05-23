@@ -1,20 +1,34 @@
-import type { ConceptRecord, EvidenceLevel, LearnerPreferences } from '../types.js';
+import type { ConceptRecord, EvidenceLevel, LearnerPreferences, RankedLearningMoment } from '../types.js';
 import { conceptMetadata } from '../concepts/mapper.js';
 import { defaultPreferences } from '../storage/user-store.js';
 import { bullet } from './markdown.js';
 
-export function formatLearningMoments(concepts: ConceptRecord[]): string {
-  if (concepts.length === 0) {
+export function formatLearningMoments(items: ConceptRecord[] | RankedLearningMoment[]): string {
+  if (items.length === 0) {
     return '# Daily Learning Card\n\n아직 프로젝트 근거를 찾지 못했습니다. `contextbook scan` 후 다시 시도하거나, 코드에 개념 신호가 있는지 확인해 주세요.\n';
   }
-  const selected = concepts.slice(0, 3);
-  return `# Daily Learning Card\n\n오늘 코드에서 뽑은 Learning Moments입니다.\n\n${selected.map((concept, index) => formatMoment(concept, index + 1)).join('\n\n')}`;
+  const selected = items.slice(0, 3);
+  return `# Daily Learning Card\n\n오늘 코드에서 뽑은 Learning Moments입니다.\n\n${selected.map((item, index) => formatMoment(normalizeMoment(item), index + 1)).join('\n\n')}`;
 }
 
-function formatMoment(concept: ConceptRecord, index: number): string {
+function normalizeMoment(item: ConceptRecord | RankedLearningMoment): RankedLearningMoment {
+  if ('concept' in item) return item;
+  return {
+    concept: item,
+    score: 0,
+    reasons: [{
+      code: 'stable-fallback',
+      label: '안정적 후보',
+      detail: '현재 프로젝트 근거 중 학습 카드에 포함할 수 있는 안정적인 후보입니다.'
+    }]
+  };
+}
+
+function formatMoment(moment: RankedLearningMoment, index: number): string {
+  const { concept } = moment;
   const files = [...new Set(concept.signals.map((signal) => signal.file).filter(Boolean))] as string[];
   const changed = concept.signals.some((signal) => signal.changed) ? '\n변경 파일 근거: yes' : '';
-  return `## ${index}. ${concept.label}\n\n근거 수준: ${concept.evidenceLevel}\n근거 파일: ${files.length ? files.join(', ') : '없음'}${changed}\n\n이 프로젝트에서는 ${concept.signals[0]?.reason ?? '관련 신호'} 때문에 이 개념을 학습할 수 있습니다.\n\n연결되는 개념:\n${bullet(concept.connectedConcepts)}\n\n면접 질문:\n${concept.interviewQuestion}`;
+  return `## ${index}. ${concept.label}\n\n근거 수준: ${concept.evidenceLevel}\n근거 파일: ${files.length ? files.join(', ') : '없음'}${changed}\n\n추천 이유:\n${bullet(moment.reasons.map((reason) => `${reason.label}: ${reason.detail}`))}\n\n이 프로젝트에서는 ${concept.signals[0]?.reason ?? '관련 신호'} 때문에 이 개념을 학습할 수 있습니다.\n\n연결되는 개념:\n${bullet(concept.connectedConcepts)}\n\n면접 질문:\n${concept.interviewQuestion}`;
 }
 
 export function formatWhyAnswer(
