@@ -63,22 +63,27 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
    \`\`\`bash
    contextbook scan
    \`\`\`
-3. For learning moments, run:
+3. To inspect Project Memory as an agent-readable contract, run:
+   \`\`\`bash
+   contextbook project --json
+   \`\`\`
+4. For learning moments, run:
    \`\`\`bash
    contextbook learn
    \`\`\`
-4. For concept questions, run:
+5. For concept questions, run:
    \`\`\`bash
    contextbook why \"<question>\"
    \`\`\`
-5. Preserve Contextbook's evidence level: \`direct\`, \`related\`, or \`general\`.
-6. Do not claim stronger project evidence than the CLI output provides.
-7. Do not ask for API keys; Contextbook v0.1 is local and deterministic-first.
+6. Preserve Contextbook's evidence level: \`direct\`, \`related\`, or \`general\`.
+7. Do not claim stronger project evidence than the CLI output provides.
+8. Do not ask for API keys; Contextbook v0.1 is local and deterministic-first.
 
 ## Useful commands
 
 - \`contextbook init\` — create project and learner memory files.
 - \`contextbook scan\` — refresh local project evidence.
+- \`contextbook project --json\` — inspect Project Memory in a stable AI-readable shape.
 - \`contextbook learn\` — produce 1-3 learning moments.
 - \`contextbook why \"cleanup 왜 해야 돼?\"\` — answer with project context, plain language, developer term, CS link, interview sentence, and evidence files.
 - \`contextbook profile\` — inspect the learner profile.

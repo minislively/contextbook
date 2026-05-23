@@ -115,7 +115,51 @@ export interface ProjectMemoryFileStatus {
   records?: number;
 }
 
+export interface ProjectSummaryConcept {
+  id: string;
+  label: string;
+  evidenceLevel: EvidenceLevel;
+  signalCount: number;
+  changed: boolean;
+  files: string[];
+  connectedConcepts: string[];
+  interviewQuestion: string;
+}
+
+export interface ProjectFileIndexSummary {
+  generatedAt?: string;
+  totals: ProjectFileIndex['totals'];
+  sampleFiles: ProjectFileIndexEntry[];
+}
+
+export interface ProjectRecommendedAction {
+  command: string;
+  reason: string;
+}
+
+export interface ProjectSummarySafety {
+  absolutePathsIncluded: false;
+  hiddenContentIncluded: false;
+  profileMutated: false;
+  persistedSummaryCreated: false;
+}
+
+export interface ProjectSummaryJson {
+  schemaVersion: 1;
+  generatedAt: string;
+  rootName?: string;
+  memoryFiles: ProjectMemoryFileStatus[];
+  topConcepts: ProjectSummaryConcept[];
+  recentScanRuns: ProjectScanRun[];
+  fileIndexSummary: ProjectFileIndexSummary;
+  evidenceCount: number;
+  recommendedActions: ProjectRecommendedAction[];
+  safety: ProjectSummarySafety;
+}
+
 export interface ProjectSummary {
+  generatedAt: string;
+  rootName?: string;
   memoryFiles: ProjectMemoryFileStatus[];
   concepts: ConceptRecord[];
   recentScanRuns: ProjectScanRun[];
