@@ -91,9 +91,77 @@ try {
 
   run(['scan']);
   const core = await import('../dist/core/index.js');
+  const rankedFixtures = core.rankLearningMoments([
+    {
+      id: 'five-one-source',
+      label: 'B concept',
+      evidenceLevel: 'direct',
+      signals: Array.from({ length: 5 }, (_, index) => ({
+        conceptId: 'five-one-source',
+        evidenceLevel: 'direct',
+        file: `src/a-${index}.ts`,
+        signal: 'signal',
+        reason: 'fixture',
+        detectedAt: new Date(0).toISOString(),
+        source: 'content'
+      })),
+      connectedConcepts: [],
+      interviewQuestion: 'fixture?',
+      updatedAt: new Date(0).toISOString()
+    },
+    {
+      id: 'four-varied-sources',
+      label: 'A concept',
+      evidenceLevel: 'direct',
+      signals: ['content', 'package', 'file-name', 'function-name'].map((source, index) => ({
+        conceptId: 'four-varied-sources',
+        evidenceLevel: 'direct',
+        file: `src/b-${index}.ts`,
+        signal: 'signal',
+        reason: 'fixture',
+        detectedAt: new Date(0).toISOString(),
+        source
+      })),
+      connectedConcepts: [],
+      interviewQuestion: 'fixture?',
+      updatedAt: new Date(0).toISOString()
+    },
+    {
+      id: 'changed-low-score',
+      label: 'Changed concept',
+      evidenceLevel: 'general',
+      signals: [{
+        conceptId: 'changed-low-score',
+        evidenceLevel: 'general',
+        file: 'src/changed.ts',
+        signal: 'signal',
+        reason: 'fixture',
+        detectedAt: new Date(0).toISOString(),
+        source: 'content'
+      }],
+      connectedConcepts: [],
+      interviewQuestion: 'fixture?',
+      updatedAt: new Date(0).toISOString()
+    }
+  ], new Set(['src/changed.ts']));
+  assert(rankedFixtures[0].concept.id === 'changed-low-score', 'changed-file-backed ranking fixture should rank first');
+  assert(rankedFixtures[1].score >= rankedFixtures[2].score, 'ranking fixtures should be ordered by public score after changed precedence');
+  assert(rankedFixtures[1].concept.id === 'four-varied-sources', 'score should be the canonical ranking key after changed precedence');
+
   const coreLearn = await core.buildLearningMoments({ root, learner: 'default' });
   assert(coreLearn.markdown.includes('# Daily Learning Card'), 'core learn contract did not return markdown');
   assert(Array.isArray(coreLearn.concepts), 'core learn contract did not return concepts');
+  assert(Array.isArray(coreLearn.moments), 'core learn contract did not return ranked moments');
+  assert(coreLearn.moments.length >= 1 && coreLearn.moments.length <= 3, 'core learn moments should include 1-3 items');
+  assert(coreLearn.moments.every((moment) => moment.concept && typeof moment.score === 'number' && Array.isArray(moment.reasons) && moment.reasons.length > 0), 'core learn moments missing ranking reasons');
+  assert(coreLearn.moments.every((moment) => moment.reasons.every((reason) => reason.code && reason.label && reason.detail)), 'core learn reason shape invalid');
+  assert(coreLearn.moments[0].concept.signals.some((signal) => signal.changed === true), 'changed-file-backed concept should rank first');
+  assert(coreLearn.moments[0].reasons.some((reason) => reason.code === 'changed-file'), 'first moment missing changed-file ranking reason');
+  assert(coreLearn.markdown.includes('추천 이유:'), 'core learn markdown missing ranking reasons');
+  const serializedMoments = JSON.stringify(coreLearn.moments);
+  assert(!serializedMoments.includes(root) && !serializedMoments.includes(home), 'ranking moments stored absolute local path');
+  assert(!serializedMoments.includes('SECRET_TOKEN') && !serializedMoments.includes('should-not-leak'), 'ranking moments stored hidden file content');
+  assert(!serializedMoments.includes('EventSource should be ignored'), 'ranking moments stored hidden runtime content');
   const evidence = await readJsonl(join(root, '.contextbook', 'project', 'evidence.jsonl'));
   assert(evidence.some((item) => item.source === 'content'), 'missing content evidence');
   assert(!evidence.some((item) => item.file?.startsWith('.fooks/')), 'scanner included hidden runtime directory evidence');
@@ -146,8 +214,12 @@ try {
 
   const learn = run(['learn']);
   assert(learn.includes('# Daily Learning Card'), 'learn did not frame output as daily card');
+  assert(learn.includes('추천 이유:'), 'learn did not include ranking reasons');
   assert(learn.includes('변경 파일 근거: yes'), 'learn did not include changed-file marker');
   assert(learn.includes('useEffect cleanup') || learn.includes('SSE'), 'learn did not include expected concepts');
+  assert(!learn.includes(root) && !learn.includes(home), 'learn output included absolute local path');
+  assert(!learn.includes('SECRET_TOKEN') && !learn.includes('should-not-leak'), 'learn output included hidden file content');
+  assert(!existsSync(join(root, '.contextbook', 'project', 'ranking-reasons.json')), 'learn created a ranking-reasons project memory artifact');
 
   const preferencesPath = join(learnerDir, 'preferences.json');
   await writeFile(preferencesPath, JSON.stringify({

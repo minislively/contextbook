@@ -12,7 +12,7 @@ Initial MVP release.
 - Project scanner for package, docs, diff, file/function names, imports, and keyword signals.
 - Project file index snapshot in `.contextbook/project/file-index.json`.
 - Project scan provenance in `.contextbook/project/scan-runs.jsonl`.
-- `contextbook learn` daily learning card with 1-3 project-grounded learning moments.
+- `contextbook learn` daily learning card with 1-3 project-grounded learning moments and deterministic recommendation reasons.
 - `contextbook why "<question>"` fixed-format concept explanation.
 - Evidence levels: `direct`, `related`, and `general`.
 - Learner profile commands: `profile`, `profile diff`, `profile edit`, `profile reset`.
