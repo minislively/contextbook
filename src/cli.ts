@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { initCommand } from './commands/init.js';
+import { learnerCommand } from './commands/learner.js';
 import { learnCommand } from './commands/learn.js';
 import { profileCommand } from './commands/profile.js';
 import { projectCommand } from './commands/project.js';
@@ -9,7 +10,7 @@ import { installCommand } from './commands/install.js';
 import { setupCommand } from './commands/setup.js';
 
 function help(): string {
-  return `Contextbook — Learn the concepts behind the code you just touched.\n\nUsage:\n  contextbook init\n  contextbook scan\n  contextbook project [--json]\n  contextbook learn\n  contextbook why "<question>"\n  contextbook profile\n  contextbook profile diff\n  contextbook profile edit\n  contextbook profile reset\n  contextbook setup\n  contextbook setup --dry-run\n  contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]\n  contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]\n  contextbook install claude-code [--dry-run]\n`;
+  return `Contextbook — Learn the concepts behind the code you just touched.\n\nUsage:\n  contextbook init\n  contextbook scan\n  contextbook project [--json]\n  contextbook learner [--json]\n  contextbook learn\n  contextbook why "<question>"\n  contextbook profile\n  contextbook profile diff\n  contextbook profile edit\n  contextbook profile reset\n  contextbook setup\n  contextbook setup --dry-run\n  contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]\n  contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]\n  contextbook install claude-code [--dry-run]\n`;
 }
 
 async function main(argv: string[]): Promise<void> {
@@ -29,6 +30,9 @@ async function main(argv: string[]): Promise<void> {
       return;
     case 'learn':
       await learnCommand();
+      return;
+    case 'learner':
+      await learnerCommand(args);
       return;
     case 'why':
       await whyCommand(args);

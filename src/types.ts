@@ -183,6 +183,53 @@ export interface WeakTermRecord {
 
 export type WeakTerms = Record<string, WeakTermRecord>;
 
+export type LearnerMemoryFileName = 'profile' | 'preferences' | 'weakTerms' | 'signals' | 'answers' | 'profileUpdates';
+
+export interface LearnerMemoryFileStatus {
+  name: LearnerMemoryFileName;
+  path: string;
+  exists: boolean;
+  records?: number;
+}
+
+export interface LearnerWeakTermSummary extends WeakTermRecord {
+  term: string;
+}
+
+export interface LearnerRecommendedAction {
+  command: string;
+  reason: string;
+}
+
+export interface LearnerSummarySafety {
+  rawTranscriptIncluded: false;
+  absolutePathsIncluded: false;
+  profileMutated: false;
+  unsafeJudgmentIncluded: false;
+}
+
+export interface LearnerSummaryJson {
+  schemaVersion: 1;
+  generatedAt: string;
+  learner: string;
+  memoryFiles: LearnerMemoryFileStatus[];
+  preferences: LearnerPreferences;
+  profileSections: string[];
+  topWeakTerms: LearnerWeakTermSummary[];
+  recentSignals: ConversationMemoryEvent[];
+  eventCounts: {
+    signals: number;
+    answers: number;
+    profileUpdates: number;
+  };
+  recommendedActions: LearnerRecommendedAction[];
+  safety: LearnerSummarySafety;
+}
+
+export interface LearnerSummary extends Omit<LearnerSummaryJson, 'schemaVersion'> {
+  markdown: string;
+}
+
 export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset';
 
 export type ConversationSignalType =

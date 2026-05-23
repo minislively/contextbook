@@ -42,6 +42,7 @@ Use the local \`contextbook\` CLI for project-grounded learning moments and why-
 - If the project has not been initialized, run \`contextbook init\`.
 - Refresh evidence with \`contextbook scan\` when code changed or memory may be stale.
 - Use \`contextbook project --json\` when acting as an agent and you need a parseable Project Memory summary.
+- Use \`contextbook learner --json\` when acting as an agent and you need parseable Learner Memory preferences/signals.
 - Use \`contextbook learn\` to produce learning moments from the current project/diff.
 - Use \`contextbook why \"$ARGUMENTS\"\` for concept questions when invoked with arguments.
 - Keep the CLI's evidence level visible: \`direct\`, \`related\`, or \`general\`.
@@ -61,8 +62,9 @@ description: Generate Contextbook learning moments from the current repository.
 Run Contextbook locally and report the result without inventing extra evidence:
 
 1. Run \`contextbook scan\` if project evidence may be stale.
-2. Run \`contextbook project --json\` if you need a structured memory check before summarizing.
-3. Run \`contextbook learn\`.
+2. Run \`contextbook project --json\` if you need a structured project memory check before summarizing.
+3. Run \`contextbook learner --json\` if you need learner preferences/signals before summarizing.
+4. Run \`contextbook learn\`.
 4. Preserve the evidence level and evidence files from the output.
 `;
 }
