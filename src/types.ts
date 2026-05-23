@@ -201,10 +201,59 @@ export interface LearnerRecommendedAction {
   reason: string;
 }
 
+export type WeakTermSuggestionReasonCode =
+  | 'confused-feedback'
+  | 'repeated-term'
+  | 'analogy-rejected'
+  | 'format-requested'
+  | 'recent-question'
+  | 'positive-feedback'
+  | 'analogy-accepted'
+  | 'existing-weak-term';
+
+export interface WeakTermSuggestionReason {
+  code: WeakTermSuggestionReasonCode;
+  signalType?: ConversationSignalType;
+  weight: number;
+  detail: string;
+  count: number;
+}
+
+export interface WeakTermSuggestionCandidate {
+  term: string;
+  score: number;
+  urgency: 'low' | 'medium' | 'high';
+  signalCount: number;
+  lastSeenAt?: string;
+  existingWeakTerm?: LearnerWeakTermSummary;
+  reasons: WeakTermSuggestionReason[];
+  recommendedActions: LearnerRecommendedAction[];
+}
+
+export interface WeakTermSuggestionsSafety {
+  rawTranscriptIncluded: false;
+  absolutePathsIncluded: false;
+  profileMutated: false;
+  weakTermsMutated: false;
+  unsafeJudgmentIncluded: false;
+}
+
+export interface WeakTermSuggestionsJson {
+  schemaVersion: 1;
+  generatedAt: string;
+  learner: string;
+  candidates: WeakTermSuggestionCandidate[];
+  eventCounts: {
+    signals: number;
+  };
+  safety: WeakTermSuggestionsSafety;
+}
+
 export interface LearnerSummarySafety {
   rawTranscriptIncluded: false;
   absolutePathsIncluded: false;
   profileMutated: false;
+  weakTermsMutated: false;
   unsafeJudgmentIncluded: false;
 }
 
@@ -216,6 +265,7 @@ export interface LearnerSummaryJson {
   preferences: LearnerPreferences;
   profileSections: string[];
   topWeakTerms: LearnerWeakTermSummary[];
+  weakTermSuggestions: WeakTermSuggestionCandidate[];
   recentSignals: ConversationMemoryEvent[];
   eventCounts: {
     signals: number;
@@ -230,7 +280,7 @@ export interface LearnerSummary extends Omit<LearnerSummaryJson, 'schemaVersion'
   markdown: string;
 }
 
-export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.signals';
+export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.signals' | 'memory.suggest-weak-terms';
 
 export type ConversationSignalType =
   | 'scan.completed'
