@@ -258,7 +258,8 @@ function isConversationCommand(value: unknown): value is ConversationCommand {
     || value === 'profile.edit'
     || value === 'profile.reset'
     || value === 'memory.add-signal'
-    || value === 'memory.signals';
+    || value === 'memory.signals'
+    || value === 'memory.suggest-weak-terms';
 }
 
 function isEvidenceLevel(value: unknown): value is EvidenceLevel {

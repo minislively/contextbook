@@ -42,8 +42,9 @@ Use the local \`contextbook\` CLI for project-grounded learning moments and why-
 - If the project has not been initialized, run \`contextbook init\`.
 - Refresh evidence with \`contextbook scan\` when code changed or memory may be stale.
 - Use \`contextbook project --json\` when acting as an agent and you need a parseable Project Memory summary.
-- Use \`contextbook learner --json\` when acting as an agent and you need parseable Learner Memory preferences/signals.
+- Use \`contextbook learner --json\` when acting as an agent and you need parseable Learner Memory preferences/signals and suggestion-only weak-term candidates.
 - Use \`contextbook memory add-signal --type <type>\` only for explicit user feedback; never infer ability or mutate profile.
+- Use \`contextbook memory suggest-weak-terms --json\` to inspect review candidates without mutating weak terms.
 - Use \`contextbook learn\` to produce learning moments from the current project/diff.
 - Use \`contextbook why \"$ARGUMENTS\"\` for concept questions when invoked with arguments.
 - Keep the CLI's evidence level visible: \`direct\`, \`related\`, or \`general\`.
@@ -66,8 +67,9 @@ Run Contextbook locally and report the result without inventing extra evidence:
 2. Run \`contextbook project --json\` if you need a structured project memory check before summarizing.
 3. Run \`contextbook learner --json\` if you need learner preferences/signals before summarizing.
 4. Run \`contextbook memory signals --json\` if you need recent explicit feedback signals.
-5. Run \`contextbook learn\`.
-6. Preserve the evidence level and evidence files from the output.
+5. Run \`contextbook memory suggest-weak-terms --json\` if you need review candidates from those signals.
+6. Run \`contextbook learn\`.
+7. Preserve the evidence level and evidence files from the output.
 `;
 }
 

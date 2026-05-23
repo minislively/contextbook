@@ -8,6 +8,7 @@ export function formatLearnerSummary(summary: Omit<LearnerSummary, 'markdown'>):
     formatMemoryFiles(summary),
     formatPreferences(summary),
     formatWeakTerms(summary),
+    formatWeakTermSuggestions(summary),
     formatRecentSignals(summary),
     formatNextActions(summary),
     '## Safety Boundary',
@@ -35,6 +36,17 @@ function formatWeakTerms(summary: Omit<LearnerSummary, 'markdown'>): string {
   }
   const rows = summary.topWeakTerms.slice(0, 5).map((term, index) => `${index + 1}. ${term.term} (${term.state}, asked ${term.askedCount})`);
   return `## Top Weak Terms\n${rows.join('\n')}`;
+}
+
+function formatWeakTermSuggestions(summary: Omit<LearnerSummary, 'markdown'>): string {
+  if (summary.weakTermSuggestions.length === 0) {
+    return '## Weak-term Suggestions\n아직 review candidate가 없습니다.';
+  }
+  const rows = summary.weakTermSuggestions.slice(0, 5).map((candidate, index) => {
+    const reason = candidate.reasons[0]?.code ?? 'signal';
+    return `${index + 1}. ${candidate.term} (${candidate.urgency}, score ${candidate.score}, ${reason})`;
+  });
+  return `## Weak-term Suggestions\n${rows.join('\n')}\n\n_자동 저장이 아니라 review 후보입니다._`;
 }
 
 function formatRecentSignals(summary: Omit<LearnerSummary, 'markdown'>): string {
