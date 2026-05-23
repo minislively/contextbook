@@ -63,12 +63,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook project', 'contextbook project --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook project [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
+  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -98,6 +98,17 @@ try {
   assert(!existsSync(join(root, '.contextbook')), 'project --json should be read-only before init');
   const projectBadFlag = runExpectFail(['project', '--bad']);
   assert(projectBadFlag.includes('Usage: contextbook project [--json]'), 'project unknown flag missing usage guidance');
+
+  const learnerBeforeWhy = JSON.parse(run(['learner', '--json']));
+  assert(learnerBeforeWhy.schemaVersion === 1, 'learner json missing schema version');
+  assert(learnerBeforeWhy.learner === 'default', 'learner json missing default learner');
+  assert(Array.isArray(learnerBeforeWhy.memoryFiles), 'learner json missing memory files');
+  assert(Array.isArray(learnerBeforeWhy.topWeakTerms) && learnerBeforeWhy.topWeakTerms.length === 0, 'learner json before why should have no weak terms');
+  assert(learnerBeforeWhy.safety.rawTranscriptIncluded === false, 'learner json raw transcript safety flag invalid');
+  assert(learnerBeforeWhy.safety.profileMutated === false, 'learner json profile mutation safety flag invalid');
+  assert(learnerBeforeWhy.safety.unsafeJudgmentIncluded === false, 'learner json unsafe judgment safety flag invalid');
+  const learnerBadFlag = runExpectFail(['learner', '--bad']);
+  assert(learnerBadFlag.includes('Usage: contextbook learner [--json]'), 'learner unknown flag missing usage guidance');
 
   run(['init']);
   const initialFileIndex = await readJson(join(root, '.contextbook', 'project', 'file-index.json'));
@@ -303,6 +314,19 @@ try {
   }
   assert(why.indexOf('## 면접 문장') < why.indexOf('## 프로젝트 말로 설명'), 'why did not apply learner preference ordering');
 
+  const learnerOutput = run(['learner']);
+  assert(learnerOutput.includes('# Learner Memory'), 'learner markdown missing heading');
+  assert(learnerOutput.includes('## Top Weak Terms'), 'learner markdown missing weak terms');
+  assert(learnerOutput.includes('원문 전체 대화 저장 없음'), 'learner markdown missing safety boundary');
+  const learnerJson = JSON.parse(run(['learner', '--json']));
+  assert(learnerJson.schemaVersion === 1, 'learner json after why missing schema version');
+  assert(learnerJson.topWeakTerms.some((item) => item.term.includes('cleanup')), 'learner json missing cleanup weak term');
+  assert(learnerJson.recentSignals.some((item) => item.signalType === 'why.answered'), 'learner json missing recent why signal');
+  assert(learnerJson.recommendedActions.some((item) => item.command.includes('contextbook why')), 'learner json missing why recommended action');
+  assert(learnerJson.safety.absolutePathsIncluded === false, 'learner json absolute path safety flag invalid');
+  assert(!JSON.stringify(learnerJson).includes(root) && !JSON.stringify(learnerJson).includes(home), 'learner json leaked absolute local path');
+  assert(!/beginner|low ability|이해력이 낮/.test(JSON.stringify(learnerJson)), 'learner json includes unsafe learner judgment');
+
   const profileOutput = run(['profile']);
   assert(profileOutput.includes('## Conversation Memory'), 'profile did not expose conversation memory summary');
   assert(profileOutput.includes('원문 전체 대화 저장 없음'), 'profile did not show conversation memory safety boundary');
@@ -368,8 +392,10 @@ try {
   assert(setupInstall.includes('# Contextbook setup') && setupInstall.includes('created'), 'setup did not install helper files');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook learn'), 'setup codex skill missing learn guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook project --json'), 'setup codex skill missing project json guidance');
+  assert((await readFile(codexSkill, 'utf8')).includes('contextbook learner --json'), 'setup codex skill missing learner json guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook why'), 'setup claude skill missing why guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook project --json'), 'setup claude skill missing project json guidance');
+  assert((await readFile(claudeSkill, 'utf8')).includes('contextbook learner --json'), 'setup claude skill missing learner json guidance');
 
   const codexInstall = run(['install', 'codex']);
   assert(codexInstall.includes('skipped identical'), 'codex install after setup did not skip identical file');

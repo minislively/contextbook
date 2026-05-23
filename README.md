@@ -164,7 +164,27 @@ Use this when you want to check what Contextbook actually knows about the curren
 
 The default output is Markdown for humans. `--json` returns the same Project Memory as a stable structured contract for Codex, Claude Code, or other agents, including `schemaVersion`, top concepts, recent scan runs, recommended actions, and safety flags.
 
-### Step 5. Get learning moments
+### Step 5. Inspect Learner Memory
+
+```bash
+contextbook learner
+# or, for agents:
+contextbook learner --json
+```
+
+This is a read-only Learner Memory summary. It reads the personal memory under `~/.contextbook/learners/default/` and does not auto-update the learner profile.
+
+It shows:
+
+- learner memory file status
+- explanation preferences
+- top weak terms
+- recent safe learning signals
+- next action hints
+
+The default output is Markdown for humans. `--json` returns a compact agent-readable contract with safety flags such as `rawTranscriptIncluded: false`, `profileMutated: false`, and `unsafeJudgmentIncluded: false`.
+
+### Step 6. Get learning moments
 
 ```bash
 contextbook learn
@@ -264,6 +284,7 @@ Typical agent flow:
 ```bash
 contextbook scan
 contextbook project --json
+contextbook learner --json
 contextbook learn
 contextbook why "<question>"
 ```
@@ -302,6 +323,8 @@ contextbook init                   # initialize .contextbook and learner memory
 contextbook scan                   # scan project evidence
 contextbook project                # inspect existing project memory
 contextbook project --json         # inspect project memory as structured agent context
+contextbook learner                # inspect learner memory
+contextbook learner --json         # inspect learner memory as structured agent context
 contextbook learn                  # generate 1-3 learning moments
 contextbook why "<question>"       # answer a concept question with evidence level
 contextbook profile                # view learner profile + conversation memory summary
@@ -315,11 +338,13 @@ contextbook profile reset          # reset learner profile to default
 The CLI is a thin adapter over the deterministic core. Future Codex/Claude adapters can import the same contract without scraping CLI output:
 
 ```ts
-import { answerWhy, buildLearningMoments, buildProjectSummary, scanProject, toProjectSummaryJson } from 'contextbook';
+import { answerWhy, buildLearnerSummary, buildLearningMoments, buildProjectSummary, scanProject, toLearnerSummaryJson, toProjectSummaryJson } from 'contextbook';
 
 await scanProject({ root: process.cwd(), learner: 'default' });
 const project = await buildProjectSummary({ root: process.cwd() });
 const projectJson = toProjectSummaryJson(project);
+const learner = await buildLearnerSummary('default');
+const learnerJson = toLearnerSummaryJson(learner);
 const learn = await buildLearningMoments({ root: process.cwd() });
 const why = await answerWhy('cleanup 왜 해야 돼?', { root: process.cwd() });
 
