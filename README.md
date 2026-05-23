@@ -147,6 +147,8 @@ It is deterministic-first and does not call an external LLM API.
 
 ```bash
 contextbook project
+# or, for agents:
+contextbook project --json
 ```
 
 This is a read-only Project Memory summary. It does not create a new summary file and does not update your learner profile.
@@ -159,6 +161,8 @@ It shows:
 - next action hints such as `contextbook scan`, `contextbook learn`, or `contextbook why`
 
 Use this when you want to check what Contextbook actually knows about the current repository before asking for a learning card.
+
+The default output is Markdown for humans. `--json` returns the same Project Memory as a stable structured contract for Codex, Claude Code, or other agents, including `schemaVersion`, top concepts, recent scan runs, recommended actions, and safety flags.
 
 ### Step 5. Get learning moments
 
@@ -259,7 +263,7 @@ Typical agent flow:
 
 ```bash
 contextbook scan
-contextbook project
+contextbook project --json
 contextbook learn
 contextbook why "<question>"
 ```
@@ -297,6 +301,7 @@ contextbook setup --dry-run        # preview helper file writes
 contextbook init                   # initialize .contextbook and learner memory
 contextbook scan                   # scan project evidence
 contextbook project                # inspect existing project memory
+contextbook project --json         # inspect project memory as structured agent context
 contextbook learn                  # generate 1-3 learning moments
 contextbook why "<question>"       # answer a concept question with evidence level
 contextbook profile                # view learner profile + conversation memory summary
@@ -310,14 +315,16 @@ contextbook profile reset          # reset learner profile to default
 The CLI is a thin adapter over the deterministic core. Future Codex/Claude adapters can import the same contract without scraping CLI output:
 
 ```ts
-import { answerWhy, buildLearningMoments, buildProjectSummary, scanProject } from 'contextbook';
+import { answerWhy, buildLearningMoments, buildProjectSummary, scanProject, toProjectSummaryJson } from 'contextbook';
 
 await scanProject({ root: process.cwd(), learner: 'default' });
 const project = await buildProjectSummary({ root: process.cwd() });
+const projectJson = toProjectSummaryJson(project);
 const learn = await buildLearningMoments({ root: process.cwd() });
 const why = await answerWhy('cleanup 왜 해야 돼?', { root: process.cwd() });
 
 console.log(project.markdown);
+console.log(projectJson.topConcepts);
 console.log(learn.markdown);
 console.log(why.markdown);
 ```

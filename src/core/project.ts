@@ -2,7 +2,16 @@ import { basename } from 'node:path';
 import { formatProjectSummary } from '../format/project.js';
 import { exists } from '../storage/fs-utils.js';
 import { projectPaths, readConcepts, readEvidence, readFileIndex, readScanRuns } from '../storage/project-store.js';
-import type { ConceptRecord, ContextbookRuntimeOptions, EvidenceLevel, ProjectMemoryFileStatus, ProjectSummary } from '../types.js';
+import type {
+  ConceptRecord,
+  ContextbookRuntimeOptions,
+  EvidenceLevel,
+  ProjectRecommendedAction,
+  ProjectMemoryFileStatus,
+  ProjectSummary,
+  ProjectSummaryConcept,
+  ProjectSummaryJson
+} from '../types.js';
 
 const evidenceWeight: Record<EvidenceLevel, number> = {
   direct: 3,
@@ -12,6 +21,7 @@ const evidenceWeight: Record<EvidenceLevel, number> = {
 
 export async function buildProjectSummary(options: ContextbookRuntimeOptions = {}): Promise<ProjectSummary> {
   const root = options.root ?? process.cwd();
+  const generatedAt = new Date().toISOString();
   const [concepts, evidence, scanRuns, fileIndex] = await Promise.all([
     readConcepts(root),
     readEvidence(root),
@@ -27,6 +37,8 @@ export async function buildProjectSummary(options: ContextbookRuntimeOptions = {
   const sortedConcepts = [...concepts].sort(compareConcepts);
   const recentScanRuns = [...scanRuns].sort((a, b) => b.scannedAt.localeCompare(a.scannedAt)).slice(0, 3);
   const summary = {
+    generatedAt,
+    rootName: fileIndex.rootName ?? basename(root),
     memoryFiles,
     concepts: sortedConcepts,
     recentScanRuns,
@@ -36,6 +48,30 @@ export async function buildProjectSummary(options: ContextbookRuntimeOptions = {
   return {
     ...summary,
     markdown: formatProjectSummary(summary)
+  };
+}
+
+export function toProjectSummaryJson(summary: ProjectSummary): ProjectSummaryJson {
+  return {
+    schemaVersion: 1,
+    generatedAt: summary.generatedAt,
+    rootName: summary.rootName,
+    memoryFiles: summary.memoryFiles,
+    topConcepts: summary.concepts.slice(0, 5).map(toProjectSummaryConcept),
+    recentScanRuns: summary.recentScanRuns,
+    fileIndexSummary: {
+      generatedAt: summary.fileIndex.generatedAt,
+      totals: summary.fileIndex.totals,
+      sampleFiles: summary.fileIndex.files.slice(0, 10)
+    },
+    evidenceCount: summary.evidenceCount,
+    recommendedActions: projectRecommendedActions(summary),
+    safety: {
+      absolutePathsIncluded: false,
+      hiddenContentIncluded: false,
+      profileMutated: false,
+      persistedSummaryCreated: false
+    }
   };
 }
 
@@ -69,4 +105,54 @@ function compareConcepts(a: ConceptRecord, b: ConceptRecord): number {
   const updatedDelta = b.updatedAt.localeCompare(a.updatedAt);
   if (updatedDelta !== 0) return updatedDelta;
   return a.label.localeCompare(b.label);
+}
+
+function toProjectSummaryConcept(concept: ConceptRecord): ProjectSummaryConcept {
+  return {
+    id: concept.id,
+    label: concept.label,
+    evidenceLevel: concept.evidenceLevel,
+    signalCount: concept.signals.length,
+    changed: concept.signals.some((signal) => signal.changed),
+    files: [...new Set(concept.signals.map((signal) => signal.file).filter(Boolean))] as string[],
+    connectedConcepts: concept.connectedConcepts,
+    interviewQuestion: concept.interviewQuestion
+  };
+}
+
+function projectRecommendedActions(summary: ProjectSummary): ProjectRecommendedAction[] {
+  const actions: ProjectRecommendedAction[] = [];
+  const hasProjectStore = summary.memoryFiles.some((file) => file.exists);
+  if (!hasProjectStore) {
+    actions.push({
+      command: 'contextbook init',
+      reason: 'Create project memory files before scanning this repository.'
+    });
+  }
+  if (summary.recentScanRuns.length === 0) {
+    actions.push({
+      command: 'contextbook scan',
+      reason: 'Collect current project evidence before generating learning moments.'
+    });
+  }
+  if (summary.concepts.length > 0) {
+    actions.push({
+      command: 'contextbook learn',
+      reason: 'Generate 1-3 learning moments from detected project concepts.'
+    });
+    actions.push({
+      command: 'contextbook why "<concept>"',
+      reason: 'Explain a detected concept with project evidence and interview wording.'
+    });
+  }
+  if (summary.recentScanRuns[0]?.warnings.length) {
+    actions.push({
+      command: 'contextbook scan',
+      reason: 'Review recent scan warnings and refresh evidence if needed.'
+    });
+  }
+  return actions.length ? actions : [{
+    command: 'contextbook learn',
+    reason: 'Project Memory is ready for a learning card.'
+  }];
 }

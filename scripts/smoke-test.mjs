@@ -25,6 +25,19 @@ function run(args, options = {}) {
   return result.stdout;
 }
 
+function runExpectFail(args, options = {}) {
+  const result = spawnSync(process.execPath, [cli, ...args], {
+    cwd: root,
+    env: { ...process.env, HOME: home, USERPROFILE: home, EDITOR: '' },
+    encoding: 'utf8',
+    ...options
+  });
+  if (result.status === 0) {
+    throw new Error(`Command unexpectedly passed: contextbook ${args.join(' ')}`);
+  }
+  return `${result.stdout}\n${result.stderr}`;
+}
+
 function git(args) {
   const result = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
   if (result.status !== 0) {
@@ -50,12 +63,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook project', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook project', 'contextbook project --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook project', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
+  for (const text of ['contextbook project [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -76,6 +89,15 @@ try {
   assert(projectBeforeInit.includes('Contextbook 메모리를 찾지 못했습니다'), 'project before init should explain missing memory');
   assert(projectBeforeInit.includes('contextbook init') && projectBeforeInit.includes('contextbook scan'), 'project before init missing next action hints');
   assert(!existsSync(join(root, '.contextbook')), 'project command should be read-only before init');
+  const projectJsonBeforeInit = JSON.parse(run(['project', '--json']));
+  assert(projectJsonBeforeInit.schemaVersion === 1, 'project json before init missing schema version');
+  assert(projectJsonBeforeInit.memoryFiles.every((file) => file.exists === false), 'project json before init should mark memory files missing');
+  assert(projectJsonBeforeInit.recommendedActions.some((action) => action.command === 'contextbook init'), 'project json before init missing init action');
+  assert(projectJsonBeforeInit.recommendedActions.some((action) => action.command === 'contextbook scan'), 'project json before init missing scan action');
+  assert(projectJsonBeforeInit.safety.profileMutated === false && projectJsonBeforeInit.safety.persistedSummaryCreated === false, 'project json before init safety flags invalid');
+  assert(!existsSync(join(root, '.contextbook')), 'project --json should be read-only before init');
+  const projectBadFlag = runExpectFail(['project', '--bad']);
+  assert(projectBadFlag.includes('Usage: contextbook project [--json]'), 'project unknown flag missing usage guidance');
 
   run(['init']);
   const initialFileIndex = await readJson(join(root, '.contextbook', 'project', 'file-index.json'));
@@ -215,6 +237,11 @@ try {
 
   const coreProject = await core.buildProjectSummary({ root });
   assert(coreProject.markdown.includes('# Project Memory'), 'core project contract did not return markdown');
+  const coreProjectJson = core.toProjectSummaryJson(coreProject);
+  assert(coreProjectJson.schemaVersion === 1, 'core project json missing schema version');
+  assert(Array.isArray(coreProjectJson.topConcepts) && coreProjectJson.topConcepts.length >= 1, 'core project json missing top concepts');
+  assert(coreProjectJson.fileIndexSummary.totals.scanned === fileIndex.totals.scanned, 'core project json file index summary mismatch');
+  assert(coreProjectJson.safety.absolutePathsIncluded === false && coreProjectJson.safety.hiddenContentIncluded === false, 'core project json safety flags invalid');
   assert(Array.isArray(coreProject.memoryFiles) && coreProject.memoryFiles.length >= 5, 'core project contract missing memory file statuses');
   assert(coreProject.memoryFiles.every((file) => !file.path.includes(root) && file.path.startsWith('.contextbook/project/')), 'project memory status should use safe relative paths');
   assert(coreProject.concepts.length >= 1, 'core project summary missing concepts');
@@ -229,6 +256,23 @@ try {
   assert(!project.includes(root) && !project.includes(home), 'project output included absolute local path');
   assert(!project.includes('SECRET_TOKEN') && !project.includes('should-not-leak'), 'project output included hidden file content');
   assert(!existsSync(join(root, '.contextbook', 'project', 'summary.json')), 'project created a persisted summary artifact');
+  const projectJson = JSON.parse(run(['project', '--json']));
+  for (const key of ['schemaVersion', 'generatedAt', 'memoryFiles', 'topConcepts', 'recentScanRuns', 'fileIndexSummary', 'evidenceCount', 'recommendedActions', 'safety']) {
+    assert(Object.prototype.hasOwnProperty.call(projectJson, key), `project json missing ${key}`);
+  }
+  assert(projectJson.schemaVersion === 1, 'project json schema version invalid');
+  assert(Array.isArray(projectJson.topConcepts) && projectJson.topConcepts.some((concept) => concept.label.includes('SSE') || concept.label.includes('useEffect') || concept.label.includes('Zustand')), 'project json missing expected concepts');
+  assert(projectJson.recommendedActions.some((action) => action.command === 'contextbook learn'), 'project json missing learn action');
+  assert(projectJson.recommendedActions.some((action) => action.command === 'contextbook why "<concept>"'), 'project json missing why action');
+  assert(projectJson.safety.absolutePathsIncluded === false, 'project json absolute path safety flag invalid');
+  assert(projectJson.safety.hiddenContentIncluded === false, 'project json hidden content safety flag invalid');
+  assert(projectJson.safety.profileMutated === false, 'project json profile mutation safety flag invalid');
+  assert(projectJson.safety.persistedSummaryCreated === false, 'project json summary artifact safety flag invalid');
+  const projectJsonSerialized = JSON.stringify(projectJson);
+  assert(!projectJsonSerialized.includes(root) && !projectJsonSerialized.includes(home), 'project json included absolute local path');
+  assert(!projectJsonSerialized.includes('SECRET_TOKEN') && !projectJsonSerialized.includes('should-not-leak'), 'project json included hidden file content');
+  assert(!projectJsonSerialized.includes('EventSource should be ignored'), 'project json included hidden runtime content');
+  assert(!existsSync(join(root, '.contextbook', 'project', 'summary.json')), 'project --json created a persisted summary artifact');
 
   run(['scan']);
   const scanRunsAfterSecondScan = await readJsonl(join(root, '.contextbook', 'project', 'scan-runs.jsonl'));
@@ -323,7 +367,9 @@ try {
   const setupInstall = run(['setup']);
   assert(setupInstall.includes('# Contextbook setup') && setupInstall.includes('created'), 'setup did not install helper files');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook learn'), 'setup codex skill missing learn guidance');
+  assert((await readFile(codexSkill, 'utf8')).includes('contextbook project --json'), 'setup codex skill missing project json guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook why'), 'setup claude skill missing why guidance');
+  assert((await readFile(claudeSkill, 'utf8')).includes('contextbook project --json'), 'setup claude skill missing project json guidance');
 
   const codexInstall = run(['install', 'codex']);
   assert(codexInstall.includes('skipped identical'), 'codex install after setup did not skip identical file');

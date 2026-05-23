@@ -1,10 +1,10 @@
 export { buildLearningMoments } from './learn.js';
-export { buildProjectSummary } from './project.js';
+export { buildProjectSummary, toProjectSummaryJson } from './project.js';
 export { rankLearningMoments } from './ranking.js';
 export { scanProject } from './scan.js';
 export { answerWhy } from './why.js';
 export { conversationMemoryMarkdown } from '../learner/conversation-memory.js';
-export type { ContextbookRuntimeOptions, ConversationMemoryEvent, ConversationSignalType, LearningMomentReason, ProjectMemoryFileStatus, ProjectSummary, RankedLearningMoment, LearnResult, ScanResult, WhyResult } from '../types.js';
+export type { ContextbookRuntimeOptions, ConversationMemoryEvent, ConversationSignalType, LearningMomentReason, ProjectFileIndexSummary, ProjectMemoryFileStatus, ProjectRecommendedAction, ProjectSummary, ProjectSummaryConcept, ProjectSummaryJson, ProjectSummarySafety, RankedLearningMoment, LearnResult, ScanResult, WhyResult } from '../types.js';
 export { adapters, adapterIds, getAdapter, codexAdapter, claudeCodeAdapter } from '../integrations/registry.js';
 export type { AdapterId, ContextbookAdapter } from '../integrations/registry.js';
 export { installCodex, codexFiles } from '../codex/install.js';
