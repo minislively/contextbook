@@ -16,6 +16,8 @@ Initial MVP release.
 - `contextbook project --json` for AI/agent-readable Project Memory with safety flags and recommended actions.
 - `contextbook learner` read-only Learner Memory summary with preferences, weak terms, recent signals, and next action hints.
 - `contextbook learner --json` for AI/agent-readable Learner Memory with safety flags and recommended actions.
+- `contextbook memory add-signal` for explicit append-only learner/conversation feedback signals.
+- `contextbook memory signals` and `contextbook memory signals --json` for recent signal inspection.
 - `contextbook learn` daily learning card with 1-3 project-grounded learning moments and deterministic recommendation reasons.
 - `contextbook why "<question>"` fixed-format concept explanation.
 - Evidence levels: `direct`, `related`, and `general`.

@@ -166,7 +166,13 @@ function isConversationSignalType(value: unknown): value is ConversationMemoryEv
     || value === 'profile.diff.viewed'
     || value === 'profile.edit.path-shown'
     || value === 'profile.edited'
-    || value === 'profile.reset';
+    || value === 'profile.reset'
+    || value === 'feedback.positive'
+    || value === 'feedback.confused'
+    || value === 'format.requested'
+    || value === 'analogy.accepted'
+    || value === 'analogy.rejected'
+    || value === 'term.repeated';
 }
 
 function isConversationCommand(value: unknown): value is ConversationMemoryEvent['command'] {
@@ -176,7 +182,9 @@ function isConversationCommand(value: unknown): value is ConversationMemoryEvent
     || value === 'profile'
     || value === 'profile.diff'
     || value === 'profile.edit'
-    || value === 'profile.reset';
+    || value === 'profile.reset'
+    || value === 'memory.add-signal'
+    || value === 'memory.signals';
 }
 
 function isEvidenceLevel(value: unknown): value is ConversationMemoryEvent['evidenceLevel'] {
