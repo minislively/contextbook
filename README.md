@@ -180,6 +180,7 @@ It shows:
 - explanation preferences
 - top weak terms
 - weak-term review suggestions
+- profile update candidates
 - recent safe learning signals
 - next action hints
 
@@ -191,14 +192,16 @@ The default output is Markdown for humans. `--json` returns a compact agent-read
 contextbook memory add-signal --type feedback.confused --concept "event loop" --note "too abstract"
 contextbook memory signals
 contextbook memory suggest-weak-terms
+contextbook memory suggest-profile-updates
 # or, for agents:
 contextbook memory signals --json
 contextbook memory suggest-weak-terms --json
+contextbook memory suggest-profile-updates --json
 ```
 
 Memory signals are append-only learning events for explicit feedback such as confusion, positive feedback, format requests, or analogy fit. They do not update your profile or weak terms automatically.
 
-`contextbook memory suggest-weak-terms` reads those signals and returns review candidates such as “event loop may be worth revisiting”. This is suggestion-only: it does not write `weak-terms.json`, does not edit your profile, and does not label your ability.
+`contextbook memory suggest-weak-terms` reads those signals and returns review candidates such as “event loop may be worth revisiting”. `contextbook memory suggest-profile-updates` turns repeated explanation-format signals into profile update candidates such as “prefer project context first”. Both are suggestion-only: they do not write `weak-terms.json`, do not edit your profile/preferences, and do not label your ability.
 
 Allowed v1 signal types:
 
@@ -312,6 +315,7 @@ contextbook project --json
 contextbook learner --json
 contextbook memory signals --json
 contextbook memory suggest-weak-terms --json
+contextbook memory suggest-profile-updates --json
 contextbook learn
 contextbook why "<question>"
 ```
@@ -356,7 +360,9 @@ contextbook memory add-signal --type feedback.confused --concept "event loop" --
 contextbook memory signals                     # inspect recent learner/conversation signals
 contextbook memory signals --json              # inspect recent signals as structured agent context
 contextbook memory suggest-weak-terms          # inspect weak-term review candidates
-contextbook memory suggest-weak-terms --json   # inspect suggestion candidates as agent context
+contextbook memory suggest-weak-terms --json   # inspect weak-term candidates as agent context
+contextbook memory suggest-profile-updates     # inspect profile update candidates
+contextbook memory suggest-profile-updates --json
 contextbook learn                  # generate 1-3 learning moments
 contextbook why "<question>"       # answer a concept question with evidence level
 contextbook profile                # view learner profile + conversation memory summary
@@ -370,7 +376,7 @@ contextbook profile reset          # reset learner profile to default
 The CLI is a thin adapter over the deterministic core. Future Codex/Claude adapters can import the same contract without scraping CLI output:
 
 ```ts
-import { answerWhy, buildLearnerSummary, buildLearningMoments, buildProjectSummary, scanProject, toLearnerSummaryJson, toProjectSummaryJson, weakTermSuggestionsJson } from 'contextbook';
+import { answerWhy, buildLearnerSummary, buildLearningMoments, buildProjectSummary, scanProject, toLearnerSummaryJson, toProjectSummaryJson, weakTermSuggestionsJson, profileUpdateCandidatesJson } from 'contextbook';
 
 await scanProject({ root: process.cwd(), learner: 'default' });
 const project = await buildProjectSummary({ root: process.cwd() });
@@ -378,12 +384,14 @@ const projectJson = toProjectSummaryJson(project);
 const learner = await buildLearnerSummary('default');
 const learnerJson = toLearnerSummaryJson(learner);
 const suggestions = await weakTermSuggestionsJson('default');
+const profileCandidates = await profileUpdateCandidatesJson('default');
 const learn = await buildLearningMoments({ root: process.cwd() });
 const why = await answerWhy('cleanup 왜 해야 돼?', { root: process.cwd() });
 
 console.log(project.markdown);
 console.log(projectJson.topConcepts);
 console.log(suggestions.candidates);
+console.log(profileCandidates.candidates);
 console.log(learn.markdown);
 console.log(why.markdown);
 ```
