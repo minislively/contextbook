@@ -63,12 +63,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
+  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -125,6 +125,20 @@ try {
   assert(profileCandidatesBefore.schemaVersion === 1, 'profile candidates json missing schema version');
   assert(Array.isArray(profileCandidatesBefore.candidates) && profileCandidatesBefore.candidates.length === 0, 'profile candidates before signals should be empty');
   assert(profileCandidatesBefore.safety.profileMutated === false && profileCandidatesBefore.safety.preferencesMutated === false, 'profile candidates safety flags invalid');
+  const memoryContextBefore = JSON.parse(run(['memory', 'context', '--json']));
+  for (const key of ['schemaVersion', 'generatedAt', 'project', 'learnerMemory', 'conversation', 'suggestions', 'freshness', 'recommendedActions', 'safety']) {
+    assert(Object.prototype.hasOwnProperty.call(memoryContextBefore, key), `memory context before init missing ${key}`);
+  }
+  assert(memoryContextBefore.schemaVersion === 1, 'memory context before init missing schema version');
+  assert(memoryContextBefore.freshness.staleHints.some((hint) => hint.code === 'project-not-initialized'), 'memory context before init missing project-not-initialized hint');
+  assert(memoryContextBefore.freshness.staleHints.some((hint) => hint.code === 'project-not-scanned'), 'memory context before init missing project-not-scanned hint');
+  assert(memoryContextBefore.recommendedActions.some((action) => action.command === 'contextbook init' && action.source === 'freshness'), 'memory context before init missing init action');
+  assert(memoryContextBefore.safety.rawTranscriptIncluded === false && memoryContextBefore.safety.profileMutated === false && memoryContextBefore.safety.projectMemoryMutated === false, 'memory context before init safety flags invalid');
+  assert(memoryContextBefore.project.safety.persistedSummaryCreated === false, 'memory context project safety flag invalid');
+  const memoryContextBadFlag = runExpectFail(['memory', 'context', '--bad']);
+  assert(memoryContextBadFlag.includes('Usage: contextbook memory context [--json]'), 'memory context unknown flag missing usage guidance');
+  assert(!existsSync(join(root, '.contextbook')), 'memory context should not create project memory before init');
+
 
   run(['init']);
   const initialFileIndex = await readJson(join(root, '.contextbook', 'project', 'file-index.json'));
@@ -388,6 +402,27 @@ try {
   assert(JSON.stringify(weakTermsAfterSignal) === JSON.stringify(weakTermsBeforeSignal), 'memory add-signal/suggest mutated weak terms');
   assert(await readFile(join(learnerDir, 'profile.md'), 'utf8') === profileBeforeSignal, 'profile suggestion mutated profile.md');
   assert(await readFile(join(learnerDir, 'preferences.json'), 'utf8') === preferencesBeforeSignal, 'profile suggestion mutated preferences.json');
+  const memoryContext = JSON.parse(run(['memory', 'context', '--json']));
+  for (const key of ['schemaVersion', 'project', 'learnerMemory', 'conversation', 'suggestions', 'freshness', 'recommendedActions', 'safety']) {
+    assert(Object.prototype.hasOwnProperty.call(memoryContext, key), `memory context missing ${key}`);
+  }
+  assert(memoryContext.project.topConcepts.some((concept) => concept.label.includes('SSE') || concept.label.includes('useEffect') || concept.label.includes('Zustand')), 'memory context missing top project concepts');
+  assert(memoryContext.learnerMemory.weakTermSuggestions.some((item) => item.term.toLowerCase() === 'event loop'), 'memory context learnerMemory missing weak-term suggestion');
+  assert(memoryContext.suggestions.weakTerms.candidates.some((item) => item.term.toLowerCase() === 'event loop'), 'memory context suggestions missing weak-term candidate');
+  assert(memoryContext.suggestions.profileUpdates.candidates.some((item) => item.targetSection === 'Preferred Explanation'), 'memory context suggestions missing profile update candidate');
+  assert(memoryContext.freshness.projectScannedAt === scanRunsAfterSecondScan[1].scannedAt, 'memory context freshness should use latest scan timestamp');
+  assert(memoryContext.recommendedActions.every((action) => action.source), 'memory context recommended actions missing source');
+  assert(new Set(memoryContext.recommendedActions.map((action) => action.command)).size === memoryContext.recommendedActions.length, 'memory context recommended actions should be deduped by command');
+  assert(memoryContext.safety.rawTranscriptIncluded === false && memoryContext.safety.hiddenContentIncluded === false && memoryContext.safety.projectMemoryMutated === false && memoryContext.safety.profileUpdatesMutated === false, 'memory context safety flags invalid after signals');
+  const memoryContextSerialized = JSON.stringify(memoryContext);
+  assert(!memoryContextSerialized.includes(root) && !memoryContextSerialized.includes(home), 'memory context leaked absolute local path');
+  assert(!memoryContextSerialized.includes('SECRET_TOKEN') && !memoryContextSerialized.includes('should-not-leak'), 'memory context included hidden file content');
+  assert(!memoryContextSerialized.includes('EventSource should be ignored'), 'memory context included hidden runtime content');
+  const memoryContextMarkdown = run(['memory', 'context']);
+  assert(memoryContextMarkdown.includes('# Contextbook Memory Context') && memoryContextMarkdown.includes('## Next Actions'), 'memory context markdown missing summary sections');
+  const coreMemoryContext = await core.buildMemoryContext({ root, learner: 'default' });
+  assert(coreMemoryContext.schemaVersion === 1 && coreMemoryContext.recommendedActions.length >= 1, 'core memory context contract invalid');
+
 
   const profileOutput = run(['profile']);
   assert(profileOutput.includes('## Conversation Memory'), 'profile did not expose conversation memory summary');
@@ -455,12 +490,14 @@ try {
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook learn'), 'setup codex skill missing learn guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook project --json'), 'setup codex skill missing project json guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook learner --json'), 'setup codex skill missing learner json guidance');
+  assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory context --json'), 'setup codex skill missing memory context guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory add-signal'), 'setup codex skill missing memory signal guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory suggest-weak-terms --json'), 'setup codex skill missing weak suggestion guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory suggest-profile-updates --json'), 'setup codex skill missing profile suggestion guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook why'), 'setup claude skill missing why guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook project --json'), 'setup claude skill missing project json guidance');
-  assert((await readFile(claudeSkill, 'utf8')).includes('contextbook learner --json'), 'setup claude skill missing learner json guidance');
+  assert((await readFile(claudeSkill, 'utf8')).includes('contextbook learner --json') || (await readFile(claudeSkill, 'utf8')).includes('contextbook memory context --json'), 'setup claude skill missing learner/memory context guidance');
+  assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory context --json'), 'setup claude skill missing memory context guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory add-signal'), 'setup claude skill missing memory signal guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory suggest-weak-terms --json'), 'setup claude skill missing weak suggestion guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory suggest-profile-updates --json'), 'setup claude skill missing profile suggestion guidance');
@@ -478,6 +515,7 @@ try {
   assert(claudeInstall.includes('skipped identical'), 'claude install after setup did not skip identical files');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook why'), 'claude skill missing why guidance');
   assert((await readFile(claudeLearn, 'utf8')).includes('contextbook learn'), 'claude learn command missing CLI guidance');
+  assert((await readFile(claudeLearn, 'utf8')).includes('contextbook memory context --json'), 'claude learn command missing memory context guidance');
   assert((await readFile(claudeWhy, 'utf8')).includes('$ARGUMENTS'), 'claude why command missing argument placeholder');
 
   await writeFile(claudeWhy, 'custom user command\n', 'utf8');

@@ -1,5 +1,6 @@
 export { buildLearnerSummary, toLearnerSummaryJson } from './learner.js';
 export { buildLearningMoments } from './learn.js';
+export { buildMemoryContext, formatMemoryContextSummary } from './memory-context.js';
 export { buildProjectSummary, toProjectSummaryJson } from './project.js';
 export { rankLearningMoments } from './ranking.js';
 export { scanProject } from './scan.js';
@@ -7,7 +8,7 @@ export { answerWhy } from './why.js';
 export { addExplicitMemorySignal, conversationMemoryMarkdown, memorySignalsJson } from '../learner/conversation-memory.js';
 export { buildProfileUpdateCandidates, profileUpdateCandidatesJson } from '../learner/profile-update-candidates.js';
 export { buildWeakTermSuggestions, weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
-export type { ContextbookRuntimeOptions, ConversationMemoryEvent, ConversationSignalType, LearnerMemoryFileStatus, LearnerRecommendedAction, LearnerSummary, LearnerSummaryJson, LearnerSummarySafety, LearnerWeakTermSummary, LearningMomentReason, MemorySignalsJson, MemorySignalsSafety, ProfileUpdateCandidate, ProfileUpdateCandidateReason, ProfileUpdateCandidatesJson, ProfileUpdateCandidatesSafety, ProjectFileIndexSummary, ProjectMemoryFileStatus, ProjectRecommendedAction, ProjectSummary, ProjectSummaryConcept, ProjectSummaryJson, ProjectSummarySafety, RankedLearningMoment, LearnResult, ScanResult, WeakTermSuggestionCandidate, WeakTermSuggestionReason, WeakTermSuggestionsJson, WeakTermSuggestionsSafety, WhyResult } from '../types.js';
+export type { ContextbookRuntimeOptions, ConversationMemoryEvent, ConversationSignalType, LearnerMemoryFileStatus, LearnerRecommendedAction, LearnerSummary, LearnerSummaryJson, LearnerSummarySafety, LearnerWeakTermSummary, LearningMomentReason, MemoryContextFreshness, MemoryContextJson, MemoryContextRecommendedAction, MemoryContextSafety, MemoryContextStaleHint, MemorySignalsJson, MemorySignalsSafety, ProfileUpdateCandidate, ProfileUpdateCandidateReason, ProfileUpdateCandidatesJson, ProfileUpdateCandidatesSafety, ProjectFileIndexSummary, ProjectMemoryFileStatus, ProjectRecommendedAction, ProjectSummary, ProjectSummaryConcept, ProjectSummaryJson, ProjectSummarySafety, RankedLearningMoment, LearnResult, ScanResult, WeakTermSuggestionCandidate, WeakTermSuggestionReason, WeakTermSuggestionsJson, WeakTermSuggestionsSafety, WhyResult } from '../types.js';
 export { adapters, adapterIds, getAdapter, codexAdapter, claudeCodeAdapter } from '../integrations/registry.js';
 export type { AdapterId, ContextbookAdapter } from '../integrations/registry.js';
 export { installCodex, codexFiles } from '../codex/install.js';

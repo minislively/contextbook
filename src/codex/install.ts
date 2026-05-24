@@ -63,37 +63,36 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
    \`\`\`bash
    contextbook scan
    \`\`\`
-3. To inspect Project Memory as an agent-readable contract, run:
+3. For the default one-shot AI context bundle, run:
+   \`\`\`bash
+   contextbook memory context --json
+   \`\`\`
+4. Use the lower-level memory contracts only when debugging a specific layer:
    \`\`\`bash
    contextbook project --json
-   \`\`\`
-4. To inspect Learner Memory preferences/signals as an agent-readable contract, run:
-   \`\`\`bash
    contextbook learner --json
-   \`\`\`
-5. To inspect recent explicit memory signals, run:
-   \`\`\`bash
    contextbook memory signals --json
    contextbook memory suggest-weak-terms --json
    contextbook memory suggest-profile-updates --json
    \`\`\`
-6. To record explicit user feedback as append-only Learner Memory, run \`contextbook memory add-signal --type <allowed-type> --concept "<concept>"\` only when the user clearly expresses feedback. Do not infer ability or mutate profile.
-7. For learning moments, run:
+5. To record explicit user feedback as append-only Learner Memory, run \`contextbook memory add-signal --type <allowed-type> --concept "<concept>"\` only when the user clearly expresses feedback. Do not infer ability or mutate profile.
+6. For learning moments, run:
    \`\`\`bash
    contextbook learn
    \`\`\`
-8. For concept questions, run:
+7. For concept questions, run:
    \`\`\`bash
    contextbook why \"<question>\"
    \`\`\`
-9. Preserve Contextbook's evidence level: \`direct\`, \`related\`, or \`general\`.
-10. Do not claim stronger project evidence than the CLI output provides.
-11. Do not ask for API keys; Contextbook v0.1 is local and deterministic-first.
+8. Preserve Contextbook's evidence level: \`direct\`, \`related\`, or \`general\`.
+9. Do not claim stronger project evidence than the CLI output provides.
+10. Do not ask for API keys; Contextbook v0.1 is local and deterministic-first.
 
 ## Useful commands
 
 - \`contextbook init\` — create project and learner memory files.
 - \`contextbook scan\` — refresh local project evidence.
+- \`contextbook memory context --json\` — inspect Project/Learner/Conversation Memory in one stable AI-readable bundle.
 - \`contextbook project --json\` — inspect Project Memory in a stable AI-readable shape.
 - \`contextbook learner --json\` — inspect Learner Memory in a stable AI-readable shape.
 - \`contextbook memory signals --json\` — inspect recent explicit memory signals.

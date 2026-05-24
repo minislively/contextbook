@@ -336,7 +336,7 @@ export interface LearnerSummary extends Omit<LearnerSummaryJson, 'schemaVersion'
   markdown: string;
 }
 
-export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.signals' | 'memory.suggest-weak-terms' | 'memory.suggest-profile-updates';
+export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.signals' | 'memory.suggest-weak-terms' | 'memory.suggest-profile-updates' | 'memory.context';
 
 export type ConversationSignalType =
   | 'scan.completed'
@@ -373,6 +373,67 @@ export interface MemorySignalsJson {
     signals: number;
   };
   safety: MemorySignalsSafety;
+}
+
+export type MemoryContextActionSource =
+  | 'project'
+  | 'learner'
+  | 'signals'
+  | 'weakTermSuggestions'
+  | 'profileUpdateCandidates'
+  | 'freshness';
+
+export interface MemoryContextRecommendedAction extends LearnerRecommendedAction {
+  source: MemoryContextActionSource;
+}
+
+export type MemoryContextStaleHintCode =
+  | 'project-not-initialized'
+  | 'project-not-scanned'
+  | 'scan-has-warnings'
+  | 'no-learner-signals';
+
+export interface MemoryContextStaleHint {
+  code: MemoryContextStaleHintCode;
+  message: string;
+  recommendedCommand: string;
+}
+
+export interface MemoryContextFreshness {
+  projectScannedAt?: string;
+  signalsGeneratedAt: string;
+  contextGeneratedAt: string;
+  staleHints: MemoryContextStaleHint[];
+}
+
+export interface MemoryContextSafety {
+  rawTranscriptIncluded: false;
+  absolutePathsIncluded: false;
+  hiddenContentIncluded: false;
+  profileMutated: false;
+  preferencesMutated: false;
+  weakTermsMutated: false;
+  profileUpdatesMutated: false;
+  projectMemoryMutated: false;
+  persistedSummaryCreated: false;
+  unsafeJudgmentIncluded: false;
+}
+
+export interface MemoryContextJson {
+  schemaVersion: 1;
+  generatedAt: string;
+  rootName?: string;
+  learner: string;
+  project: ProjectSummaryJson;
+  learnerMemory: LearnerSummaryJson;
+  conversation: MemorySignalsJson;
+  suggestions: {
+    weakTerms: WeakTermSuggestionsJson;
+    profileUpdates: ProfileUpdateCandidatesJson;
+  };
+  freshness: MemoryContextFreshness;
+  recommendedActions: MemoryContextRecommendedAction[];
+  safety: MemoryContextSafety;
 }
 
 export interface ConversationMemoryEvent {

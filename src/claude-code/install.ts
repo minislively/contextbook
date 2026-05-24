@@ -41,8 +41,8 @@ Use the local \`contextbook\` CLI for project-grounded learning moments and why-
 
 - If the project has not been initialized, run \`contextbook init\`.
 - Refresh evidence with \`contextbook scan\` when code changed or memory may be stale.
-- Use \`contextbook project --json\` when acting as an agent and you need a parseable Project Memory summary.
-- Use \`contextbook learner --json\` when acting as an agent and you need parseable Learner Memory preferences/signals and suggestion-only candidates.
+- Use \`contextbook memory context --json\` as the default one-shot AI context bundle across Project, Learner, Conversation Memory, suggestions, freshness, and safety.
+- Use \`contextbook project --json\` or \`contextbook learner --json\` only when debugging a specific memory layer.
 - Use \`contextbook memory add-signal --type <type>\` only for explicit user feedback; never infer ability or mutate profile.
 - Use \`contextbook memory suggest-weak-terms --json\` to inspect review candidates without mutating weak terms.
 - Use \`contextbook memory suggest-profile-updates --json\` to inspect profile update candidates without editing profile/preferences.
@@ -65,13 +65,10 @@ description: Generate Contextbook learning moments from the current repository.
 Run Contextbook locally and report the result without inventing extra evidence:
 
 1. Run \`contextbook scan\` if project evidence may be stale.
-2. Run \`contextbook project --json\` if you need a structured project memory check before summarizing.
-3. Run \`contextbook learner --json\` if you need learner preferences/signals before summarizing.
-4. Run \`contextbook memory signals --json\` if you need recent explicit feedback signals.
-5. Run \`contextbook memory suggest-weak-terms --json\` if you need review candidates from those signals.
-6. Run \`contextbook memory suggest-profile-updates --json\` if you need profile update candidates from explicit feedback.
-7. Run \`contextbook learn\`.
-8. Preserve the evidence level and evidence files from the output.
+2. Run \`contextbook memory context --json\` for the one-shot AI context bundle before summarizing.
+3. Run lower-level \`contextbook project --json\`, \`contextbook learner --json\`, or suggestion commands only when debugging a specific layer.
+4. Run \`contextbook learn\`.
+5. Preserve the evidence level and evidence files from the output.
 `;
 }
 
