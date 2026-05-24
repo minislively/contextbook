@@ -203,7 +203,8 @@ function isConversationCommand(value: unknown): value is ConversationMemoryEvent
     || value === 'memory.add-signal'
     || value === 'memory.signals'
     || value === 'memory.suggest-weak-terms'
-    || value === 'memory.suggest-profile-updates';
+    || value === 'memory.suggest-profile-updates'
+    || value === 'memory.context';
 }
 
 function isEvidenceLevel(value: unknown): value is ConversationMemoryEvent['evidenceLevel'] {

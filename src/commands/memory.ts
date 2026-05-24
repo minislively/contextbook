@@ -1,3 +1,4 @@
+import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
 import { addExplicitMemorySignal, formatMemorySignalsSummary, memorySignalsJson, memorySignalTypes } from '../learner/conversation-memory.js';
 import { formatProfileUpdateCandidatesSummary, profileUpdateCandidatesJson } from '../learner/profile-update-candidates.js';
 import { formatWeakTermSuggestionsSummary, weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
@@ -12,7 +13,7 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
       return;
     }
     case 'signals': {
-      const json = parseSignals(rest);
+      const json = parseJsonFlag(rest, 'contextbook memory signals [--json]');
       const result = await memorySignalsJson('default');
       if (json) {
         console.log(JSON.stringify(result, null, 2));
@@ -22,7 +23,7 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
       return;
     }
     case 'suggest-weak-terms': {
-      const json = parseSignals(rest);
+      const json = parseJsonFlag(rest, 'contextbook memory suggest-weak-terms [--json]');
       const result = await weakTermSuggestionsJson('default');
       if (json) {
         console.log(JSON.stringify(result, null, 2));
@@ -32,13 +33,23 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
       return;
     }
     case 'suggest-profile-updates': {
-      const json = parseSignals(rest);
+      const json = parseJsonFlag(rest, 'contextbook memory suggest-profile-updates [--json]');
       const result = await profileUpdateCandidatesJson('default');
       if (json) {
         console.log(JSON.stringify(result, null, 2));
         return;
       }
       console.log(formatProfileUpdateCandidatesSummary(result));
+      return;
+    }
+    case 'context': {
+      const json = parseJsonFlag(rest, 'contextbook memory context [--json]');
+      const result = await buildMemoryContext({ learner: 'default' });
+      if (json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatMemoryContextSummary(result));
       return;
     }
     default:
@@ -59,10 +70,10 @@ function parseAddSignal(args: string[]): { signalType: typeof memorySignalTypes[
   };
 }
 
-function parseSignals(args: string[]): boolean {
+function parseJsonFlag(args: string[], usage: string): boolean {
   if (args.length === 0) return false;
   if (args.length === 1 && args[0] === '--json') return true;
-  throw new Error('Usage: contextbook memory signals [--json]');
+  throw new Error(`Usage: ${usage}`);
 }
 
 function parseFlags(args: string[]): Record<string, string | undefined> {
@@ -92,6 +103,7 @@ function memoryUsage(): string {
     '  contextbook memory signals [--json]',
     '  contextbook memory suggest-weak-terms [--json]',
     '  contextbook memory suggest-profile-updates [--json]',
+    '  contextbook memory context [--json]',
     '',
     `Allowed types: ${memorySignalTypes.join(', ')}`
   ].join('\n');

@@ -20,6 +20,7 @@ Initial MVP release.
 - `contextbook memory signals` and `contextbook memory signals --json` for recent signal inspection.
 - `contextbook memory suggest-weak-terms` and `--json` for suggestion-only weak-term review candidates from learner signals.
 - `contextbook memory suggest-profile-updates` and `--json` for suggestion-only learner profile update candidates from explicit signals.
+- `contextbook memory context` and `--json` for a read-only AI context bundle across project, learner, signals, suggestions, freshness, and safety.
 - `contextbook learn` daily learning card with 1-3 project-grounded learning moments and deterministic recommendation reasons.
 - `contextbook why "<question>"` fixed-format concept explanation.
 - Evidence levels: `direct`, `related`, and `general`.
@@ -31,6 +32,7 @@ Initial MVP release.
 - Adapter-ready core exports for `scanProject`, `buildProjectSummary`, `toProjectSummaryJson`, `buildLearnerSummary`, `toLearnerSummaryJson`, `buildLearningMoments`, and `answerWhy`.
 - Adapter-ready weak-term suggestion exports for `weakTermSuggestionsJson` and `buildWeakTermSuggestions`.
 - Adapter-ready profile update candidate exports for `profileUpdateCandidatesJson` and `buildProfileUpdateCandidates`.
+- Adapter-ready memory context export for `buildMemoryContext`.
 
 ### Safety
 
