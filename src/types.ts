@@ -267,6 +267,7 @@ export interface ProfileUpdateCandidateReason {
 }
 
 export interface ProfileUpdateCandidate {
+  id: string;
   targetSection: ProfileUpdateCandidateTarget;
   suggestion: string;
   confidence: 'low' | 'medium' | 'high';
@@ -289,6 +290,40 @@ export interface ProfileUpdateCandidatesSafety {
   weakTermsMutated: false;
   profileUpdatesMutated: false;
   unsafeJudgmentIncluded: false;
+}
+
+export type ApplyProfileUpdateOperation = 'append-preference' | 'append-avoid' | 'skip-identical' | 'unsupported-target';
+
+export interface ApplyProfileUpdateChange {
+  file: 'preferences.json' | 'profile.md';
+  operation: ApplyProfileUpdateOperation;
+  before?: string[];
+  after?: string[];
+  message: string;
+}
+
+export interface ApplyProfileUpdateSafety {
+  rawTranscriptIncluded: false;
+  absolutePathsIncluded: false;
+  hiddenContentIncluded: false;
+  projectMemoryMutated: false;
+  weakTermsMutated: false;
+  profileMutated: false;
+  preferencesMutated: boolean;
+  unsafeJudgmentIncluded: false;
+}
+
+export interface ApplyProfileUpdateResult {
+  schemaVersion: 1;
+  generatedAt: string;
+  learner: string;
+  applied: boolean;
+  dryRun: boolean;
+  candidate: ProfileUpdateCandidate;
+  changes: ApplyProfileUpdateChange[];
+  auditEvent?: ConversationMemoryEvent;
+  backupCreated?: string;
+  safety: ApplyProfileUpdateSafety;
 }
 
 export interface ProfileUpdateCandidatesJson {
@@ -336,7 +371,7 @@ export interface LearnerSummary extends Omit<LearnerSummaryJson, 'schemaVersion'
   markdown: string;
 }
 
-export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.signals' | 'memory.suggest-weak-terms' | 'memory.suggest-profile-updates' | 'memory.context';
+export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.signals' | 'memory.suggest-weak-terms' | 'memory.suggest-profile-updates' | 'memory.apply-profile-update' | 'memory.context';
 
 export type ConversationSignalType =
   | 'scan.completed'
@@ -352,7 +387,8 @@ export type ConversationSignalType =
   | 'format.requested'
   | 'analogy.accepted'
   | 'analogy.rejected'
-  | 'term.repeated';
+  | 'term.repeated'
+  | 'profile-update.applied';
 
 
 export interface MemorySignalsSafety {

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { learnerPaths, readPreferences } from '../storage/user-store.js';
 import { readJsonl } from '../storage/fs-utils.js';
@@ -98,7 +99,7 @@ export function formatProfileUpdateCandidatesSummary(summary: ProfileUpdateCandi
   const rows = summary.candidates.length
     ? summary.candidates.map((candidate, index) => {
       const reasons = candidate.reasons.map((reason) => `${reason.code} x${reason.count}`).join(', ');
-      return `${index + 1}. ${candidate.targetSection} — ${candidate.confidence}\n   ${candidate.suggestion}\n   reasons: ${reasons}`;
+      return `${index + 1}. ${candidate.targetSection} — ${candidate.confidence}\n   id: ${candidate.id}\n   ${candidate.suggestion}\n   reasons: ${reasons}`;
     }).join('\n')
     : '아직 profile update candidate가 없습니다.';
   return [
@@ -143,16 +144,38 @@ function addReason(
 }
 
 function toProfileUpdateCandidate(candidate: CandidateAccumulator, context: ProfileContext): ProfileUpdateCandidate {
+  const reasons = [...candidate.reasons.values()].sort((a, b) => b.count - a.count || a.code.localeCompare(b.code));
+  const suggestion = candidate.suggestion;
   return {
+    id: profileUpdateCandidateId(candidate.targetSection, suggestion, reasons),
     targetSection: candidate.targetSection,
-    suggestion: candidate.suggestion,
+    suggestion,
     confidence: confidence(candidate.signalCount),
     signalCount: candidate.signalCount,
     lastSeenAt: candidate.lastSeenAt,
     currentContext: context,
-    reasons: [...candidate.reasons.values()].sort((a, b) => b.count - a.count || a.code.localeCompare(b.code)),
+    reasons,
     recommendedActions: recommendedActions(candidate.targetSection)
   };
+}
+
+
+function profileUpdateCandidateId(
+  targetSection: ProfileUpdateCandidate['targetSection'],
+  suggestion: string,
+  reasons: ProfileUpdateCandidateReason[]
+): string {
+  const target = slug(targetSection);
+  const reasonCodes = reasons.map((reason) => reason.code).sort().join(',');
+  const hash = createHash('sha1')
+    .update([targetSection, suggestion, reasonCodes].join('\n'))
+    .digest('hex')
+    .slice(0, 12);
+  return `profile-update:${target}:${hash}`;
+}
+
+function slug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
 function recommendedActions(targetSection: ProfileUpdateCandidate['targetSection']): LearnerRecommendedAction[] {

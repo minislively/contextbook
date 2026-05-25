@@ -246,7 +246,8 @@ function isConversationSignalType(value: unknown): value is ConversationSignalTy
     || value === 'format.requested'
     || value === 'analogy.accepted'
     || value === 'analogy.rejected'
-    || value === 'term.repeated';
+    || value === 'term.repeated'
+    || value === 'profile-update.applied';
 }
 
 function isConversationCommand(value: unknown): value is ConversationCommand {
@@ -261,6 +262,7 @@ function isConversationCommand(value: unknown): value is ConversationCommand {
     || value === 'memory.signals'
     || value === 'memory.suggest-weak-terms'
     || value === 'memory.suggest-profile-updates'
+    || value === 'memory.apply-profile-update'
     || value === 'memory.context';
 }
 
@@ -283,7 +285,8 @@ function legacyType(signalType: ConversationSignalType): string {
     'format.requested': 'format.requested',
     'analogy.accepted': 'analogy.accepted',
     'analogy.rejected': 'analogy.rejected',
-    'term.repeated': 'term.repeated'
+    'term.repeated': 'term.repeated',
+    'profile-update.applied': 'profile-update.applied'
   };
   return map[signalType];
 }
