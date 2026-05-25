@@ -68,15 +68,17 @@ export async function addExplicitMemorySignal(input: {
   conceptLabel?: string;
   note?: string;
   format?: string;
+  command?: ConversationCommand;
+  metadata?: PrimitiveMetadata;
 }): Promise<ConversationMemoryEvent> {
-  const metadata: PrimitiveMetadata = {};
+  const metadata: PrimitiveMetadata = { ...(input.metadata ?? {}) };
   const note = sanitizeShortText(input.note, MAX_NOTE_LENGTH);
   const format = sanitizeShortText(input.format, 40);
   if (note) metadata.note = note;
   if (format) metadata.format = format;
   return recordConversationSignal({
     signalType: input.signalType,
-    command: 'memory.add-signal',
+    command: input.command ?? 'memory.add-signal',
     learner: input.learner ?? 'default',
     conceptLabel: input.conceptLabel,
     metadata
@@ -259,6 +261,7 @@ function isConversationCommand(value: unknown): value is ConversationCommand {
     || value === 'profile.edit'
     || value === 'profile.reset'
     || value === 'memory.add-signal'
+    || value === 'memory.capture-prompt'
     || value === 'memory.signals'
     || value === 'memory.suggest-weak-terms'
     || value === 'memory.suggest-profile-updates'

@@ -371,7 +371,7 @@ export interface LearnerSummary extends Omit<LearnerSummaryJson, 'schemaVersion'
   markdown: string;
 }
 
-export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.signals' | 'memory.suggest-weak-terms' | 'memory.suggest-profile-updates' | 'memory.apply-profile-update' | 'memory.context';
+export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.capture-prompt' | 'memory.signals' | 'memory.suggest-weak-terms' | 'memory.suggest-profile-updates' | 'memory.apply-profile-update' | 'memory.context';
 
 export type ConversationSignalType =
   | 'scan.completed'
@@ -390,6 +390,36 @@ export type ConversationSignalType =
   | 'term.repeated'
   | 'profile-update.applied';
 
+export type PromptCaptureSource = 'manual' | 'codex' | 'claude-code';
+
+export interface PromptSignalCandidate {
+  signalType: Extract<ConversationSignalType, 'feedback.positive' | 'feedback.confused' | 'format.requested' | 'analogy.accepted' | 'analogy.rejected'>;
+  note: string;
+  format?: string;
+  source: PromptCaptureSource;
+  reason: string;
+}
+
+export interface PromptCaptureSafety {
+  rawTranscriptIncluded: false;
+  rawPromptPersisted: false;
+  absolutePathsIncluded: false;
+  profileMutated: false;
+  preferencesMutated: false;
+  weakTermsMutated: false;
+  projectMemoryMutated: false;
+  unsafeJudgmentIncluded: false;
+}
+
+export interface PromptCaptureResult {
+  schemaVersion: 1;
+  generatedAt: string;
+  learner: string;
+  source: PromptCaptureSource;
+  capturedSignals: ConversationMemoryEvent[];
+  skippedReasons: string[];
+  safety: PromptCaptureSafety;
+}
 
 export interface MemorySignalsSafety {
   rawTranscriptIncluded: false;

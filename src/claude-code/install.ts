@@ -44,6 +44,7 @@ Use the local \`contextbook\` CLI for project-grounded learning moments and why-
 - Use \`contextbook memory context --json\` as the default one-shot AI context bundle across Project, Learner, Conversation Memory, suggestions, freshness, and safety.
 - Use \`contextbook project --json\` or \`contextbook learner --json\` only when debugging a specific memory layer.
 - Use \`contextbook memory add-signal --type <type>\` only for explicit user feedback; never infer ability or mutate profile.
+- Use \`contextbook memory capture-prompt --prompt "<user prompt>" --source claude-code --json\` for hook-ready explicit prompt feedback capture without storing raw transcript text.
 - Use \`contextbook memory suggest-weak-terms --json\` to inspect review candidates without mutating weak terms.
 - Use \`contextbook memory suggest-profile-updates --json\` to inspect profile update candidates without editing profile/preferences.
 - Use \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` to preview exact preferences-only changes; apply without \`--dry-run\` only after explicit user approval.

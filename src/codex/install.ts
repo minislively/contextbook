@@ -75,7 +75,7 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
    contextbook memory suggest-weak-terms --json
    contextbook memory suggest-profile-updates --json
    \`\`\`
-5. To record explicit user feedback as append-only Learner Memory, run \`contextbook memory add-signal --type <allowed-type> --concept "<concept>"\` only when the user clearly expresses feedback. Do not infer ability or mutate profile.
+5. To record explicit user feedback as append-only Learner Memory, run \`contextbook memory add-signal --type <allowed-type> --concept "<concept>"\` only when the user clearly expresses feedback. For hook-ready prompt feedback capture, use \`contextbook memory capture-prompt --prompt "<user prompt>" --source codex --json\`; it stores sanitized signal notes, not raw transcript text. Do not infer ability or mutate profile.
 6. Profile update candidates are preview-first. Use \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` to show the exact preferences-only change, and run without \`--dry-run\` only after explicit user approval.
 7. For learning moments, run:
    \`\`\`bash
@@ -101,6 +101,7 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
 - \`contextbook memory suggest-profile-updates --json\` — inspect suggestion-only profile update candidates without editing profile/preferences.
 - \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` — preview an explicit preferences-only profile candidate before any write.
 - \`contextbook memory add-signal --type feedback.confused --concept "event loop"\` — record explicit feedback only.
+- \`contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source codex --json\` — deterministically capture explicit prompt feedback without storing the raw prompt.
 - \`contextbook learn\` — produce 1-3 learning moments.
 - \`contextbook why \"cleanup 왜 해야 돼?\"\` — answer with project context, plain language, developer term, CS link, interview sentence, and evidence files.
 - \`contextbook profile\` — inspect the learner profile.

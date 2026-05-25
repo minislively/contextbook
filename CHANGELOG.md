@@ -17,6 +17,7 @@ Initial MVP release.
 - `contextbook learner` read-only Learner Memory summary with preferences, weak terms, recent signals, and next action hints.
 - `contextbook learner --json` for AI/agent-readable Learner Memory with safety flags and recommended actions.
 - `contextbook memory add-signal` for explicit append-only learner/conversation feedback signals.
+- `contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]` for deterministic, hook-ready explicit prompt signal capture.
 - `contextbook memory signals` and `contextbook memory signals --json` for recent signal inspection.
 - `contextbook memory suggest-weak-terms` and `--json` for suggestion-only weak-term review candidates from learner signals.
 - `contextbook memory suggest-profile-updates` and `--json` for suggestion-only learner profile update candidates from explicit signals.

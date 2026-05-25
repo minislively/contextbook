@@ -190,11 +190,14 @@ The default output is Markdown for humans. `--json` returns a compact agent-read
 
 ```bash
 contextbook memory add-signal --type feedback.confused --concept "event loop" --note "too abstract"
+contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual
 contextbook memory signals
 contextbook memory suggest-weak-terms
 contextbook memory suggest-profile-updates
 contextbook memory context
 # or, for agents:
+contextbook memory capture-prompt --prompt "내 프로젝트에 빗대서 설명해줘" --source codex --json
+contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual --json
 contextbook memory signals --json
 contextbook memory suggest-weak-terms --json
 contextbook memory suggest-profile-updates --json
@@ -203,7 +206,7 @@ contextbook memory apply-profile-update --candidate <id|index> --dry-run --json
 contextbook memory context --json
 ```
 
-Memory signals are append-only learning events for explicit feedback such as confusion, positive feedback, format requests, or analogy fit. They do not update your profile or weak terms automatically.
+Memory signals are append-only learning events for explicit feedback such as confusion, positive feedback, format requests, or analogy fit. They do not update your profile or weak terms automatically. `contextbook memory capture-prompt` is the hook-ready deterministic version: it classifies only explicit learning-feedback phrases from a prompt, stores sanitized signal notes, and does not persist the raw prompt.
 
 `contextbook memory suggest-weak-terms` reads those signals and returns review candidates such as “event loop may be worth revisiting”. `contextbook memory suggest-profile-updates` turns repeated explanation-format signals into profile update candidates such as “prefer project context first”. Both suggestion commands are read-only: they do not write `weak-terms.json`, do not edit your profile/preferences, and do not label your ability.
 
@@ -329,6 +332,8 @@ Advanced/debug commands:
 ```bash
 contextbook project --json
 contextbook learner --json
+contextbook memory capture-prompt --prompt "내 프로젝트에 빗대서 설명해줘" --source codex --json
+contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual --json
 contextbook memory signals --json
 contextbook memory suggest-weak-terms --json
 contextbook memory suggest-profile-updates --json
@@ -372,6 +377,8 @@ contextbook project --json         # inspect project memory as structured agent 
 contextbook learner                # inspect learner memory
 contextbook learner --json         # inspect learner memory as structured agent context
 contextbook memory add-signal --type feedback.confused --concept "event loop" --note "too abstract"
+contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual
+contextbook memory capture-prompt --prompt <text> --source manual --json
 contextbook memory signals                     # inspect recent learner/conversation signals
 contextbook memory signals --json              # inspect recent signals as structured agent context
 contextbook memory suggest-weak-terms          # inspect weak-term review candidates
