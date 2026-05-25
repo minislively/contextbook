@@ -76,17 +76,18 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
    contextbook memory suggest-profile-updates --json
    \`\`\`
 5. To record explicit user feedback as append-only Learner Memory, run \`contextbook memory add-signal --type <allowed-type> --concept "<concept>"\` only when the user clearly expresses feedback. Do not infer ability or mutate profile.
-6. For learning moments, run:
+6. Profile update candidates are preview-first. Use \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` to show the exact preferences-only change, and run without \`--dry-run\` only after explicit user approval.
+7. For learning moments, run:
    \`\`\`bash
    contextbook learn
    \`\`\`
-7. For concept questions, run:
+8. For concept questions, run:
    \`\`\`bash
    contextbook why \"<question>\"
    \`\`\`
-8. Preserve Contextbook's evidence level: \`direct\`, \`related\`, or \`general\`.
-9. Do not claim stronger project evidence than the CLI output provides.
-10. Do not ask for API keys; Contextbook v0.1 is local and deterministic-first.
+9. Preserve Contextbook's evidence level: \`direct\`, \`related\`, or \`general\`.
+10. Do not claim stronger project evidence than the CLI output provides.
+11. Do not ask for API keys; Contextbook v0.1 is local and deterministic-first.
 
 ## Useful commands
 
@@ -98,6 +99,7 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
 - \`contextbook memory signals --json\` — inspect recent explicit memory signals.
 - \`contextbook memory suggest-weak-terms --json\` — inspect suggestion-only weak-term review candidates without mutating learner memory.
 - \`contextbook memory suggest-profile-updates --json\` — inspect suggestion-only profile update candidates without editing profile/preferences.
+- \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` — preview an explicit preferences-only profile candidate before any write.
 - \`contextbook memory add-signal --type feedback.confused --concept "event loop"\` — record explicit feedback only.
 - \`contextbook learn\` — produce 1-3 learning moments.
 - \`contextbook why \"cleanup 왜 해야 돼?\"\` — answer with project context, plain language, developer term, CS link, interview sentence, and evidence files.

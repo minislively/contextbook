@@ -63,12 +63,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
+  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -384,11 +384,14 @@ try {
   const weakSuggestionsMarkdown = run(['memory', 'suggest-weak-terms']);
   assert(weakSuggestionsMarkdown.includes('# Weak-term Suggestions') && weakSuggestionsMarkdown.includes('event loop'), 'weak suggestions markdown missing event loop');
   const profileCandidates = JSON.parse(run(['memory', 'suggest-profile-updates', '--json']));
+  assert(profileCandidates.candidates.every((item) => typeof item.id === 'string' && item.id.startsWith('profile-update:')), 'profile candidates missing deterministic ids');
+  const profileCandidatesAgain = JSON.parse(run(['memory', 'suggest-profile-updates', '--json']));
+  assert(JSON.stringify(profileCandidates.candidates.map((item) => item.id)) === JSON.stringify(profileCandidatesAgain.candidates.map((item) => item.id)), 'profile candidate ids should be stable across reads');
   assert(profileCandidates.candidates.some((item) => item.targetSection === 'Preferred Explanation' && item.reasons.some((reason) => reason.code === 'project-first-requested')), 'profile candidates missing project-first suggestion');
   assert(profileCandidates.candidates.some((item) => item.targetSection === 'Avoid' && item.reasons.some((reason) => reason.code === 'abstract-confusion')), 'profile candidates missing avoid abstract suggestion');
   assert(profileCandidates.safety.profileMutated === false && profileCandidates.safety.preferencesMutated === false && profileCandidates.safety.profileUpdatesMutated === false, 'profile candidates safety flags invalid after signal');
   const profileCandidatesMarkdown = run(['memory', 'suggest-profile-updates']);
-  assert(profileCandidatesMarkdown.includes('# Profile Update Candidates') && profileCandidatesMarkdown.includes('project context'), 'profile candidates markdown missing project context suggestion');
+  assert(profileCandidatesMarkdown.includes('# Profile Update Candidates') && profileCandidatesMarkdown.includes('project context') && profileCandidatesMarkdown.includes('profile-update:'), 'profile candidates markdown missing project context suggestion/id');
   const learnerAfterSignal = JSON.parse(run(['learner', '--json']));
   assert(learnerAfterSignal.recentSignals.some((item) => item.signalType === 'feedback.confused'), 'learner json did not reflect added memory signal');
   assert(learnerAfterSignal.weakTermSuggestions.some((item) => item.term.toLowerCase() === 'event loop'), 'learner json missing weak term suggestion');
@@ -402,6 +405,44 @@ try {
   assert(JSON.stringify(weakTermsAfterSignal) === JSON.stringify(weakTermsBeforeSignal), 'memory add-signal/suggest mutated weak terms');
   assert(await readFile(join(learnerDir, 'profile.md'), 'utf8') === profileBeforeSignal, 'profile suggestion mutated profile.md');
   assert(await readFile(join(learnerDir, 'preferences.json'), 'utf8') === preferencesBeforeSignal, 'profile suggestion mutated preferences.json');
+
+  const projectFirstProfileCandidate = profileCandidates.candidates.find((item) => item.targetSection === 'Preferred Explanation' && item.reasons.some((reason) => reason.code === 'project-first-requested'));
+  assert(projectFirstProfileCandidate, 'missing project-first candidate for apply test');
+  const profileUpdatesBeforeApply = await readFile(join(learnerDir, 'profile-updates.jsonl'), 'utf8');
+  const signalsBeforeApply = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
+  const backupEntriesBeforeApply = (await readdir(learnerDir)).filter((entry) => entry.startsWith('preferences.json.bak-'));
+  const dryRunApply = JSON.parse(run(['memory', 'apply-profile-update', '--candidate', projectFirstProfileCandidate.id, '--dry-run', '--json']));
+  assert(dryRunApply.schemaVersion === 1 && dryRunApply.dryRun === true && dryRunApply.applied === false, 'profile apply dry-run shape invalid');
+  assert(dryRunApply.changes.some((change) => change.file === 'preferences.json'), 'profile apply dry-run missing preferences change plan');
+  assert(await readFile(join(learnerDir, 'preferences.json'), 'utf8') === preferencesBeforeSignal, 'profile apply dry-run mutated preferences');
+  assert(await readFile(join(learnerDir, 'profile-updates.jsonl'), 'utf8') === profileUpdatesBeforeApply, 'profile apply dry-run appended profile update audit');
+  assert(await readFile(join(learnerDir, 'signals.jsonl'), 'utf8') === signalsBeforeApply, 'profile apply dry-run appended signal audit');
+  assert(JSON.stringify(await readJson(join(learnerDir, 'weak-terms.json'))) === JSON.stringify(weakTermsBeforeSignal), 'profile apply dry-run mutated weak terms');
+  assert((await readdir(learnerDir)).filter((entry) => entry.startsWith('preferences.json.bak-')).length === backupEntriesBeforeApply.length, 'profile apply dry-run created backup');
+  const realApply = JSON.parse(run(['memory', 'apply-profile-update', '--candidate', projectFirstProfileCandidate.id, '--json']));
+  assert(realApply.dryRun === false && realApply.applied === true, 'profile apply real apply did not apply supported candidate');
+  assert(realApply.auditEvent?.signalType === 'profile-update.applied' && realApply.auditEvent?.command === 'memory.apply-profile-update', 'profile apply missing typed audit event');
+  const preferencesAfterApply = await readJson(join(learnerDir, 'preferences.json'));
+  assert(preferencesAfterApply.explanationOrder[0] === 'project', 'profile apply did not move project first');
+  assert(await readFile(join(learnerDir, 'profile.md'), 'utf8') === profileBeforeSignal, 'profile apply mutated profile.md');
+  assert(JSON.stringify(await readJson(join(learnerDir, 'weak-terms.json'))) === JSON.stringify(weakTermsBeforeSignal), 'profile apply mutated weak terms');
+  const profileUpdatesAfterApply = await readJsonl(join(learnerDir, 'profile-updates.jsonl'));
+  assert(profileUpdatesAfterApply.some((item) => item.signalType === 'profile-update.applied' && item.command === 'memory.apply-profile-update'), 'profile apply audit missing from profile-updates');
+  assert(await readFile(join(learnerDir, 'signals.jsonl'), 'utf8') === signalsBeforeApply, 'profile apply should not append to signals.jsonl');
+  assert((await readdir(learnerDir)).filter((entry) => entry.startsWith('preferences.json.bak-')).length === backupEntriesBeforeApply.length + 1, 'profile apply did not create exactly one backup');
+  const reapply = JSON.parse(run(['memory', 'apply-profile-update', '--candidate', projectFirstProfileCandidate.id, '--json']));
+  assert(reapply.applied === false && reapply.changes.some((change) => change.operation === 'skip-identical'), 'profile reapply should skip identical');
+  assert((await readdir(learnerDir)).filter((entry) => entry.startsWith('preferences.json.bak-')).length === backupEntriesBeforeApply.length + 1, 'profile reapply created extra backup');
+  assert((await readJsonl(join(learnerDir, 'profile-updates.jsonl'))).length === profileUpdatesAfterApply.length, 'profile reapply appended extra audit');
+  const analogyCandidate = profileCandidates.candidates.find((item) => item.targetSection === 'Analogy Notes');
+  assert(analogyCandidate, 'missing analogy candidate for unsupported apply test');
+  const updatesBeforeUnsupported = await readFile(join(learnerDir, 'profile-updates.jsonl'), 'utf8');
+  const unsupportedApply = JSON.parse(run(['memory', 'apply-profile-update', '--candidate', analogyCandidate.id, '--json']));
+  assert(unsupportedApply.applied === false && unsupportedApply.changes.some((change) => change.operation === 'unsupported-target' && change.message.includes('contextbook profile edit')), 'unsupported apply did not no-op with profile edit guidance');
+  assert(await readFile(join(learnerDir, 'profile-updates.jsonl'), 'utf8') === updatesBeforeUnsupported, 'unsupported apply appended audit');
+  const applyMarkdown = run(['memory', 'apply-profile-update', '--candidate', projectFirstProfileCandidate.id, '--dry-run']);
+  assert(applyMarkdown.includes('# Apply Profile Update') && applyMarkdown.includes('## Safety'), 'profile apply markdown missing sections');
+
   const memoryContext = JSON.parse(run(['memory', 'context', '--json']));
   for (const key of ['schemaVersion', 'project', 'learnerMemory', 'conversation', 'suggestions', 'freshness', 'recommendedActions', 'safety']) {
     assert(Object.prototype.hasOwnProperty.call(memoryContext, key), `memory context missing ${key}`);
@@ -412,6 +453,7 @@ try {
   assert(memoryContext.suggestions.profileUpdates.candidates.some((item) => item.targetSection === 'Preferred Explanation'), 'memory context suggestions missing profile update candidate');
   assert(memoryContext.freshness.projectScannedAt === scanRunsAfterSecondScan[1].scannedAt, 'memory context freshness should use latest scan timestamp');
   assert(memoryContext.recommendedActions.every((action) => action.source), 'memory context recommended actions missing source');
+  assert(memoryContext.recommendedActions.some((action) => action.command.includes('memory apply-profile-update') && action.command.includes('--dry-run')), 'memory context missing profile apply dry-run recommendation');
   assert(new Set(memoryContext.recommendedActions.map((action) => action.command)).size === memoryContext.recommendedActions.length, 'memory context recommended actions should be deduped by command');
   assert(memoryContext.safety.rawTranscriptIncluded === false && memoryContext.safety.hiddenContentIncluded === false && memoryContext.safety.projectMemoryMutated === false && memoryContext.safety.profileUpdatesMutated === false, 'memory context safety flags invalid after signals');
   const memoryContextSerialized = JSON.stringify(memoryContext);
@@ -445,6 +487,7 @@ try {
   assert(answers.some((item) => item.question?.includes('cleanup')), 'answers.jsonl missing why answer');
   assert(answers.some((item) => item.schemaVersion === 1 && item.kind === 'conversation-memory' && item.signalType === 'why.answered'), 'answers.jsonl missing structured why answer');
   const profileUpdates = await readJsonl(join(learnerDir, 'profile-updates.jsonl'));
+  assert(profileUpdates.some((item) => item.signalType === 'profile-update.applied'), 'profile-updates missing profile apply audit');
   assert(profileUpdates.some((item) => item.type === 'profile.edit'), 'profile-updates missing edit');
   assert(profileUpdates.some((item) => item.type === 'profile.reset'), 'profile-updates missing reset');
   assert(profileUpdates.every((item) => item.kind === 'conversation-memory'), 'profile-updates should use structured conversation memory events');
@@ -494,6 +537,7 @@ try {
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory add-signal'), 'setup codex skill missing memory signal guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory suggest-weak-terms --json'), 'setup codex skill missing weak suggestion guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory suggest-profile-updates --json'), 'setup codex skill missing profile suggestion guidance');
+  assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'setup codex skill missing profile apply dry-run guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook why'), 'setup claude skill missing why guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook project --json'), 'setup claude skill missing project json guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook learner --json') || (await readFile(claudeSkill, 'utf8')).includes('contextbook memory context --json'), 'setup claude skill missing learner/memory context guidance');
@@ -501,6 +545,7 @@ try {
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory add-signal'), 'setup claude skill missing memory signal guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory suggest-weak-terms --json'), 'setup claude skill missing weak suggestion guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory suggest-profile-updates --json'), 'setup claude skill missing profile suggestion guidance');
+  assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'setup claude skill missing profile apply dry-run guidance');
 
   const codexInstall = run(['install', 'codex']);
   assert(codexInstall.includes('skipped identical'), 'codex install after setup did not skip identical file');
@@ -516,6 +561,7 @@ try {
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook why'), 'claude skill missing why guidance');
   assert((await readFile(claudeLearn, 'utf8')).includes('contextbook learn'), 'claude learn command missing CLI guidance');
   assert((await readFile(claudeLearn, 'utf8')).includes('contextbook memory context --json'), 'claude learn command missing memory context guidance');
+  assert((await readFile(claudeLearn, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'claude learn command missing profile apply dry-run guidance');
   assert((await readFile(claudeWhy, 'utf8')).includes('$ARGUMENTS'), 'claude why command missing argument placeholder');
 
   await writeFile(claudeWhy, 'custom user command\n', 'utf8');

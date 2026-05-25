@@ -189,7 +189,8 @@ function isConversationSignalType(value: unknown): value is ConversationMemoryEv
     || value === 'format.requested'
     || value === 'analogy.accepted'
     || value === 'analogy.rejected'
-    || value === 'term.repeated';
+    || value === 'term.repeated'
+    || value === 'profile-update.applied';
 }
 
 function isConversationCommand(value: unknown): value is ConversationMemoryEvent['command'] {
@@ -204,6 +205,7 @@ function isConversationCommand(value: unknown): value is ConversationMemoryEvent
     || value === 'memory.signals'
     || value === 'memory.suggest-weak-terms'
     || value === 'memory.suggest-profile-updates'
+    || value === 'memory.apply-profile-update'
     || value === 'memory.context';
 }
 

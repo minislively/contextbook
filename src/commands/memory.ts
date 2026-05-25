@@ -1,5 +1,6 @@
 import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
 import { addExplicitMemorySignal, formatMemorySignalsSummary, memorySignalsJson, memorySignalTypes } from '../learner/conversation-memory.js';
+import { applyProfileUpdateCandidate, formatApplyProfileUpdateSummary } from '../learner/profile-update-apply.js';
 import { formatProfileUpdateCandidatesSummary, profileUpdateCandidatesJson } from '../learner/profile-update-candidates.js';
 import { formatWeakTermSuggestionsSummary, weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
 
@@ -42,6 +43,16 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
       console.log(formatProfileUpdateCandidatesSummary(result));
       return;
     }
+    case 'apply-profile-update': {
+      const input = parseApplyProfileUpdate(rest);
+      const result = await applyProfileUpdateCandidate({ learner: 'default', candidateRef: input.candidate, dryRun: input.dryRun });
+      if (input.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatApplyProfileUpdateSummary(result));
+      return;
+    }
     case 'context': {
       const json = parseJsonFlag(rest, 'contextbook memory context [--json]');
       const result = await buildMemoryContext({ learner: 'default' });
@@ -76,6 +87,38 @@ function parseJsonFlag(args: string[], usage: string): boolean {
   throw new Error(`Usage: ${usage}`);
 }
 
+function parseApplyProfileUpdate(args: string[]): { candidate: string; dryRun: boolean; json: boolean } {
+  let candidate: string | undefined;
+  let dryRun = false;
+  let json = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+    if (arg === '--json') {
+      json = true;
+      continue;
+    }
+    if (arg === '--candidate') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) throw new Error('Usage: contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]');
+      candidate = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--candidate=')) {
+      candidate = arg.slice('--candidate='.length);
+      if (!candidate) throw new Error('Usage: contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]');
+      continue;
+    }
+    throw new Error('Usage: contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]');
+  }
+  if (!candidate) throw new Error('Usage: contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]');
+  return { candidate, dryRun, json };
+}
+
 function parseFlags(args: string[]): Record<string, string | undefined> {
   const values: Record<string, string | undefined> = {};
   for (let index = 0; index < args.length; index += 1) {
@@ -103,6 +146,7 @@ function memoryUsage(): string {
     '  contextbook memory signals [--json]',
     '  contextbook memory suggest-weak-terms [--json]',
     '  contextbook memory suggest-profile-updates [--json]',
+    '  contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]',
     '  contextbook memory context [--json]',
     '',
     `Allowed types: ${memorySignalTypes.join(', ')}`

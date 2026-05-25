@@ -11,6 +11,7 @@ import type {
   MemoryContextRecommendedAction,
   MemoryContextSafety,
   MemoryContextStaleHint,
+  ProfileUpdateCandidate,
   ProjectRecommendedAction
 } from '../types.js';
 
@@ -41,7 +42,7 @@ export async function buildMemoryContext(options: ContextbookRuntimeOptions = {}
       profileUpdates
     },
     freshness,
-    recommendedActions: recommendedActions(project.recommendedActions, learnerMemory.recommendedActions, freshness.staleHints),
+    recommendedActions: recommendedActions(project.recommendedActions, learnerMemory.recommendedActions, freshness.staleHints, profileUpdates.candidates),
     safety: memoryContextSafety()
   };
 }
@@ -116,7 +117,8 @@ function memoryContextFreshness(
 function recommendedActions(
   projectActions: ProjectRecommendedAction[],
   learnerActions: LearnerRecommendedAction[],
-  staleHints: MemoryContextStaleHint[]
+  staleHints: MemoryContextStaleHint[],
+  profileCandidates: ProfileUpdateCandidate[]
 ): MemoryContextRecommendedAction[] {
   const actions: MemoryContextRecommendedAction[] = [
     ...staleHints.map((hint) => ({
@@ -125,7 +127,12 @@ function recommendedActions(
       source: 'freshness' as const
     })),
     ...projectActions.map((action) => ({ ...action, source: 'project' as const })),
-    ...learnerActions.map((action) => ({ ...action, source: 'learner' as const }))
+    ...learnerActions.map((action) => ({ ...action, source: 'learner' as const })),
+    ...profileCandidates.slice(0, 3).map((candidate) => ({
+      command: `contextbook memory apply-profile-update --candidate ${JSON.stringify(candidate.id)} --dry-run`,
+      reason: `${candidate.targetSection} candidate can be previewed before applying.`,
+      source: 'profileUpdateCandidates' as const
+    }))
   ];
   return dedupeActions(actions);
 }
