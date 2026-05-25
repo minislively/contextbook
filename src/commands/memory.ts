@@ -1,6 +1,7 @@
 import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
 import { addExplicitMemorySignal, formatMemorySignalsSummary, memorySignalsJson, memorySignalTypes } from '../learner/conversation-memory.js';
 import { applyProfileUpdateCandidate, formatApplyProfileUpdateSummary } from '../learner/profile-update-apply.js';
+import { capturePromptSignals, formatPromptCaptureSummary, isPromptCaptureSource } from '../learner/prompt-capture.js';
 import { formatProfileUpdateCandidatesSummary, profileUpdateCandidatesJson } from '../learner/profile-update-candidates.js';
 import { formatWeakTermSuggestionsSummary, weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
 
@@ -11,6 +12,16 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
       const input = parseAddSignal(rest);
       const event = await addExplicitMemorySignal(input);
       console.log(`Recorded memory signal: ${event.signalType}${event.conceptLabel ? ` — ${event.conceptLabel}` : ''}`);
+      return;
+    }
+    case 'capture-prompt': {
+      const input = parseCapturePrompt(rest);
+      const result = await capturePromptSignals({ prompt: input.prompt, source: input.source, learner: 'default' });
+      if (input.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatPromptCaptureSummary(result));
       return;
     }
     case 'signals': {
@@ -81,6 +92,47 @@ function parseAddSignal(args: string[]): { signalType: typeof memorySignalTypes[
   };
 }
 
+function parseCapturePrompt(args: string[]): { prompt: string; source: 'manual' | 'codex' | 'claude-code'; json: boolean } {
+  let prompt: string | undefined;
+  let source: 'manual' | 'codex' | 'claude-code' = 'manual';
+  let json = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') {
+      json = true;
+      continue;
+    }
+    if (arg === '--prompt') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) throw new Error('Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]');
+      prompt = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--prompt=')) {
+      prompt = arg.slice('--prompt='.length);
+      if (!prompt) throw new Error('Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]');
+      continue;
+    }
+    if (arg === '--source') {
+      const value = args[index + 1];
+      if (!value || !isPromptCaptureSource(value)) throw new Error('Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]');
+      source = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--source=')) {
+      const value = arg.slice('--source='.length);
+      if (!isPromptCaptureSource(value)) throw new Error('Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]');
+      source = value;
+      continue;
+    }
+    throw new Error('Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]');
+  }
+  if (!prompt) throw new Error('Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]');
+  return { prompt, source, json };
+}
+
 function parseJsonFlag(args: string[], usage: string): boolean {
   if (args.length === 0) return false;
   if (args.length === 1 && args[0] === '--json') return true;
@@ -143,6 +195,7 @@ function memoryUsage(): string {
   return [
     'Usage:',
     '  contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>] [--format <format>]',
+    '  contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]',
     '  contextbook memory signals [--json]',
     '  contextbook memory suggest-weak-terms [--json]',
     '  contextbook memory suggest-profile-updates [--json]',

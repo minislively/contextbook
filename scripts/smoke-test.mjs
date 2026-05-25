@@ -63,12 +63,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
+  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -357,6 +357,36 @@ try {
   assert(!JSON.stringify(learnerJson).includes(root) && !JSON.stringify(learnerJson).includes(home), 'learner json leaked absolute local path');
   assert(!/beginner|low ability|이해력이 낮/.test(JSON.stringify(learnerJson)), 'learner json includes unsafe learner judgment');
 
+  const captureSignalsBefore = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
+  const captureProfileBefore = await readFile(join(learnerDir, 'profile.md'), 'utf8');
+  const capturePreferencesBefore = await readFile(join(learnerDir, 'preferences.json'), 'utf8');
+  const captureWeakTermsBefore = await readFile(join(learnerDir, 'weak-terms.json'), 'utf8');
+  const captureProjectEvidenceBefore = await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8');
+  const noMatchCapture = JSON.parse(run(['memory', 'capture-prompt', '--prompt', '오늘 다음 작업 진행해줘', '--source', 'manual', '--json']));
+  assert(noMatchCapture.schemaVersion === 1 && noMatchCapture.capturedSignals.length === 0, 'capture no-match should not capture signals');
+  assert(noMatchCapture.skippedReasons.includes('no-explicit-learning-signal'), 'capture no-match missing skip reason');
+  assert(await readFile(join(learnerDir, 'signals.jsonl'), 'utf8') === captureSignalsBefore, 'capture no-match appended signals');
+  const confusedCapture = JSON.parse(run(['memory', 'capture-prompt', '--prompt', '뭔소리야 너무 추상적임', '--source', 'manual', '--json']));
+  assert(confusedCapture.source === 'manual' && confusedCapture.capturedSignals.some((item) => item.signalType === 'feedback.confused' && item.command === 'memory.capture-prompt'), 'capture confused signal missing');
+  assert(confusedCapture.safety.rawTranscriptIncluded === false && confusedCapture.safety.rawPromptPersisted === false && confusedCapture.safety.profileMutated === false, 'capture confused safety invalid');
+  const formatCapture = JSON.parse(run(['memory', 'capture-prompt', '--prompt', '내 프로젝트에 빗대서 설명해줘', '--source', 'codex', '--json']));
+  assert(formatCapture.source === 'codex' && formatCapture.capturedSignals.some((item) => item.signalType === 'format.requested' && item.metadata?.format === 'project-first'), 'capture project-first format signal missing');
+  const positiveCapture = JSON.parse(run(['memory', 'capture-prompt', '--prompt', '좋다 이해됐어', '--source=claude-code', '--json']));
+  assert(positiveCapture.source === 'claude-code' && positiveCapture.capturedSignals.some((item) => item.signalType === 'feedback.positive'), 'capture positive signal missing');
+  const captureMarkdown = run(['memory', 'capture-prompt', '--prompt', '비유 별로', '--source', 'manual']);
+  assert(captureMarkdown.includes('# Prompt Signal Capture') && captureMarkdown.includes('analogy.rejected'), 'capture markdown missing rejected analogy');
+  const capturedSignalsAfter = await readJsonl(join(learnerDir, 'signals.jsonl'));
+  assert(capturedSignalsAfter.some((item) => item.command === 'memory.capture-prompt' && item.signalType === 'feedback.confused'), 'signals missing captured confusion event');
+  assert(capturedSignalsAfter.some((item) => item.command === 'memory.capture-prompt' && item.signalType === 'format.requested'), 'signals missing captured format event');
+  const capturedSignalsSerialized = JSON.stringify(capturedSignalsAfter.filter((item) => item.command === 'memory.capture-prompt'));
+  assert(!capturedSignalsSerialized.includes('뭔소리야 너무 추상적임') && !capturedSignalsSerialized.includes('내 프로젝트에 빗대서 설명해줘'), 'capture persisted raw prompt text');
+  assert(await readFile(join(learnerDir, 'profile.md'), 'utf8') === captureProfileBefore, 'capture mutated profile.md');
+  assert(await readFile(join(learnerDir, 'preferences.json'), 'utf8') === capturePreferencesBefore, 'capture mutated preferences.json');
+  assert(await readFile(join(learnerDir, 'weak-terms.json'), 'utf8') === captureWeakTermsBefore, 'capture mutated weak terms');
+  assert(await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8') === captureProjectEvidenceBefore, 'capture mutated project evidence');
+  const coreCaptureCandidates = core.classifyPromptSignals('비유 좋다');
+  assert(coreCaptureCandidates.some((item) => item.signalType === 'analogy.accepted'), 'core capture classifier missing accepted analogy');
+
   const weakTermsBeforeSignal = await readJson(join(learnerDir, 'weak-terms.json'));
   run(['memory', 'add-signal', '--type', 'feedback.confused', '--concept', 'event loop', '--note', 'too abstract '.repeat(40)]);
   run(['memory', 'add-signal', '--type', 'term.repeated', '--concept', 'Event Loop']);
@@ -535,6 +565,7 @@ try {
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook learner --json'), 'setup codex skill missing learner json guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory context --json'), 'setup codex skill missing memory context guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory add-signal'), 'setup codex skill missing memory signal guidance');
+  assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory capture-prompt'), 'setup codex skill missing prompt capture guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory suggest-weak-terms --json'), 'setup codex skill missing weak suggestion guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory suggest-profile-updates --json'), 'setup codex skill missing profile suggestion guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'setup codex skill missing profile apply dry-run guidance');
@@ -543,6 +574,7 @@ try {
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook learner --json') || (await readFile(claudeSkill, 'utf8')).includes('contextbook memory context --json'), 'setup claude skill missing learner/memory context guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory context --json'), 'setup claude skill missing memory context guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory add-signal'), 'setup claude skill missing memory signal guidance');
+  assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory capture-prompt'), 'setup claude skill missing prompt capture guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory suggest-weak-terms --json'), 'setup claude skill missing weak suggestion guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory suggest-profile-updates --json'), 'setup claude skill missing profile suggestion guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'setup claude skill missing profile apply dry-run guidance');

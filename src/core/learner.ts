@@ -202,6 +202,7 @@ function isConversationCommand(value: unknown): value is ConversationMemoryEvent
     || value === 'profile.edit'
     || value === 'profile.reset'
     || value === 'memory.add-signal'
+    || value === 'memory.capture-prompt'
     || value === 'memory.signals'
     || value === 'memory.suggest-weak-terms'
     || value === 'memory.suggest-profile-updates'
