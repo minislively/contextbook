@@ -137,7 +137,7 @@ export async function capturePromptSignals(options: CapturePromptOptions): Promi
 
 export function formatPromptCaptureSummary(result: PromptCaptureResult): string {
   const captured = result.capturedSignals.map((signal) => `- ${signal.signalType}${signal.metadata?.format ? ` (${signal.metadata.format})` : ''}`).join('\n') || '- none';
-  const preferenceSignals = result.preferenceSignals.map((signal) => `- ${signal.dimension}=${signal.value} (${signal.route})`).join('\n') || '- none';
+  const preferenceSignals = result.preferenceSignals.map((signal) => `- ${signal.dimension}=${signal.value} (${signal.route}, ${signal.scope}, ${signal.policy})`).join('\n') || '- none';
   const skipped = result.skippedReasons.map((reason) => `- ${reason}`).join('\n') || '- none';
   return [
     '# Prompt Signal Capture',
