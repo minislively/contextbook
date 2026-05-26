@@ -36,6 +36,10 @@ function parseArgs(args: string[]): { target: InstallTargetArg; options: Install
       options.dryRun = true;
       continue;
     }
+    if (arg === '--hooks') {
+      options.includeHooks = true;
+      continue;
+    }
     if (arg === '--codex-path') {
       const value = rest[index + 1];
       assertCodexPathSupported(target, value);
@@ -69,7 +73,7 @@ function isCodexSkillPathMode(value: string | undefined): value is CodexSkillPat
 }
 
 function usage(): string {
-  return `Usage: contextbook install <all|${adapterIds.join('|')}> [--dry-run]\n       contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]\n       contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]`;
+  return `Usage: contextbook install <all|${adapterIds.join('|')}> [--dry-run] [--hooks]\n       contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]\n       contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]`;
 }
 
 function formatInstallResult(result: InstallResult): string {

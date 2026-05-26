@@ -8,6 +8,7 @@ export interface InstallOptions {
   homeDir?: string;
   now?: Date;
   codexSkillPathMode?: CodexSkillPathMode;
+  includeHooks?: boolean;
 }
 
 export interface InstallFile {

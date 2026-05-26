@@ -63,12 +63,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook setup --hooks --dry-run', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup', 'contextbook setup --dry-run', 'contextbook install all [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run]']) {
+  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -529,17 +529,35 @@ try {
   const claudeSkill = join(home, '.claude', 'skills', 'contextbook', 'SKILL.md');
   const claudeLearn = join(home, '.claude', 'commands', 'contextbook-learn.md');
   const claudeWhy = join(home, '.claude', 'commands', 'contextbook-why.md');
+  const codexHookScript = join(home, '.codex', 'hooks', 'contextbook-user-prompt-submit.js');
+  const codexHookGuide = join(home, '.codex', 'hooks', 'contextbook-user-prompt-submit.md');
+  const claudeHookScript = join(home, '.claude', 'hooks', 'contextbook-user-prompt-submit.js');
+  const claudeHookGuide = join(home, '.claude', 'hooks', 'contextbook-user-prompt-submit.md');
 
   const setupDryRun = run(['setup', '--dry-run']);
   assert(setupDryRun.includes('# Contextbook setup (dry run)'), 'setup dry-run did not show setup heading');
   assert(setupDryRun.includes('# Contextbook codex install (dry run)') && setupDryRun.includes('# Contextbook claude-code install (dry run)'), 'setup dry-run did not preview both adapters');
   assert(setupDryRun.includes('.codex') && setupDryRun.includes('.claude'), 'setup dry-run did not show codex and claude target paths');
   assert(!existsSync(codexSkill) && !existsSync(claudeSkill), 'setup dry-run wrote files');
+  assert(!existsSync(codexHookScript) && !existsSync(claudeHookScript), 'setup dry-run wrote hook files');
+
+  const setupHooksDryRun = run(['setup', '--hooks', '--dry-run']);
+  assert(setupHooksDryRun.includes('.codex') && setupHooksDryRun.includes('.claude'), 'setup hooks dry-run did not show platform paths');
+  assert(setupHooksDryRun.includes('.codex/hooks') && setupHooksDryRun.includes('.claude/hooks'), 'setup hooks dry-run did not preview hook paths');
+  assert(setupHooksDryRun.includes('UserPromptSubmit'), 'setup hooks dry-run did not describe prompt hooks');
+  assert(!existsSync(codexHookScript) && !existsSync(claudeHookScript), 'setup hooks dry-run wrote hook files');
 
   const allDryRun = run(['install', 'all', '--dry-run']);
   assert(allDryRun.includes('# Contextbook codex install (dry run)') && allDryRun.includes('# Contextbook claude-code install (dry run)'), 'install all dry-run did not preview both adapters');
   assert(allDryRun.includes('.codex') && allDryRun.includes('.claude'), 'install all dry-run did not show codex and claude target paths');
   assert(!existsSync(codexSkill) && !existsSync(claudeSkill), 'install all dry-run wrote files');
+
+  const codexHooksDryRun = run(['install', 'codex', '--hooks', '--dry-run']);
+  assert(codexHooksDryRun.includes('.codex/hooks') && codexHooksDryRun.includes('UserPromptSubmit'), 'codex hooks dry-run did not preview hook files');
+  assert(!existsSync(codexHookScript) && !existsSync(codexHookGuide), 'codex hooks dry-run wrote hook files');
+  const claudeHooksDryRun = run(['install', 'claude-code', '--hooks', '--dry-run']);
+  assert(claudeHooksDryRun.includes('.claude/hooks') && claudeHooksDryRun.includes('UserPromptSubmit'), 'claude hooks dry-run did not preview hook files');
+  assert(!existsSync(claudeHookScript) && !existsSync(claudeHookGuide), 'claude hooks dry-run wrote hook files');
 
   const codexDryRun = run(['install', 'codex', '--dry-run']);
   assert(codexDryRun.includes('would create'), 'codex dry-run did not preview create');
@@ -578,9 +596,40 @@ try {
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory suggest-weak-terms --json'), 'setup claude skill missing weak suggestion guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory suggest-profile-updates --json'), 'setup claude skill missing profile suggestion guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'setup claude skill missing profile apply dry-run guidance');
+  assert(!existsSync(codexHookScript) && !existsSync(claudeHookScript), 'default setup installed hook files without --hooks');
+
+  const setupHooksInstall = run(['setup', '--hooks']);
+  assert(setupHooksInstall.includes('created') && setupHooksInstall.includes('Hook helpers are opt-in'), 'setup --hooks did not install hook helpers');
+  const codexHookScriptText = await readFile(codexHookScript, 'utf8');
+  const codexHookGuideText = await readFile(codexHookGuide, 'utf8');
+  const claudeHookScriptText = await readFile(claudeHookScript, 'utf8');
+  const claudeHookGuideText = await readFile(claudeHookGuide, 'utf8');
+  for (const [label, text, source] of [['codex', codexHookScriptText, 'codex'], ['claude', claudeHookScriptText, 'claude-code']]) {
+    assert(text.includes('spawnSync') && text.includes('memory') && text.includes('capture-prompt'), `${label} hook script missing capture-prompt spawn`);
+    assert(text.includes(`'${source}'`), `${label} hook script missing source`);
+    assert(!text.includes('transcript_path'), `${label} hook script should not parse transcript path`);
+  }
+  assert(codexHookGuideText.includes('~/.codex/hooks.json') && codexHookGuideText.includes('UserPromptSubmit') && codexHookGuideText.includes('review and trust'), 'codex hook guide missing config/trust guidance');
+  assert(claudeHookGuideText.includes('~/.claude/settings.json') && claudeHookGuideText.includes('UserPromptSubmit'), 'claude hook guide missing config guidance');
+  for (const [label, script] of [['codex', codexHookScript], ['claude', claudeHookScript]]) {
+    const syntaxRun = spawnSync(process.execPath, [script], {
+      input: JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: '' }),
+      encoding: 'utf8'
+    });
+    assert(syntaxRun.status === 0, `${label} hook script should run under plain node without ESM package context`);
+    const missingBinaryRun = spawnSync(process.execPath, [script], {
+      input: JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: '뭔소리야 너무 추상적임' }),
+      env: { ...process.env, PATH: '' },
+      encoding: 'utf8'
+    });
+    assert(missingBinaryRun.status === 0, `${label} hook script should not block when contextbook binary is unavailable`);
+  }
+  const setupHooksAgain = run(['setup', '--hooks']);
+  assert(setupHooksAgain.includes('skipped identical'), 'setup --hooks reinstall did not skip identical files');
 
   const codexInstall = run(['install', 'codex']);
   assert(codexInstall.includes('skipped identical'), 'codex install after setup did not skip identical file');
+  assert(existsSync(codexHookScript), 'codex install without --hooks should not remove existing hook file');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook learn'), 'codex skill missing learn guidance');
   const codexInstallAgain = run(['install', 'codex']);
   assert(codexInstallAgain.includes('skipped identical'), 'codex reinstall did not skip identical file');
@@ -590,11 +639,18 @@ try {
 
   const claudeInstall = run(['install', 'claude-code']);
   assert(claudeInstall.includes('skipped identical'), 'claude install after setup did not skip identical files');
+  assert(existsSync(claudeHookScript), 'claude install without --hooks should not remove existing hook file');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook why'), 'claude skill missing why guidance');
   assert((await readFile(claudeLearn, 'utf8')).includes('contextbook learn'), 'claude learn command missing CLI guidance');
   assert((await readFile(claudeLearn, 'utf8')).includes('contextbook memory context --json'), 'claude learn command missing memory context guidance');
   assert((await readFile(claudeLearn, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'claude learn command missing profile apply dry-run guidance');
   assert((await readFile(claudeWhy, 'utf8')).includes('$ARGUMENTS'), 'claude why command missing argument placeholder');
+
+  await writeFile(codexHookGuide, 'custom codex hook guide\n', 'utf8');
+  const codexHookUpdate = run(['install', 'codex', '--hooks']);
+  assert(codexHookUpdate.includes('updated with backup'), 'codex changed hook guide was not backed up before update');
+  const codexHookDirEntries = await readdir(join(home, '.codex', 'hooks'));
+  assert(codexHookDirEntries.some((entry) => entry.startsWith('contextbook-user-prompt-submit.md.bak-')), 'backup file missing for changed codex hook guide');
 
   await writeFile(claudeWhy, 'custom user command\n', 'utf8');
   const claudeUpdate = run(['install', 'claude-code']);
