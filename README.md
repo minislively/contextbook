@@ -116,6 +116,8 @@ Prompt-capture hooks are opt-in because they run on every submitted prompt. To i
 ```bash
 contextbook setup --hooks --dry-run
 contextbook setup --hooks
+contextbook hooks status
+contextbook hooks status --json
 contextbook install codex --hooks --dry-run
 contextbook install claude-code --hooks --dry-run
 ```
@@ -132,7 +134,7 @@ Claude Code hook helpers:
 ~/.claude/hooks/contextbook-user-prompt-submit.md
 ```
 
-After install, merge the generated snippet into `~/.codex/hooks.json` or `~/.claude/settings.json` and use your agent's hook review/trust flow if required.
+After install, run `contextbook hooks status` to see which helper files and hook configs are detected. Then merge the generated snippet into `~/.codex/hooks.json` or `~/.claude/settings.json` and use your agent's hook review/trust flow if required.
 
 Requires Node.js 20 or newer.
 
@@ -395,6 +397,7 @@ contextbook install claude-code
 ```bash
 contextbook setup                  # install Codex + Claude Code helper files
 contextbook setup --dry-run        # preview helper file writes
+contextbook hooks status           # read-only hook helper/config diagnostic
 contextbook init                   # initialize .contextbook and learner memory
 contextbook scan                   # scan project evidence
 contextbook project                # inspect existing project memory

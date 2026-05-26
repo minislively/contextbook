@@ -15,4 +15,6 @@ export { adapters, adapterIds, getAdapter, codexAdapter, claudeCodeAdapter } fro
 export type { AdapterId, ContextbookAdapter } from '../integrations/registry.js';
 export { installCodex, codexFiles } from '../codex/install.js';
 export { installClaudeCode, claudeCodeFiles } from '../claude-code/install.js';
+export { hooksStatus, formatHooksStatusMarkdown } from '../hooks/status.js';
 export type { InstallAction, InstallActionStatus, InstallFile, InstallOptions, InstallResult, InstallTarget } from '../install/types.js';
+export type { HooksStatusJson, HookPlatformStatus } from '../hooks/status.js';

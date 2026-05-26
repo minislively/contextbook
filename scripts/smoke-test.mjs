@@ -63,12 +63,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook setup --hooks --dry-run', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook setup --hooks --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
+  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook hooks status [--json]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -534,6 +534,15 @@ try {
   const claudeHookScript = join(home, '.claude', 'hooks', 'contextbook-user-prompt-submit.js');
   const claudeHookGuide = join(home, '.claude', 'hooks', 'contextbook-user-prompt-submit.md');
 
+  const hooksStatusBefore = run(['hooks', 'status']);
+  assert(hooksStatusBefore.includes('# Contextbook Hooks Status'), 'hooks status missing heading');
+  assert(hooksStatusBefore.includes('helper script: missing'), 'hooks status before setup should show missing helpers');
+  assert(hooksStatusBefore.includes('contextbook setup --hooks'), 'hooks status before setup missing setup action');
+  const hooksStatusJsonBefore = JSON.parse(run(['hooks', 'status', '--json']));
+  assert(hooksStatusJsonBefore.schemaVersion === 1, 'hooks status json missing schema version');
+  assert(hooksStatusJsonBefore.safety.readOnly === true && hooksStatusJsonBefore.safety.configMutated === false, 'hooks status safety flags invalid');
+  assert(hooksStatusJsonBefore.platforms.length === 2, 'hooks status json should include both platforms');
+
   const setupDryRun = run(['setup', '--dry-run']);
   assert(setupDryRun.includes('# Contextbook setup (dry run)'), 'setup dry-run did not show setup heading');
   assert(setupDryRun.includes('# Contextbook codex install (dry run)') && setupDryRun.includes('# Contextbook claude-code install (dry run)'), 'setup dry-run did not preview both adapters');
@@ -611,6 +620,44 @@ try {
   }
   assert(codexHookGuideText.includes('~/.codex/hooks.json') && codexHookGuideText.includes('UserPromptSubmit') && codexHookGuideText.includes('review and trust'), 'codex hook guide missing config/trust guidance');
   assert(claudeHookGuideText.includes('~/.claude/settings.json') && claudeHookGuideText.includes('UserPromptSubmit'), 'claude hook guide missing config guidance');
+  const hooksStatusAfterSetup = JSON.parse(run(['hooks', 'status', '--json']));
+  const codexPlatform = hooksStatusAfterSetup.platforms.find((platform) => platform.id === 'codex');
+  const claudePlatform = hooksStatusAfterSetup.platforms.find((platform) => platform.id === 'claude-code');
+  assert(codexPlatform?.helper.exists === true && claudePlatform?.helper.exists === true, 'hooks status after setup should find helper scripts');
+  assert(codexPlatform.runtime.helperSmoke === 'ok' && claudePlatform.runtime.helperSmoke === 'ok', 'hooks status should smoke test installed helpers with empty prompt');
+  assert(codexPlatform.configs.every((config) => config.status !== 'enabled') && claudePlatform.configs.every((config) => config.status !== 'enabled'), 'hooks status should not mark hooks enabled before config snippets are merged');
+  assert(codexPlatform.recommendedActions.some((action) => action.command.includes('~/.codex/hooks.json')), 'codex hooks status missing config merge action');
+  assert(claudePlatform.recommendedActions.some((action) => action.command.includes('~/.claude/settings.json')), 'claude hooks status missing config merge action');
+
+  await mkdir(join(home, '.codex'), { recursive: true });
+  await writeFile(join(home, '.codex', 'hooks.json'), JSON.stringify({
+    hooks: {
+      UserPromptSubmit: [{
+        hooks: [{ type: 'command', command: `node \"${codexHookScript}\"`, timeout: 30 }]
+      }]
+    }
+  }, null, 2), 'utf8');
+  await mkdir(join(root, '.claude'), { recursive: true });
+  await writeFile(join(root, '.claude', 'settings.json'), JSON.stringify({
+    hooks: {
+      UserPromptSubmit: [{
+        hooks: [{ type: 'command', command: `node \"${claudeHookScript}\"`, timeout: 30 }]
+      }]
+    }
+  }, null, 2), 'utf8');
+  await mkdir(join(root, '.codex'), { recursive: true });
+  await writeFile(join(root, '.codex', 'hooks.json'), '{ invalid json', 'utf8');
+  const signalsBeforeHookStatus = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
+  const hooksStatusEnabled = JSON.parse(run(['hooks', 'status', '--json']));
+  const codexEnabled = hooksStatusEnabled.platforms.find((platform) => platform.id === 'codex');
+  const claudeEnabled = hooksStatusEnabled.platforms.find((platform) => platform.id === 'claude-code');
+  assert(codexEnabled.configs.some((config) => config.status === 'enabled'), 'codex hooks status should detect enabled hooks.json');
+  assert(codexEnabled.configs.some((config) => config.status === 'parse-error'), 'codex hooks status should report invalid project hooks json as parse-error');
+  assert(claudeEnabled.configs.some((config) => config.status === 'enabled'), 'claude hooks status should detect enabled settings json');
+  assert(hooksStatusEnabled.safety.learnerMemoryMutated === false && hooksStatusEnabled.safety.rawPromptPersisted === false, 'hooks status safety flags should prohibit memory/raw prompt writes');
+  const signalsAfterHookStatus = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
+  assert(signalsAfterHookStatus === signalsBeforeHookStatus, 'hooks status should not mutate conversation memory while smoke testing helpers');
+
   for (const [label, script] of [['codex', codexHookScript], ['claude', claudeHookScript]]) {
     const syntaxRun = spawnSync(process.execPath, [script], {
       input: JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: '' }),
@@ -624,6 +671,13 @@ try {
     });
     assert(missingBinaryRun.status === 0, `${label} hook script should not block when contextbook binary is unavailable`);
   }
+  await writeFile(codexHookScript, '#!/usr/bin/env node\nconsole.log(\"custom\");\n', 'utf8');
+  const tamperedStatus = JSON.parse(run(['hooks', 'status', '--json']));
+  const tamperedCodex = tamperedStatus.platforms.find((platform) => platform.id === 'codex');
+  assert(tamperedCodex.runtime.helperSmoke === 'skipped', 'hooks status should not execute modified helper scripts');
+  const restoredCodexHook = run(['install', 'codex', '--hooks']);
+  assert(restoredCodexHook.includes('updated with backup'), 'codex hook script restore should back up modified helper');
+
   const setupHooksAgain = run(['setup', '--hooks']);
   assert(setupHooksAgain.includes('skipped identical'), 'setup --hooks reinstall did not skip identical files');
 
