@@ -376,6 +376,79 @@ export interface ApplyPreferenceSignalsResult {
   safety: ApplyPreferenceSignalsSafety;
 }
 
+export type PreferenceHistoryCommand = 'memory.apply-profile-update' | 'memory.apply-preference-signals' | 'profile.reset' | 'memory.undo-preference-update';
+
+export interface PreferenceHistoryEntry {
+  id: string;
+  index: number;
+  appliedAt: string;
+  command: PreferenceHistoryCommand;
+  file: 'preferences.json';
+  backup: string;
+  canUndo: boolean;
+  summary: string;
+  metadata: Record<string, string | number | boolean | null>;
+}
+
+export interface PreferenceHistorySafety {
+  rawTranscriptIncluded: false;
+  rawPromptPersisted: false;
+  absolutePathsIncluded: false;
+  hiddenContentIncluded: false;
+  projectMemoryMutated: false;
+  profileMutated: false;
+  preferencesMutated: false;
+  weakTermsMutated: false;
+  unsafeJudgmentIncluded: false;
+}
+
+export interface PreferenceHistoryResult {
+  schemaVersion: 1;
+  generatedAt: string;
+  learner: string;
+  entries: PreferenceHistoryEntry[];
+  eventCounts: {
+    profileUpdates: number;
+    undoableEntries: number;
+  };
+  safety: PreferenceHistorySafety;
+}
+
+export type UndoPreferenceUpdateOperation = 'restore-snapshot' | 'skip-identical';
+
+export interface UndoPreferenceUpdateChange {
+  file: 'preferences.json';
+  operation: UndoPreferenceUpdateOperation;
+  before?: LearnerPreferences;
+  after?: LearnerPreferences;
+  message: string;
+}
+
+export interface UndoPreferenceUpdateSafety {
+  rawTranscriptIncluded: false;
+  rawPromptPersisted: false;
+  absolutePathsIncluded: false;
+  hiddenContentIncluded: false;
+  projectMemoryMutated: false;
+  profileMutated: false;
+  preferencesMutated: boolean;
+  weakTermsMutated: false;
+  unsafeJudgmentIncluded: false;
+}
+
+export interface UndoPreferenceUpdateResult {
+  schemaVersion: 1;
+  generatedAt: string;
+  learner: string;
+  dryRun: boolean;
+  applied: boolean;
+  entry: PreferenceHistoryEntry;
+  changes: UndoPreferenceUpdateChange[];
+  auditEvent?: ConversationMemoryEvent;
+  backupCreated?: string;
+  safety: UndoPreferenceUpdateSafety;
+}
+
 export interface ProfileUpdateCandidatesJson {
   schemaVersion: 1;
   generatedAt: string;
@@ -421,7 +494,7 @@ export interface LearnerSummary extends Omit<LearnerSummaryJson, 'schemaVersion'
   markdown: string;
 }
 
-export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.capture-prompt' | 'memory.signals' | 'memory.suggest-weak-terms' | 'memory.suggest-profile-updates' | 'memory.apply-profile-update' | 'memory.apply-preference-signals' | 'memory.context';
+export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.capture-prompt' | 'memory.signals' | 'memory.suggest-weak-terms' | 'memory.suggest-profile-updates' | 'memory.apply-profile-update' | 'memory.apply-preference-signals' | 'memory.preference-history' | 'memory.undo-preference-update' | 'memory.context';
 
 export type ConversationSignalType =
   | 'scan.completed'

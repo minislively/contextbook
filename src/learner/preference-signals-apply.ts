@@ -61,7 +61,8 @@ export async function applyPreferenceSignals(options: ApplyPreferenceSignalsOpti
         safeSignals: counts.autoApplySafe,
         signalOnly: counts.signalOnly,
         changes: plan.changes.filter((change) => WRITE_OPERATIONS.has(change.operation)).length,
-        file: 'preferences.json'
+        file: 'preferences.json',
+        backup: basename(backupCreated)
       }
     });
     await recordProfileUpdate(auditEvent, learner);

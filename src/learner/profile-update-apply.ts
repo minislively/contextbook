@@ -49,7 +49,8 @@ export async function applyProfileUpdateCandidate(options: ApplyProfileUpdateOpt
         candidateId: candidate.id,
         targetSection: candidate.targetSection,
         changes: plan.changes.length,
-        file: 'preferences.json'
+        file: 'preferences.json',
+        backup: basename(backupCreated)
       }
     });
     await recordProfileUpdate(auditEvent, learner);

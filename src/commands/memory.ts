@@ -4,6 +4,7 @@ import { applyPreferenceSignals, formatApplyPreferenceSignalsSummary } from '../
 import { applyProfileUpdateCandidate, formatApplyProfileUpdateSummary } from '../learner/profile-update-apply.js';
 import { capturePromptSignals, formatPromptCaptureSummary, isPromptCaptureSource } from '../learner/prompt-capture.js';
 import { formatProfileUpdateCandidatesSummary, profileUpdateCandidatesJson } from '../learner/profile-update-candidates.js';
+import { formatPreferenceHistorySummary, formatUndoPreferenceUpdateSummary, preferenceHistoryJson, undoPreferenceUpdate } from '../learner/preference-history.js';
 import { formatWeakTermSuggestionsSummary, weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
 
 export async function memoryCommand(args: string[] = []): Promise<void> {
@@ -73,6 +74,26 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
         return;
       }
       console.log(formatApplyPreferenceSignalsSummary(result));
+      return;
+    }
+    case 'preference-history': {
+      const json = parseJsonFlag(rest, 'contextbook memory preference-history [--json]');
+      const result = await preferenceHistoryJson('default');
+      if (json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatPreferenceHistorySummary(result));
+      return;
+    }
+    case 'undo-preference-update': {
+      const input = parseUndoPreferenceUpdate(rest);
+      const result = await undoPreferenceUpdate({ learner: 'default', entryRef: input.entry, dryRun: input.dryRun, yes: input.yes });
+      if (input.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatUndoPreferenceUpdateSummary(result));
       return;
     }
     case 'context': {
@@ -229,6 +250,45 @@ function parseApplyProfileUpdate(args: string[]): { candidate: string; dryRun: b
   return { candidate, dryRun, json };
 }
 
+
+function parseUndoPreferenceUpdate(args: string[]): { entry: string; dryRun: boolean; yes: boolean; json: boolean } {
+  let entry: string | undefined;
+  let dryRun = false;
+  let yes = false;
+  let json = false;
+  const usage = 'Usage: contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]';
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+    if (arg === '--yes') {
+      yes = true;
+      continue;
+    }
+    if (arg === '--json') {
+      json = true;
+      continue;
+    }
+    if (arg === '--entry') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) throw new Error(usage);
+      entry = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--entry=')) {
+      entry = arg.slice('--entry='.length);
+      if (!entry) throw new Error(usage);
+      continue;
+    }
+    throw new Error(usage);
+  }
+  if (!entry || dryRun === yes) throw new Error(usage);
+  return { entry, dryRun, yes, json };
+}
+
 function parseFlags(args: string[]): Record<string, string | undefined> {
   const values: Record<string, string | undefined> = {};
   for (let index = 0; index < args.length; index += 1) {
@@ -259,6 +319,8 @@ function memoryUsage(): string {
     '  contextbook memory suggest-profile-updates [--json]',
     '  contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]',
     '  contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--dry-run] [--json]',
+    '  contextbook memory preference-history [--json]',
+    '  contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]',
     '  contextbook memory context [--json]',
     '',
     `Allowed types: ${memorySignalTypes.join(', ')}`

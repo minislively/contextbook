@@ -230,6 +230,8 @@ contextbook memory apply-profile-update --candidate <id|index> --dry-run
 contextbook memory apply-profile-update --candidate <id|index> --dry-run --json
 contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --dry-run
 contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --dry-run --json
+contextbook memory preference-history --json
+contextbook memory undo-preference-update --entry 1 --dry-run --json
 contextbook memory context --json
 ```
 
@@ -244,6 +246,8 @@ For agent integrations, `contextbook setup --hooks` installs platform-specific `
 When you explicitly accept a supported profile candidate, preview first with `contextbook memory apply-profile-update --candidate <id|index> --dry-run`. Applying without `--dry-run` is narrow by design: it can update `preferences.json`, creates a timestamped `preferences.json.bak-*`, and appends an audit event to `profile-updates.jsonl`; it does not mutate `profile.md`, `weak-terms.json`, Project Memory, or raw signal logs.
 
 For one-off explicit preferences from a prompt, preview first with `contextbook memory apply-preference-signals --prompt "<text>" --dry-run`. Applying without `--dry-run` only writes allowlisted safe preferences such as language, project-first order, short output, interview sentence, or fewer commands. It creates a `preferences.json.bak-*` backup and appends an audit event without storing the raw prompt. Hook auto-apply is intentionally not enabled by default.
+
+Preference updates are recoverable. Use `contextbook memory preference-history` to inspect audited preference snapshots and `contextbook memory undo-preference-update --entry <id|index> --dry-run` before restoring with `--yes`. Undo restores `preferences.json` from a backup snapshot, creates a fresh backup of the current state, and appends an audit event; it does not touch raw prompts, `profile.md`, weak terms, Project Memory, or signal logs.
 
 `contextbook memory context --json` bundles Project Memory, Learner Memory, signals, suggestions, freshness hints, safety flags, and preview-first next actions for AI agents in one payload.
 
@@ -424,6 +428,9 @@ contextbook memory apply-profile-update --candidate <id|index> --dry-run
 contextbook memory apply-profile-update --candidate <id|index> --dry-run --json
 contextbook memory apply-preference-signals --prompt <text> --dry-run
 contextbook memory apply-preference-signals --prompt <text> --dry-run --json
+contextbook memory preference-history [--json]
+contextbook memory undo-preference-update --entry <id|index> --dry-run [--json]
+contextbook memory undo-preference-update --entry <id|index> --yes [--json]
 contextbook memory context                    # inspect bundled memory context
 contextbook memory context --json             # one-shot agent context bundle
 contextbook learn                  # generate 1-3 learning moments

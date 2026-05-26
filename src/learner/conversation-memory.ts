@@ -267,6 +267,8 @@ function isConversationCommand(value: unknown): value is ConversationCommand {
     || value === 'memory.suggest-profile-updates'
     || value === 'memory.apply-profile-update'
     || value === 'memory.apply-preference-signals'
+    || value === 'memory.preference-history'
+    || value === 'memory.undo-preference-update'
     || value === 'memory.context';
 }
 
