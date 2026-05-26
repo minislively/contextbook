@@ -2,7 +2,7 @@ export type PromptCaptureHookSource = 'codex' | 'claude-code';
 
 export function promptCaptureHookScript(source: PromptCaptureHookSource): string {
   return `#!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
+const { spawnSync } = require('node:child_process');
 
 let inputText = '';
 process.stdin.setEncoding('utf8');

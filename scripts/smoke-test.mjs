@@ -611,6 +611,19 @@ try {
   }
   assert(codexHookGuideText.includes('~/.codex/hooks.json') && codexHookGuideText.includes('UserPromptSubmit') && codexHookGuideText.includes('review and trust'), 'codex hook guide missing config/trust guidance');
   assert(claudeHookGuideText.includes('~/.claude/settings.json') && claudeHookGuideText.includes('UserPromptSubmit'), 'claude hook guide missing config guidance');
+  for (const [label, script] of [['codex', codexHookScript], ['claude', claudeHookScript]]) {
+    const syntaxRun = spawnSync(process.execPath, [script], {
+      input: JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: '' }),
+      encoding: 'utf8'
+    });
+    assert(syntaxRun.status === 0, `${label} hook script should run under plain node without ESM package context`);
+    const missingBinaryRun = spawnSync(process.execPath, [script], {
+      input: JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: '뭔소리야 너무 추상적임' }),
+      env: { ...process.env, PATH: '' },
+      encoding: 'utf8'
+    });
+    assert(missingBinaryRun.status === 0, `${label} hook script should not block when contextbook binary is unavailable`);
+  }
   const setupHooksAgain = run(['setup', '--hooks']);
   assert(setupHooksAgain.includes('skipped identical'), 'setup --hooks reinstall did not skip identical files');
 
