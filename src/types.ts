@@ -601,6 +601,20 @@ export interface HookSuggestRecommendedAction {
   approvalRequired: boolean;
 }
 
+export interface HookSuggestMemoryContext {
+  included: boolean;
+  trigger: 'explicit-contextbook' | 'learning-question' | 'forced' | 'none';
+  projectConcepts: string[];
+  learnerPreferences: {
+    preferredLanguage?: string;
+    explanationOrder: string[];
+    avoid: string[];
+  };
+  weakTerms: string[];
+  profileUpdateCandidateCount: number;
+  recommendedActions: string[];
+}
+
 export interface HookSuggestSafety {
   rawTranscriptIncluded: false;
   rawPromptIncluded: false;
@@ -622,6 +636,7 @@ export interface HookSuggestResult {
   actionable: boolean;
   capturedSignalsCount: number;
   preferenceSignals: PreferenceSignalCandidate[];
+  memoryContext: HookSuggestMemoryContext;
   recommendedActions: HookSuggestRecommendedAction[];
   additionalContext: string;
   skippedReasons: string[];

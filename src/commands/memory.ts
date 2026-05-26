@@ -27,8 +27,8 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
       return;
     }
     case 'hook-suggest': {
-      const input = parseCapturePrompt(rest, 'Usage: contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--json]');
-      const result = await hookSuggest({ prompt: input.prompt, source: input.source, learner: 'default' });
+      const input = parseHookSuggest(rest);
+      const result = await hookSuggest({ prompt: input.prompt, source: input.source, learner: 'default', includeMemoryContext: input.includeMemoryContext });
       if (input.json) {
         console.log(JSON.stringify(result, null, 2));
         return;
@@ -174,6 +174,22 @@ function parseCapturePrompt(args: string[], usage = 'Usage: contextbook memory c
   }
   if (!prompt) throw new Error(usage);
   return { prompt, source, json };
+}
+
+function parseHookSuggest(args: string[]): { prompt: string; source: 'manual' | 'codex' | 'claude-code'; json: boolean; includeMemoryContext: boolean } {
+  const filtered: string[] = [];
+  let includeMemoryContext = false;
+  for (const arg of args) {
+    if (arg === '--include-memory-context') {
+      includeMemoryContext = true;
+      continue;
+    }
+    filtered.push(arg);
+  }
+  return {
+    ...parseCapturePrompt(filtered, 'Usage: contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]'),
+    includeMemoryContext
+  };
 }
 
 function parseApplyPreferenceSignals(args: string[]): { prompt: string; source: 'manual' | 'codex' | 'claude-code'; dryRun: boolean; json: boolean } {
@@ -325,7 +341,7 @@ function memoryUsage(): string {
     'Usage:',
     '  contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>] [--format <format>]',
     '  contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]',
-    '  contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--json]',
+    '  contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]',
     '  contextbook memory signals [--json]',
     '  contextbook memory suggest-weak-terms [--json]',
     '  contextbook memory suggest-profile-updates [--json]',

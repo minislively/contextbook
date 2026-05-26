@@ -89,12 +89,14 @@ Contextbook does **not** edit your Codex hook config automatically. To enable pr
 
 After changing Codex hooks, use \`/hooks\` in Codex to review and trust the hook definition.
 
+Codex hook context injection can vary by installed Codex runtime. Treat this helper as best-effort until you verify the generated hook with \`/hooks\` and a live local prompt. If your Codex runtime does not inject hook stdout as model context, run \`contextbook memory context --json\` manually from the Contextbook skill.
+
 ## Safety
 
 - The hook calls \`contextbook memory hook-suggest --source codex --json\`.
 - Contextbook classifies only explicit learning/preference signals.
 - Contextbook does not persist or echo the raw prompt text.
-- The hook may surface suggestion-only context for dry-run preference previews.
+- The hook may surface suggestion-only context for dry-run preference previews and read-only Contextbook memory for learning questions.
 - Contextbook never auto-applies profile/preferences from hooks.
 - The hook exits successfully even if capture fails, so it should not block Codex.
 `;
@@ -135,7 +137,7 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
    contextbook memory suggest-weak-terms --json
    contextbook memory suggest-profile-updates --json
    \`\`\`
-5. To record explicit user feedback as append-only Learner Memory, run \`contextbook memory add-signal --type <allowed-type> --concept "<concept>"\` only when the user clearly expresses feedback. For hook-ready prompt feedback capture, use \`contextbook memory capture-prompt --prompt "<user prompt>" --source codex --json\`; it stores sanitized signal notes, not raw transcript text. For hook suggestion context, use \`contextbook memory hook-suggest --prompt "<user prompt>" --source codex --json\`; it emits suggestion-only context and never auto-applies preferences. Do not infer ability or mutate profile.
+5. To record explicit user feedback as append-only Learner Memory, run \`contextbook memory add-signal --type <allowed-type> --concept "<concept>"\` only when the user clearly expresses feedback. For hook-ready prompt feedback capture, use \`contextbook memory capture-prompt --prompt "<user prompt>" --source codex --json\`; it stores sanitized signal notes, not raw transcript text. For hook suggestion context, use \`contextbook memory hook-suggest --prompt "<user prompt>" --source codex --json\`; it emits suggestion-only/read-only memory context and never auto-applies preferences. Do not infer ability or mutate profile.
 6. Profile update candidates are preview-first. Use \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` to show the exact preferences-only change, and run without \`--dry-run\` only after explicit user approval.
 7. Explicit prompt preferences are also preview-first. Use \`contextbook memory apply-preference-signals --prompt "<user prompt>" --source codex --dry-run\` to preview allowlisted language/order/length/command-volume updates without storing the raw prompt.
 8. For learning moments, run:

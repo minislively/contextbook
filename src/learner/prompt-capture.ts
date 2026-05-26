@@ -1,8 +1,10 @@
 import { addExplicitMemorySignal } from './conversation-memory.js';
 import { classifyPreferenceSignals, preferenceSignalCounts } from './preference-signals.js';
+import { buildMemoryContext } from '../core/memory-context.js';
 import type {
   ConversationMemoryEvent,
   ConversationSignalType,
+  HookSuggestMemoryContext,
   HookSuggestRecommendedAction,
   HookSuggestResult,
   PromptCaptureResult,
@@ -76,6 +78,7 @@ export interface CapturePromptOptions {
   prompt: string;
   source?: PromptCaptureSource;
   learner?: string;
+  includeMemoryContext?: boolean;
 }
 
 export function isPromptCaptureSource(value: string): value is PromptCaptureSource {
@@ -139,8 +142,9 @@ export async function capturePromptSignals(options: CapturePromptOptions): Promi
 
 export async function hookSuggest(options: CapturePromptOptions): Promise<HookSuggestResult> {
   const capture = await capturePromptSignals(options);
+  const memoryContext = await hookMemoryContext(options.prompt, capture.learner, options.includeMemoryContext === true);
   const recommendedActions = hookRecommendedActions(capture);
-  const actionable = recommendedActions.length > 0 || capture.preferenceSignals.length > 0;
+  const actionable = recommendedActions.length > 0 || capture.preferenceSignals.length > 0 || memoryContext.included;
   return {
     schemaVersion: 1,
     generatedAt: capture.generatedAt,
@@ -149,8 +153,9 @@ export async function hookSuggest(options: CapturePromptOptions): Promise<HookSu
     actionable,
     capturedSignalsCount: capture.capturedSignals.length,
     preferenceSignals: capture.preferenceSignals,
+    memoryContext,
     recommendedActions,
-    additionalContext: actionable ? formatHookAdditionalContext(capture, recommendedActions) : '',
+    additionalContext: actionable ? formatHookAdditionalContext(capture, recommendedActions, memoryContext) : '',
     skippedReasons: actionable ? [] : capture.skippedReasons,
     safety: {
       rawTranscriptIncluded: false,
@@ -220,7 +225,50 @@ function hookRecommendedActions(result: PromptCaptureResult): HookSuggestRecomme
   return actions;
 }
 
-function formatHookAdditionalContext(result: PromptCaptureResult, actions: HookSuggestRecommendedAction[]): string {
+async function hookMemoryContext(prompt: string, learner: string, forced: boolean): Promise<HookSuggestMemoryContext> {
+  const trigger = forced ? 'forced' : memoryContextTrigger(prompt);
+  if (trigger === 'none') return emptyHookMemoryContext();
+  const context = await buildMemoryContext({ learner });
+  return {
+    included: true,
+    trigger,
+    projectConcepts: context.project.topConcepts.slice(0, 5).map((concept) => concept.label),
+    learnerPreferences: {
+      preferredLanguage: context.learnerMemory.preferences.preferredLanguage,
+      explanationOrder: context.learnerMemory.preferences.explanationOrder.slice(0, 6),
+      avoid: context.learnerMemory.preferences.avoid.slice(0, 5)
+    },
+    weakTerms: context.learnerMemory.topWeakTerms.slice(0, 5).map((term) => term.term),
+    profileUpdateCandidateCount: context.suggestions.profileUpdates.candidates.length,
+    recommendedActions: context.recommendedActions.slice(0, 5).map((action) => action.command)
+  };
+}
+
+function memoryContextTrigger(prompt: string): HookSuggestMemoryContext['trigger'] {
+  const normalized = normalizePrompt(prompt);
+  if (!normalized) return 'none';
+  if (/contextbook/i.test(normalized) || /컨텍스트북/i.test(normalized)) return 'explicit-contextbook';
+  if (/(learning moment|learning card|learn the concepts|what can i learn)/i.test(normalized)) return 'learning-question';
+  if (/(학습\s*(카드|모먼트|메모)|배울\s*개념|개념.*(설명|정리)|면접\s*(문장|답변)|왜\s*(필요|해야|중요)|why\s+)/i.test(normalized)) return 'learning-question';
+  return 'none';
+}
+
+function emptyHookMemoryContext(): HookSuggestMemoryContext {
+  return {
+    included: false,
+    trigger: 'none',
+    projectConcepts: [],
+    learnerPreferences: {
+      explanationOrder: [],
+      avoid: []
+    },
+    weakTerms: [],
+    profileUpdateCandidateCount: 0,
+    recommendedActions: []
+  };
+}
+
+function formatHookAdditionalContext(result: PromptCaptureResult, actions: HookSuggestRecommendedAction[], memoryContext: HookSuggestMemoryContext): string {
   const preferenceSignals = result.preferenceSignals
     .slice(0, 5)
     .map((signal) => `- ${signal.dimension}=${signal.value} (${signal.intent}, ${signal.scope}, ${signal.policy})`)
@@ -232,6 +280,18 @@ function formatHookAdditionalContext(result: PromptCaptureResult, actions: HookS
   const commands = actions
     .map((action) => `- \`${action.command}\` — ${action.reason}${action.approvalRequired ? ' Apply only after explicit user approval.' : ''}`)
     .join('\n') || '- none';
+  const memoryContextLines = memoryContext.included ? [
+    '## Read-only Memory Context',
+    `- trigger: ${memoryContext.trigger}`,
+    `- project concepts: ${memoryContext.projectConcepts.join(', ') || 'none'}`,
+    `- explanation order: ${memoryContext.learnerPreferences.explanationOrder.join(' → ') || 'none'}`,
+    `- preferred language: ${memoryContext.learnerPreferences.preferredLanguage ?? 'unspecified'}`,
+    `- avoid: ${memoryContext.learnerPreferences.avoid.join(', ') || 'none'}`,
+    `- weak terms: ${memoryContext.weakTerms.join(', ') || 'none'}`,
+    `- profile update candidates: ${memoryContext.profileUpdateCandidateCount}`,
+    `- recommended commands: ${memoryContext.recommendedActions.join('; ') || 'none'}`,
+    ''
+  ] : [];
   return [
     '# Contextbook Hook Suggestion',
     '',
@@ -246,6 +306,7 @@ function formatHookAdditionalContext(result: PromptCaptureResult, actions: HookS
     '## Suggested Next Actions',
     commands,
     '',
+    ...memoryContextLines,
     '## Safety Contract',
     '- Do not auto-apply profile or preference updates from this hook.',
     '- Do not quote or persist the raw prompt.',
