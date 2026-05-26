@@ -595,6 +595,39 @@ export interface PromptCaptureResult {
   safety: PromptCaptureSafety;
 }
 
+export interface HookSuggestRecommendedAction {
+  command: string;
+  reason: string;
+  approvalRequired: boolean;
+}
+
+export interface HookSuggestSafety {
+  rawTranscriptIncluded: false;
+  rawPromptIncluded: false;
+  rawPromptPersisted: false;
+  absolutePathsIncluded: false;
+  profileMutated: false;
+  preferencesMutated: false;
+  weakTermsMutated: false;
+  projectMemoryMutated: false;
+  unsafeJudgmentIncluded: false;
+  hookBlocksAgent: false;
+}
+
+export interface HookSuggestResult {
+  schemaVersion: 1;
+  generatedAt: string;
+  learner: string;
+  source: PromptCaptureSource;
+  actionable: boolean;
+  capturedSignalsCount: number;
+  preferenceSignals: PreferenceSignalCandidate[];
+  recommendedActions: HookSuggestRecommendedAction[];
+  additionalContext: string;
+  skippedReasons: string[];
+  safety: HookSuggestSafety;
+}
+
 export interface MemorySignalsSafety {
   rawTranscriptIncluded: false;
   absolutePathsIncluded: false;
