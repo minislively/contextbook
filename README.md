@@ -111,6 +111,29 @@ If you want to preview the writes first:
 contextbook setup --dry-run
 ```
 
+Prompt-capture hooks are opt-in because they run on every submitted prompt. To install hook helper files for both Codex and Claude Code:
+
+```bash
+contextbook setup --hooks --dry-run
+contextbook setup --hooks
+contextbook install codex --hooks --dry-run
+contextbook install claude-code --hooks --dry-run
+```
+
+This creates hook scripts and guide snippets, but it does not silently edit your existing Codex/Claude hook settings:
+
+```txt
+Codex hook helpers:
+~/.codex/hooks/contextbook-user-prompt-submit.js
+~/.codex/hooks/contextbook-user-prompt-submit.md
+
+Claude Code hook helpers:
+~/.claude/hooks/contextbook-user-prompt-submit.js
+~/.claude/hooks/contextbook-user-prompt-submit.md
+```
+
+After install, merge the generated snippet into `~/.codex/hooks.json` or `~/.claude/settings.json` and use your agent's hook review/trust flow if required.
+
 Requires Node.js 20 or newer.
 
 ### Step 2. Initialize a project
@@ -207,6 +230,8 @@ contextbook memory context --json
 ```
 
 Memory signals are append-only learning events for explicit feedback such as confusion, positive feedback, format requests, or analogy fit. They do not update your profile or weak terms automatically. `contextbook memory capture-prompt` is the hook-ready deterministic version: it classifies only explicit learning-feedback phrases from a prompt, stores sanitized signal notes, and does not persist the raw prompt.
+
+For agent integrations, `contextbook setup --hooks` installs platform-specific `UserPromptSubmit` helper scripts that call `capture-prompt` locally. The hook scripts are non-blocking and config activation remains manual/snippet-based so existing user hooks are not overwritten.
 
 `contextbook memory suggest-weak-terms` reads those signals and returns review candidates such as “event loop may be worth revisiting”. `contextbook memory suggest-profile-updates` turns repeated explanation-format signals into profile update candidates such as “prefer project context first”. Both suggestion commands are read-only: they do not write `weak-terms.json`, do not edit your profile/preferences, and do not label your ability.
 

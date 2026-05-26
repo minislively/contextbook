@@ -30,6 +30,7 @@ Initial MVP release.
 - Structured Conversation Memory events for `scan`, `learn`, `why`, and `profile` flows.
 - Conversation Memory summary in `contextbook profile`.
 - `contextbook setup` for explicit Codex/OMX and Claude Code helper installation.
+- `contextbook setup --hooks` and `contextbook install <target> --hooks` for opt-in Codex/Claude Code `UserPromptSubmit` hook helper files that call deterministic prompt signal capture.
 - Advanced platform install commands for Codex and Claude Code.
 - Adapter-ready core exports for `scanProject`, `buildProjectSummary`, `toProjectSummaryJson`, `buildLearnerSummary`, `toLearnerSummaryJson`, `buildLearningMoments`, and `answerWhy`.
 - Adapter-ready weak-term suggestion exports for `weakTermSuggestionsJson` and `buildWeakTermSuggestions`.
