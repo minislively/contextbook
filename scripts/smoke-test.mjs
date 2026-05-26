@@ -387,13 +387,20 @@ try {
   }
   assert(mixedCapture.preferenceSignals.length >= 5, 'mixed capture should classify multiple preference signals');
   assert(mixedCapture.preferenceSignals.filter((item) => item.route === 'auto-apply-safe').length >= 5, 'mixed capture safe preferences should be auto-apply eligible labels');
+  assert(mixedCapture.preferenceSignals.every((item) => item.intent && item.scope && item.risk && item.policy && Array.isArray(item.scopeEvidence)), 'mixed capture missing intent/scope/risk/policy contract');
+  assert(mixedCapture.preferenceSignals.some((item) => item.scope === 'persistent-candidate' && item.policy === 'dry-run-only' && item.scopeEvidence.includes('negative-constraint')), 'mixed capture should expose persistent candidate evidence without applying');
   assert(mixedCapture.safety.preferencesMutated === false && mixedCapture.safety.profileMutated === false, 'mixed capture mutated profile/preferences');
   const koreanCapture = JSON.parse(run(['memory', 'capture-prompt', '--prompt', '앞으로 한국어로 설명해줘. 영어보다 한국어가 좋아.', '--source', 'manual', '--json']));
   assert(koreanCapture.preferenceSignals.some((item) => item.dimension === 'language' && item.value === 'ko' && item.route === 'auto-apply-safe'), 'language capture missing ko preference');
   const selfJudgmentCapture = JSON.parse(run(['memory', 'capture-prompt', '--prompt', '나는 CS를 못해서 그런가 이해가 잘 안 돼.', '--source', 'manual', '--json']));
   assert(selfJudgmentCapture.preferenceSignals.some((item) => item.dimension === 'self-assessment'), 'self judgment capture missing self-assessment signal');
   assert(!selfJudgmentCapture.preferenceSignals.some((item) => item.dimension === 'self-assessment' && item.route === 'auto-apply-safe'), 'self judgment must not be auto-apply safe');
+  assert(selfJudgmentCapture.preferenceSignals.some((item) => item.dimension === 'self-assessment' && item.intent === 'unsafe-self-assessment' && item.risk === 'high' && item.policy === 'observe-only' && item.scopeEvidence.includes('unsafe-self-assessment')), 'self judgment should be high-risk observe-only metadata');
   assert(selfJudgmentCapture.safety.unsafeJudgmentIncluded === false, 'self judgment safety flag should remain false');
+  const taskLocalCapture = JSON.parse(run(['memory', 'capture-prompt', '--prompt', '이번 답변만 영어로 짧게 해줘', '--source', 'manual', '--json']));
+  assert(taskLocalCapture.preferenceSignals.some((item) => item.scopeEvidence.includes('task-local-cue') && item.scope === 'turn-local' && item.policy === 'observe-only'), 'task-local capture should not become persistent preference');
+  const uncertaintyCapture = JSON.parse(run(['memory', 'capture-prompt', '--prompt', '영어로 하는 게 나을까? 추천해줘', '--source', 'manual', '--json']));
+  assert(uncertaintyCapture.preferenceSignals.some((item) => item.scopeEvidence.includes('uncertainty-cue') && item.intent === 'meta-question' && item.policy === 'observe-only'), 'uncertainty capture should remain observe-only');
   const capturedSignalsAfter = await readJsonl(join(learnerDir, 'signals.jsonl'));
   assert(capturedSignalsAfter.some((item) => item.command === 'memory.capture-prompt' && item.signalType === 'feedback.confused'), 'signals missing captured confusion event');
   assert(capturedSignalsAfter.some((item) => item.command === 'memory.capture-prompt' && item.signalType === 'format.requested'), 'signals missing captured format event');
@@ -406,7 +413,7 @@ try {
   const coreCaptureCandidates = core.classifyPromptSignals('비유 좋다');
   assert(coreCaptureCandidates.some((item) => item.signalType === 'analogy.accepted'), 'core capture classifier missing accepted analogy');
   const corePreferenceCandidates = core.classifyPreferenceSignals('한국어로 쉽게 설명해줘');
-  assert(corePreferenceCandidates.some((item) => item.dimension === 'language' && item.value === 'ko'), 'core preference classifier missing language signal');
+  assert(corePreferenceCandidates.some((item) => item.dimension === 'language' && item.value === 'ko' && item.scope && item.policy), 'core preference classifier missing language signal contract');
 
   const applyPreferencePrompt = '앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명하고, 면접 문장은 짧게 줘. 명령어는 너무 많이 주지 마.';
   const preferenceApplyProfileBefore = await readFile(join(learnerDir, 'profile.md'), 'utf8');
@@ -419,6 +426,8 @@ try {
   const dryPreferenceApply = JSON.parse(run(['memory', 'apply-preference-signals', '--prompt', applyPreferencePrompt, '--source', 'manual', '--dry-run', '--json']));
   assert(dryPreferenceApply.schemaVersion === 1 && dryPreferenceApply.dryRun === true && dryPreferenceApply.applied === false, 'preference apply dry-run shape invalid');
   assert(dryPreferenceApply.preferenceSignals.some((item) => item.dimension === 'language' && item.value === 'ko'), 'preference apply dry-run missing language signal');
+  assert(dryPreferenceApply.preferenceSignals.every((item) => item.policy === 'apply-eligible' || item.route !== 'auto-apply-safe'), 'explicit apply should mark safe signals apply-eligible');
+  assert(dryPreferenceApply.preferenceSignals.some((item) => item.scope === 'persistent-explicit' && item.scopeEvidence.includes('explicit-apply-command')), 'explicit apply should include explicit apply evidence');
   assert(dryPreferenceApply.changes.some((change) => change.operation === 'set-language'), 'preference apply dry-run missing language change');
   assert(dryPreferenceApply.safety.preferencesMutated === false && dryPreferenceApply.safety.rawPromptPersisted === false, 'preference apply dry-run safety invalid');
   assert(await readFile(join(learnerDir, 'preferences.json'), 'utf8') === preferenceApplyPreferencesBefore, 'preference apply dry-run mutated preferences');
@@ -449,6 +458,7 @@ try {
   assert((await readJsonl(join(learnerDir, 'profile-updates.jsonl'))).length === preferenceApplyAuditsAfter.length, 'preference reapply appended extra audit');
   const selfAssessmentPreference = JSON.parse(run(['memory', 'apply-preference-signals', '--prompt', '나는 CS를 못해서 그런가 이해가 잘 안 돼. 앞으로 쉽게 설명해줘.', '--dry-run', '--json']));
   assert(selfAssessmentPreference.preferenceSignals.some((item) => item.dimension === 'self-assessment'), 'preference apply self-assessment missing signal');
+  assert(selfAssessmentPreference.preferenceSignals.some((item) => item.dimension === 'self-assessment' && item.policy === 'observe-only' && item.risk === 'high'), 'preference apply self-assessment should remain observe-only high risk');
   assert(selfAssessmentPreference.changes.some((change) => change.signal?.dimension === 'self-assessment' && change.operation === 'skip-unsafe-route'), 'preference apply self-assessment was not skipped');
   const taskOnlyPreference = JSON.parse(run(['memory', 'apply-preference-signals', '--prompt', 'PR 머지하고 다음 작업 진행해줘.', '--json']));
   assert(taskOnlyPreference.applied === false && taskOnlyPreference.preferenceSignals.length === 0 && taskOnlyPreference.changes.length === 0, 'task-only preference apply should no-op');

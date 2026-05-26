@@ -446,6 +446,27 @@ export type PreferenceApplyRoute = 'auto-apply-safe' | 'candidate-only' | 'signa
 export type PreferencePolarity = 'positive' | 'negative' | 'neutral';
 export type PreferenceExplicitness = 'explicit' | 'implicit';
 export type PreferenceConfidence = 'low' | 'medium' | 'high';
+export type PreferenceIntent =
+  | 'task-command'
+  | 'turn-format-request'
+  | 'session-style-request'
+  | 'preference-statement'
+  | 'correction-feedback'
+  | 'meta-question'
+  | 'unsafe-self-assessment';
+export type PreferenceScope = 'turn-local' | 'session-local' | 'persistent-candidate' | 'persistent-explicit';
+export type PreferenceRisk = 'low' | 'medium' | 'high';
+export type PreferencePolicy = 'observe-only' | 'suggest-only' | 'dry-run-only' | 'apply-eligible';
+export type PreferenceScopeEvidenceCode =
+  | 'slot-detected'
+  | 'explicit-preference-framing'
+  | 'style-continuity'
+  | 'negative-constraint'
+  | 'correction-feedback'
+  | 'task-local-cue'
+  | 'uncertainty-cue'
+  | 'unsafe-self-assessment'
+  | 'explicit-apply-command';
 
 export interface PreferenceSignalCandidate {
   dimension: string;
@@ -456,6 +477,11 @@ export interface PreferenceSignalCandidate {
   route: PreferenceApplyRoute;
   reason: string;
   source: PromptCaptureSource;
+  intent: PreferenceIntent;
+  scope: PreferenceScope;
+  risk: PreferenceRisk;
+  policy: PreferencePolicy;
+  scopeEvidence: PreferenceScopeEvidenceCode[];
 }
 
 export interface PreferenceSignalCounts {

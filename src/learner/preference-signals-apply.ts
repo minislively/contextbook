@@ -39,7 +39,7 @@ export async function applyPreferenceSignals(options: ApplyPreferenceSignalsOpti
   const dryRun = options.dryRun ?? false;
   await ensureLearnerStore(learner);
 
-  const preferenceSignals = classifyPreferenceSignals(options.prompt, source);
+  const preferenceSignals = classifyPreferenceSignals(options.prompt, source, { explicitApplyCommand: true });
   const preferences = await readPreferences(learner);
   const plan = planPreferenceSignals(preferenceSignals, preferences);
   const applied = !dryRun && plan.shouldWrite;
@@ -83,7 +83,7 @@ export async function applyPreferenceSignals(options: ApplyPreferenceSignalsOpti
 }
 
 export function formatApplyPreferenceSignalsSummary(result: ApplyPreferenceSignalsResult): string {
-  const signals = result.preferenceSignals.map((signal) => `- ${signal.dimension}=${signal.value} (${signal.route})`).join('\n') || '- none';
+  const signals = result.preferenceSignals.map((signal) => `- ${signal.dimension}=${signal.value} (${signal.route}, ${signal.scope}, ${signal.policy})`).join('\n') || '- none';
   const changes = result.changes.map((change) => `- ${change.file}: ${change.operation} — ${change.message}`).join('\n') || '- no changes';
   return [
     '# Apply Preference Signals',
