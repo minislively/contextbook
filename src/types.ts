@@ -171,6 +171,8 @@ export interface ProjectSummary {
 export interface LearnerPreferences {
   explanationOrder: string[];
   avoid: string[];
+  preferredLanguage?: 'ko' | 'en';
+  outputLength?: 'short' | 'default';
 }
 
 export interface WeakTermRecord {
@@ -326,6 +328,54 @@ export interface ApplyProfileUpdateResult {
   safety: ApplyProfileUpdateSafety;
 }
 
+export type ApplyPreferenceSignalOperation =
+  | 'set-language'
+  | 'set-output-length'
+  | 'move-explanation-order'
+  | 'append-avoid'
+  | 'skip-identical'
+  | 'skip-unsafe-route'
+  | 'unsupported-dimension';
+
+export interface ApplyPreferenceSignalChange {
+  file: 'preferences.json';
+  operation: ApplyPreferenceSignalOperation;
+  before?: unknown;
+  after?: unknown;
+  message: string;
+  signal?: {
+    dimension: string;
+    value: string;
+    route: PreferenceApplyRoute;
+  };
+}
+
+export interface ApplyPreferenceSignalsSafety {
+  rawTranscriptIncluded: false;
+  rawPromptPersisted: false;
+  absolutePathsIncluded: false;
+  hiddenContentIncluded: false;
+  projectMemoryMutated: false;
+  profileMutated: false;
+  preferencesMutated: boolean;
+  weakTermsMutated: false;
+  unsafeJudgmentIncluded: false;
+}
+
+export interface ApplyPreferenceSignalsResult {
+  schemaVersion: 1;
+  generatedAt: string;
+  learner: string;
+  source: PromptCaptureSource;
+  dryRun: boolean;
+  applied: boolean;
+  preferenceSignals: PreferenceSignalCandidate[];
+  changes: ApplyPreferenceSignalChange[];
+  auditEvent?: ConversationMemoryEvent;
+  backupCreated?: string;
+  safety: ApplyPreferenceSignalsSafety;
+}
+
 export interface ProfileUpdateCandidatesJson {
   schemaVersion: 1;
   generatedAt: string;
@@ -371,7 +421,7 @@ export interface LearnerSummary extends Omit<LearnerSummaryJson, 'schemaVersion'
   markdown: string;
 }
 
-export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.capture-prompt' | 'memory.signals' | 'memory.suggest-weak-terms' | 'memory.suggest-profile-updates' | 'memory.apply-profile-update' | 'memory.context';
+export type ConversationCommand = 'scan' | 'learn' | 'why' | 'profile' | 'profile.diff' | 'profile.edit' | 'profile.reset' | 'memory.add-signal' | 'memory.capture-prompt' | 'memory.signals' | 'memory.suggest-weak-terms' | 'memory.suggest-profile-updates' | 'memory.apply-profile-update' | 'memory.apply-preference-signals' | 'memory.context';
 
 export type ConversationSignalType =
   | 'scan.completed'

@@ -1,5 +1,6 @@
 import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
 import { addExplicitMemorySignal, formatMemorySignalsSummary, memorySignalsJson, memorySignalTypes } from '../learner/conversation-memory.js';
+import { applyPreferenceSignals, formatApplyPreferenceSignalsSummary } from '../learner/preference-signals-apply.js';
 import { applyProfileUpdateCandidate, formatApplyProfileUpdateSummary } from '../learner/profile-update-apply.js';
 import { capturePromptSignals, formatPromptCaptureSummary, isPromptCaptureSource } from '../learner/prompt-capture.js';
 import { formatProfileUpdateCandidatesSummary, profileUpdateCandidatesJson } from '../learner/profile-update-candidates.js';
@@ -62,6 +63,16 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
         return;
       }
       console.log(formatApplyProfileUpdateSummary(result));
+      return;
+    }
+    case 'apply-preference-signals': {
+      const input = parseApplyPreferenceSignals(rest);
+      const result = await applyPreferenceSignals({ learner: 'default', prompt: input.prompt, source: input.source, dryRun: input.dryRun });
+      if (input.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatApplyPreferenceSignalsSummary(result));
       return;
     }
     case 'context': {
@@ -133,6 +144,53 @@ function parseCapturePrompt(args: string[]): { prompt: string; source: 'manual' 
   return { prompt, source, json };
 }
 
+function parseApplyPreferenceSignals(args: string[]): { prompt: string; source: 'manual' | 'codex' | 'claude-code'; dryRun: boolean; json: boolean } {
+  let prompt: string | undefined;
+  let source: 'manual' | 'codex' | 'claude-code' = 'manual';
+  let dryRun = false;
+  let json = false;
+  const usage = 'Usage: contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--dry-run] [--json]';
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+    if (arg === '--json') {
+      json = true;
+      continue;
+    }
+    if (arg === '--prompt') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) throw new Error(usage);
+      prompt = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--prompt=')) {
+      prompt = arg.slice('--prompt='.length);
+      if (!prompt) throw new Error(usage);
+      continue;
+    }
+    if (arg === '--source') {
+      const value = args[index + 1];
+      if (!value || !isPromptCaptureSource(value)) throw new Error(usage);
+      source = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--source=')) {
+      const value = arg.slice('--source='.length);
+      if (!isPromptCaptureSource(value)) throw new Error(usage);
+      source = value;
+      continue;
+    }
+    throw new Error(usage);
+  }
+  if (!prompt) throw new Error(usage);
+  return { prompt, source, dryRun, json };
+}
+
 function parseJsonFlag(args: string[], usage: string): boolean {
   if (args.length === 0) return false;
   if (args.length === 1 && args[0] === '--json') return true;
@@ -200,6 +258,7 @@ function memoryUsage(): string {
     '  contextbook memory suggest-weak-terms [--json]',
     '  contextbook memory suggest-profile-updates [--json]',
     '  contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]',
+    '  contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--dry-run] [--json]',
     '  contextbook memory context [--json]',
     '',
     `Allowed types: ${memorySignalTypes.join(', ')}`

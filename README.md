@@ -228,6 +228,8 @@ contextbook memory suggest-weak-terms --json
 contextbook memory suggest-profile-updates --json
 contextbook memory apply-profile-update --candidate <id|index> --dry-run
 contextbook memory apply-profile-update --candidate <id|index> --dry-run --json
+contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --dry-run
+contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --dry-run --json
 contextbook memory context --json
 ```
 
@@ -238,6 +240,8 @@ For agent integrations, `contextbook setup --hooks` installs platform-specific `
 `contextbook memory suggest-weak-terms` reads those signals and returns review candidates such as “event loop may be worth revisiting”. `contextbook memory suggest-profile-updates` turns repeated explanation-format signals into profile update candidates such as “prefer project context first”. Both suggestion commands are read-only: they do not write `weak-terms.json`, do not edit your profile/preferences, and do not label your ability.
 
 When you explicitly accept a supported profile candidate, preview first with `contextbook memory apply-profile-update --candidate <id|index> --dry-run`. Applying without `--dry-run` is narrow by design: it can update `preferences.json`, creates a timestamped `preferences.json.bak-*`, and appends an audit event to `profile-updates.jsonl`; it does not mutate `profile.md`, `weak-terms.json`, Project Memory, or raw signal logs.
+
+For one-off explicit preferences from a prompt, preview first with `contextbook memory apply-preference-signals --prompt "<text>" --dry-run`. Applying without `--dry-run` only writes allowlisted safe preferences such as language, project-first order, short output, interview sentence, or fewer commands. It creates a `preferences.json.bak-*` backup and appends an audit event without storing the raw prompt. Hook auto-apply is intentionally not enabled by default.
 
 `contextbook memory context --json` bundles Project Memory, Learner Memory, signals, suggestions, freshness hints, safety flags, and preview-first next actions for AI agents in one payload.
 
@@ -365,6 +369,7 @@ contextbook memory signals --json
 contextbook memory suggest-weak-terms --json
 contextbook memory suggest-profile-updates --json
 contextbook memory apply-profile-update --candidate <id|index> --dry-run
+contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --dry-run
 ```
 
 The helper files only teach the agent how to use Contextbook. They do not call external APIs, launch agent sessions, or require API keys.
@@ -415,6 +420,8 @@ contextbook memory suggest-profile-updates     # inspect profile update candidat
 contextbook memory suggest-profile-updates --json
 contextbook memory apply-profile-update --candidate <id|index> --dry-run
 contextbook memory apply-profile-update --candidate <id|index> --dry-run --json
+contextbook memory apply-preference-signals --prompt <text> --dry-run
+contextbook memory apply-preference-signals --prompt <text> --dry-run --json
 contextbook memory context                    # inspect bundled memory context
 contextbook memory context --json             # one-shot agent context bundle
 contextbook learn                  # generate 1-3 learning moments

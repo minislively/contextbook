@@ -104,6 +104,7 @@ Use the local \`contextbook\` CLI for project-grounded learning moments and why-
 - Use \`contextbook memory suggest-weak-terms --json\` to inspect review candidates without mutating weak terms.
 - Use \`contextbook memory suggest-profile-updates --json\` to inspect profile update candidates without editing profile/preferences.
 - Use \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` to preview exact preferences-only changes; apply without \`--dry-run\` only after explicit user approval.
+- Use \`contextbook memory apply-preference-signals --prompt "<user prompt>" --source claude-code --dry-run\` to preview allowlisted language/order/length/command-volume preference writes without storing the raw prompt.
 - Use \`contextbook learn\` to produce learning moments from the current project/diff.
 - Use \`contextbook why "$ARGUMENTS"\` for concept questions when invoked with arguments.
 - Keep the CLI's evidence level visible: \`direct\`, \`related\`, or \`general\`.
@@ -126,8 +127,9 @@ Run Contextbook locally and report the result without inventing extra evidence:
 2. Run \`contextbook memory context --json\` for the one-shot AI context bundle before summarizing.
 3. Run lower-level \`contextbook project --json\`, \`contextbook learner --json\`, or suggestion commands only when debugging a specific layer.
 4. If a profile update candidate matters, preview it with \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` and wait for explicit user approval before applying.
-5. Run \`contextbook learn\`.
-6. Preserve the evidence level and evidence files from the output.
+5. If the user explicitly states a safe preference, preview \`contextbook memory apply-preference-signals --prompt "$ARGUMENTS" --source claude-code --dry-run\`; do not auto-apply from hooks.
+6. Run \`contextbook learn\`.
+7. Preserve the evidence level and evidence files from the output.
 `;
 }
 
