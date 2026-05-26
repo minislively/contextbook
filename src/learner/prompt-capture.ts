@@ -1,4 +1,5 @@
 import { addExplicitMemorySignal } from './conversation-memory.js';
+import { classifyPreferenceSignals, preferenceSignalCounts } from './preference-signals.js';
 import type {
   ConversationMemoryEvent,
   ConversationSignalType,
@@ -105,6 +106,7 @@ export async function capturePromptSignals(options: CapturePromptOptions): Promi
   const source = options.source ?? 'manual';
   const learner = options.learner ?? 'default';
   const candidates = classifyPromptSignals(options.prompt, source);
+  const preferenceSignals = classifyPreferenceSignals(options.prompt, source);
   const capturedSignals: ConversationMemoryEvent[] = [];
   for (const candidate of candidates) {
     capturedSignals.push(await addExplicitMemorySignal({
@@ -126,13 +128,16 @@ export async function capturePromptSignals(options: CapturePromptOptions): Promi
     learner,
     source,
     capturedSignals,
-    skippedReasons: capturedSignals.length ? [] : ['no-explicit-learning-signal'],
+    preferenceSignals,
+    preferenceSignalCounts: preferenceSignalCounts(preferenceSignals),
+    skippedReasons: capturedSignals.length || preferenceSignals.length ? [] : ['no-explicit-learning-signal'],
     safety: promptCaptureSafety()
   };
 }
 
 export function formatPromptCaptureSummary(result: PromptCaptureResult): string {
   const captured = result.capturedSignals.map((signal) => `- ${signal.signalType}${signal.metadata?.format ? ` (${signal.metadata.format})` : ''}`).join('\n') || '- none';
+  const preferenceSignals = result.preferenceSignals.map((signal) => `- ${signal.dimension}=${signal.value} (${signal.route})`).join('\n') || '- none';
   const skipped = result.skippedReasons.map((reason) => `- ${reason}`).join('\n') || '- none';
   return [
     '# Prompt Signal Capture',
@@ -143,6 +148,9 @@ export function formatPromptCaptureSummary(result: PromptCaptureResult): string 
     '',
     '## Captured Signals',
     captured,
+    '',
+    '## Preference Signals',
+    preferenceSignals,
     '',
     '## Skipped Reasons',
     skipped,

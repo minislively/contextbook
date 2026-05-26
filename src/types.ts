@@ -392,6 +392,29 @@ export type ConversationSignalType =
 
 export type PromptCaptureSource = 'manual' | 'codex' | 'claude-code';
 
+export type PreferenceApplyRoute = 'auto-apply-safe' | 'candidate-only' | 'signal-only' | 'ignore';
+export type PreferencePolarity = 'positive' | 'negative' | 'neutral';
+export type PreferenceExplicitness = 'explicit' | 'implicit';
+export type PreferenceConfidence = 'low' | 'medium' | 'high';
+
+export interface PreferenceSignalCandidate {
+  dimension: string;
+  value: string;
+  polarity: PreferencePolarity;
+  explicitness: PreferenceExplicitness;
+  confidence: PreferenceConfidence;
+  route: PreferenceApplyRoute;
+  reason: string;
+  source: PromptCaptureSource;
+}
+
+export interface PreferenceSignalCounts {
+  autoApplySafe: number;
+  candidateOnly: number;
+  signalOnly: number;
+  ignored: number;
+}
+
 export interface PromptSignalCandidate {
   signalType: Extract<ConversationSignalType, 'feedback.positive' | 'feedback.confused' | 'format.requested' | 'analogy.accepted' | 'analogy.rejected'>;
   note: string;
@@ -417,6 +440,8 @@ export interface PromptCaptureResult {
   learner: string;
   source: PromptCaptureSource;
   capturedSignals: ConversationMemoryEvent[];
+  preferenceSignals: PreferenceSignalCandidate[];
+  preferenceSignalCounts: PreferenceSignalCounts;
   skippedReasons: string[];
   safety: PromptCaptureSafety;
 }

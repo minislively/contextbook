@@ -231,7 +231,7 @@ contextbook memory apply-profile-update --candidate <id|index> --dry-run --json
 contextbook memory context --json
 ```
 
-Memory signals are append-only learning events for explicit feedback such as confusion, positive feedback, format requests, or analogy fit. They do not update your profile or weak terms automatically. `contextbook memory capture-prompt` is the hook-ready deterministic version: it classifies only explicit learning-feedback phrases from a prompt, stores sanitized signal notes, and does not persist the raw prompt.
+Memory signals are append-only learning events for explicit feedback such as confusion, positive feedback, format requests, or analogy fit. They do not update your profile or weak terms automatically. `contextbook memory capture-prompt` is the hook-ready deterministic version: it classifies only explicit learning-feedback phrases from a prompt, stores sanitized signal notes, and does not persist the raw prompt. Its JSON output also includes read-only `preferenceSignals` / `preferenceSignalCounts`, so mixed prompts can be split into safe atomic labels such as `explanation.order=project-first`, `language=ko`, or `command.volume=fewer-commands` without mutating `preferences.json`.
 
 For agent integrations, `contextbook setup --hooks` installs platform-specific `UserPromptSubmit` helper scripts that call `capture-prompt` locally. The hook scripts are non-blocking and config activation remains manual/snippet-based so existing user hooks are not overwritten.
 
