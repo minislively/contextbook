@@ -17,7 +17,7 @@ process.stdin.on('end', () => {
 
     const result = spawnSync('contextbook', [
       'memory',
-      'capture-prompt',
+      'hook-suggest',
       '--prompt',
       prompt,
       '--source',
@@ -25,21 +25,37 @@ process.stdin.on('end', () => {
       '--json'
     ], {
       encoding: 'utf8',
-      stdio: ['ignore', 'ignore', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 25_000
     });
 
     if (result.error) {
-      console.error(\`contextbook prompt capture skipped: \${result.error.message}\`);
+      console.error(\`contextbook hook suggestion skipped: \${result.error.message}\`);
       return;
     }
     if (typeof result.status === 'number' && result.status !== 0) {
       const detail = result.stderr?.trim().split(/\\r?\\n/)[0] ?? 'unknown error';
-      console.error(\`contextbook prompt capture skipped: \${detail}\`);
+      console.error(\`contextbook hook suggestion skipped: \${detail}\`);
+      return;
     }
+    const stdout = result.stdout?.trim();
+    if (!stdout) return;
+    const parsed = JSON.parse(stdout);
+    const additionalContext = typeof parsed.additionalContext === 'string' ? parsed.additionalContext.trim() : '';
+    if (!parsed.actionable || !additionalContext) return;
+    if ('${source}' === 'claude-code') {
+      console.log(JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: 'UserPromptSubmit',
+          additionalContext
+        }
+      }));
+      return;
+    }
+    console.log(additionalContext);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(\`contextbook prompt capture skipped: \${message}\`);
+    console.error(\`contextbook hook suggestion skipped: \${message}\`);
   }
 });
 process.stdin.resume();

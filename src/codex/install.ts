@@ -36,12 +36,12 @@ function codexHookFiles(homeDir: string): InstallFile[] {
   return [
     {
       path: scriptPath,
-      description: 'Codex UserPromptSubmit hook helper for deterministic Contextbook prompt signal capture',
+      description: 'Codex UserPromptSubmit hook helper for deterministic Contextbook prompt signal capture and suggestion bridge',
       content: promptCaptureHookScript('codex')
     },
     {
       path: guidePath,
-      description: 'Codex hook configuration snippet for enabling Contextbook prompt signal capture',
+      description: 'Codex hook configuration snippet for enabling Contextbook prompt signal capture and suggestion bridge',
       content: codexHookGuide(scriptPath)
     }
   ];
@@ -91,9 +91,11 @@ After changing Codex hooks, use \`/hooks\` in Codex to review and trust the hook
 
 ## Safety
 
-- The hook calls \`contextbook memory capture-prompt --source codex --json\`.
-- Contextbook classifies only explicit learning feedback signals.
-- Contextbook does not persist the raw prompt text.
+- The hook calls \`contextbook memory hook-suggest --source codex --json\`.
+- Contextbook classifies only explicit learning/preference signals.
+- Contextbook does not persist or echo the raw prompt text.
+- The hook may surface suggestion-only context for dry-run preference previews.
+- Contextbook never auto-applies profile/preferences from hooks.
 - The hook exits successfully even if capture fails, so it should not block Codex.
 `;
 }
@@ -133,7 +135,7 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
    contextbook memory suggest-weak-terms --json
    contextbook memory suggest-profile-updates --json
    \`\`\`
-5. To record explicit user feedback as append-only Learner Memory, run \`contextbook memory add-signal --type <allowed-type> --concept "<concept>"\` only when the user clearly expresses feedback. For hook-ready prompt feedback capture, use \`contextbook memory capture-prompt --prompt "<user prompt>" --source codex --json\`; it stores sanitized signal notes, not raw transcript text. Do not infer ability or mutate profile.
+5. To record explicit user feedback as append-only Learner Memory, run \`contextbook memory add-signal --type <allowed-type> --concept "<concept>"\` only when the user clearly expresses feedback. For hook-ready prompt feedback capture, use \`contextbook memory capture-prompt --prompt "<user prompt>" --source codex --json\`; it stores sanitized signal notes, not raw transcript text. For hook suggestion context, use \`contextbook memory hook-suggest --prompt "<user prompt>" --source codex --json\`; it emits suggestion-only context and never auto-applies preferences. Do not infer ability or mutate profile.
 6. Profile update candidates are preview-first. Use \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` to show the exact preferences-only change, and run without \`--dry-run\` only after explicit user approval.
 7. Explicit prompt preferences are also preview-first. Use \`contextbook memory apply-preference-signals --prompt "<user prompt>" --source codex --dry-run\` to preview allowlisted language/order/length/command-volume updates without storing the raw prompt.
 8. For learning moments, run:
@@ -162,6 +164,7 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
 - \`contextbook memory apply-preference-signals --prompt "한국어로 쉽게 설명해줘" --source codex --dry-run\` — preview allowlisted preference writes from an explicit prompt without hook auto-apply.
 - \`contextbook memory add-signal --type feedback.confused --concept "event loop"\` — record explicit feedback only.
 - \`contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source codex --json\` — deterministically capture explicit prompt feedback without storing the raw prompt.
+- \`contextbook memory hook-suggest --prompt "앞으로 한국어로 짧게 설명해줘" --source codex --json\` — produce hook-safe suggestion context without applying preferences.
 - \`contextbook learn\` — produce 1-3 learning moments.
 - \`contextbook why "cleanup 왜 해야 돼?"\` — answer with project context, plain language, developer term, CS link, interview sentence, and evidence files.
 - \`contextbook profile\` — inspect the learner profile.

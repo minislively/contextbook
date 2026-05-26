@@ -37,12 +37,12 @@ function claudeHookFiles(homeDir: string): InstallFile[] {
   return [
     {
       path: scriptPath,
-      description: 'Claude Code UserPromptSubmit hook helper for deterministic Contextbook prompt signal capture',
+      description: 'Claude Code UserPromptSubmit hook helper for deterministic Contextbook prompt signal capture and suggestion bridge',
       content: promptCaptureHookScript('claude-code')
     },
     {
       path: guidePath,
-      description: 'Claude Code hook configuration snippet for enabling Contextbook prompt signal capture',
+      description: 'Claude Code hook configuration snippet for enabling Contextbook prompt signal capture and suggestion bridge',
       content: claudeHookGuide(scriptPath)
     }
   ];
@@ -76,9 +76,11 @@ Contextbook does **not** edit your Claude Code settings automatically. To enable
 
 ## Safety
 
-- The hook calls \`contextbook memory capture-prompt --source claude-code --json\`.
-- Contextbook classifies only explicit learning feedback signals.
-- Contextbook does not persist the raw prompt text.
+- The hook calls \`contextbook memory hook-suggest --source claude-code --json\`.
+- Contextbook classifies only explicit learning/preference signals.
+- Contextbook does not persist or echo the raw prompt text.
+- The hook may surface suggestion-only context for dry-run preference previews.
+- Contextbook never auto-applies profile/preferences from hooks.
 - The hook exits successfully even if capture fails, so it should not block Claude Code.
 `;
 }
@@ -101,6 +103,7 @@ Use the local \`contextbook\` CLI for project-grounded learning moments and why-
 - Use \`contextbook project --json\` or \`contextbook learner --json\` only when debugging a specific memory layer.
 - Use \`contextbook memory add-signal --type <type>\` only for explicit user feedback; never infer ability or mutate profile.
 - Use \`contextbook memory capture-prompt --prompt "<user prompt>" --source claude-code --json\` for hook-ready explicit prompt feedback capture without storing raw transcript text.
+- Use \`contextbook memory hook-suggest --prompt "<user prompt>" --source claude-code --json\` for suggestion-only hook context; never auto-apply from hooks.
 - Use \`contextbook memory suggest-weak-terms --json\` to inspect review candidates without mutating weak terms.
 - Use \`contextbook memory suggest-profile-updates --json\` to inspect profile update candidates without editing profile/preferences.
 - Use \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` to preview exact preferences-only changes; apply without \`--dry-run\` only after explicit user approval.

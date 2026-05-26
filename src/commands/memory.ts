@@ -2,7 +2,7 @@ import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-c
 import { addExplicitMemorySignal, formatMemorySignalsSummary, memorySignalsJson, memorySignalTypes } from '../learner/conversation-memory.js';
 import { applyPreferenceSignals, formatApplyPreferenceSignalsSummary } from '../learner/preference-signals-apply.js';
 import { applyProfileUpdateCandidate, formatApplyProfileUpdateSummary } from '../learner/profile-update-apply.js';
-import { capturePromptSignals, formatPromptCaptureSummary, isPromptCaptureSource } from '../learner/prompt-capture.js';
+import { capturePromptSignals, formatHookSuggestSummary, formatPromptCaptureSummary, hookSuggest, isPromptCaptureSource } from '../learner/prompt-capture.js';
 import { formatProfileUpdateCandidatesSummary, profileUpdateCandidatesJson } from '../learner/profile-update-candidates.js';
 import { formatPreferenceHistorySummary, formatUndoPreferenceUpdateSummary, preferenceHistoryJson, undoPreferenceUpdate } from '../learner/preference-history.js';
 import { formatWeakTermSuggestionsSummary, weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
@@ -24,6 +24,17 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
         return;
       }
       console.log(formatPromptCaptureSummary(result));
+      return;
+    }
+    case 'hook-suggest': {
+      const input = parseCapturePrompt(rest, 'Usage: contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--json]');
+      const result = await hookSuggest({ prompt: input.prompt, source: input.source, learner: 'default' });
+      if (input.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      const summary = formatHookSuggestSummary(result);
+      if (summary) console.log(summary);
       return;
     }
     case 'signals': {
@@ -124,7 +135,7 @@ function parseAddSignal(args: string[]): { signalType: typeof memorySignalTypes[
   };
 }
 
-function parseCapturePrompt(args: string[]): { prompt: string; source: 'manual' | 'codex' | 'claude-code'; json: boolean } {
+function parseCapturePrompt(args: string[], usage = 'Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]'): { prompt: string; source: 'manual' | 'codex' | 'claude-code'; json: boolean } {
   let prompt: string | undefined;
   let source: 'manual' | 'codex' | 'claude-code' = 'manual';
   let json = false;
@@ -136,32 +147,32 @@ function parseCapturePrompt(args: string[]): { prompt: string; source: 'manual' 
     }
     if (arg === '--prompt') {
       const value = args[index + 1];
-      if (!value || value.startsWith('--')) throw new Error('Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]');
+      if (!value || value.startsWith('--')) throw new Error(usage);
       prompt = value;
       index += 1;
       continue;
     }
     if (arg.startsWith('--prompt=')) {
       prompt = arg.slice('--prompt='.length);
-      if (!prompt) throw new Error('Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]');
+      if (!prompt) throw new Error(usage);
       continue;
     }
     if (arg === '--source') {
       const value = args[index + 1];
-      if (!value || !isPromptCaptureSource(value)) throw new Error('Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]');
+      if (!value || !isPromptCaptureSource(value)) throw new Error(usage);
       source = value;
       index += 1;
       continue;
     }
     if (arg.startsWith('--source=')) {
       const value = arg.slice('--source='.length);
-      if (!isPromptCaptureSource(value)) throw new Error('Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]');
+      if (!isPromptCaptureSource(value)) throw new Error(usage);
       source = value;
       continue;
     }
-    throw new Error('Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]');
+    throw new Error(usage);
   }
-  if (!prompt) throw new Error('Usage: contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]');
+  if (!prompt) throw new Error(usage);
   return { prompt, source, json };
 }
 
@@ -314,6 +325,7 @@ function memoryUsage(): string {
     'Usage:',
     '  contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>] [--format <format>]',
     '  contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]',
+    '  contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--json]',
     '  contextbook memory signals [--json]',
     '  contextbook memory suggest-weak-terms [--json]',
     '  contextbook memory suggest-profile-updates [--json]',

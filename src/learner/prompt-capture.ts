@@ -3,6 +3,8 @@ import { classifyPreferenceSignals, preferenceSignalCounts } from './preference-
 import type {
   ConversationMemoryEvent,
   ConversationSignalType,
+  HookSuggestRecommendedAction,
+  HookSuggestResult,
   PromptCaptureResult,
   PromptCaptureSafety,
   PromptCaptureSource,
@@ -135,6 +137,41 @@ export async function capturePromptSignals(options: CapturePromptOptions): Promi
   };
 }
 
+export async function hookSuggest(options: CapturePromptOptions): Promise<HookSuggestResult> {
+  const capture = await capturePromptSignals(options);
+  const recommendedActions = hookRecommendedActions(capture);
+  const actionable = recommendedActions.length > 0 || capture.preferenceSignals.length > 0;
+  return {
+    schemaVersion: 1,
+    generatedAt: capture.generatedAt,
+    learner: capture.learner,
+    source: capture.source,
+    actionable,
+    capturedSignalsCount: capture.capturedSignals.length,
+    preferenceSignals: capture.preferenceSignals,
+    recommendedActions,
+    additionalContext: actionable ? formatHookAdditionalContext(capture, recommendedActions) : '',
+    skippedReasons: actionable ? [] : capture.skippedReasons,
+    safety: {
+      rawTranscriptIncluded: false,
+      rawPromptIncluded: false,
+      rawPromptPersisted: false,
+      absolutePathsIncluded: false,
+      profileMutated: false,
+      preferencesMutated: false,
+      weakTermsMutated: false,
+      projectMemoryMutated: false,
+      unsafeJudgmentIncluded: false,
+      hookBlocksAgent: false
+    }
+  };
+}
+
+export function formatHookSuggestSummary(result: HookSuggestResult): string {
+  if (!result.actionable) return '';
+  return result.additionalContext;
+}
+
 export function formatPromptCaptureSummary(result: PromptCaptureResult): string {
   const captured = result.capturedSignals.map((signal) => `- ${signal.signalType}${signal.metadata?.format ? ` (${signal.metadata.format})` : ''}`).join('\n') || '- none';
   const preferenceSignals = result.preferenceSignals.map((signal) => `- ${signal.dimension}=${signal.value} (${signal.route}, ${signal.scope}, ${signal.policy})`).join('\n') || '- none';
@@ -161,6 +198,59 @@ export function formatPromptCaptureSummary(result: PromptCaptureResult): string 
     `- profile mutated: ${result.safety.profileMutated}`,
     `- weak terms mutated: ${result.safety.weakTermsMutated}`,
     `- project memory mutated: ${result.safety.projectMemoryMutated}`
+  ].join('\n');
+}
+
+function hookRecommendedActions(result: PromptCaptureResult): HookSuggestRecommendedAction[] {
+  const actions: HookSuggestRecommendedAction[] = [];
+  if (result.capturedSignals.length > 0) {
+    actions.push({
+      command: 'contextbook memory suggest-profile-updates --json',
+      reason: 'Captured conversation-memory signals may produce profile update candidates.',
+      approvalRequired: true
+    });
+  }
+  if (result.preferenceSignals.length > 0) {
+    actions.push({
+      command: `contextbook memory apply-preference-signals --prompt "<current user prompt>" --source ${result.source} --dry-run`,
+      reason: 'Preference signals were detected; preview exact preference changes before asking for approval.',
+      approvalRequired: true
+    });
+  }
+  return actions;
+}
+
+function formatHookAdditionalContext(result: PromptCaptureResult, actions: HookSuggestRecommendedAction[]): string {
+  const preferenceSignals = result.preferenceSignals
+    .slice(0, 5)
+    .map((signal) => `- ${signal.dimension}=${signal.value} (${signal.intent}, ${signal.scope}, ${signal.policy})`)
+    .join('\n') || '- none';
+  const captured = result.capturedSignals
+    .slice(0, 3)
+    .map((signal) => `- ${signal.signalType}${signal.metadata?.format ? ` (${signal.metadata.format})` : ''}`)
+    .join('\n') || '- none';
+  const commands = actions
+    .map((action) => `- \`${action.command}\` — ${action.reason}${action.approvalRequired ? ' Apply only after explicit user approval.' : ''}`)
+    .join('\n') || '- none';
+  return [
+    '# Contextbook Hook Suggestion',
+    '',
+    'Contextbook detected learning/preference signals from the current prompt. This is suggestion-only context.',
+    '',
+    '## Detected Preference Signals',
+    preferenceSignals,
+    '',
+    '## Captured Learning Signals',
+    captured,
+    '',
+    '## Suggested Next Actions',
+    commands,
+    '',
+    '## Safety Contract',
+    '- Do not auto-apply profile or preference updates from this hook.',
+    '- Do not quote or persist the raw prompt.',
+    '- Use dry-run preview first; apply only after explicit user approval.',
+    '- Hook failures must not block the agent.'
   ].join('\n');
 }
 

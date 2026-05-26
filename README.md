@@ -122,7 +122,7 @@ contextbook install codex --hooks --dry-run
 contextbook install claude-code --hooks --dry-run
 ```
 
-This creates hook scripts and guide snippets, but it does not silently edit your existing Codex/Claude hook settings:
+This creates hook scripts and guide snippets, but it does not silently edit your existing Codex/Claude hook settings. The hook helper runs `contextbook memory hook-suggest` so agents can receive suggestion-only context for preference dry-runs; it never auto-applies profile/preferences or stores the raw prompt:
 
 ```txt
 Codex hook helpers:
@@ -216,6 +216,7 @@ The default output is Markdown for humans. `--json` returns a compact agent-read
 ```bash
 contextbook memory add-signal --type feedback.confused --concept "event loop" --note "too abstract"
 contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual
+contextbook memory hook-suggest --prompt "앞으로 한국어로 짧게 설명해줘" --source codex --json
 contextbook memory signals
 contextbook memory suggest-weak-terms
 contextbook memory suggest-profile-updates
