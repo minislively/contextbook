@@ -55,11 +55,13 @@ async function resetProfile(): Promise<void> {
   await ensureLearnerStore('default');
   const paths = learnerPaths('default');
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  await copyFile(paths.profile, `${paths.profile}.bak-${stamp}`);
-  await copyFile(paths.preferences, `${paths.preferences}.bak-${stamp}`);
+  const profileBackup = `${paths.profile}.bak-${stamp}`;
+  const preferencesBackup = `${paths.preferences}.bak-${stamp}`;
+  await copyFile(paths.profile, profileBackup);
+  await copyFile(paths.preferences, preferencesBackup);
   await writeFile(paths.profile, defaultProfile, 'utf8');
   await writeFile(paths.preferences, `${JSON.stringify(defaultPreferences, null, 2)}\n`, 'utf8');
-  await recordConversationProfileUpdate({ signalType: 'profile.reset', command: 'profile.reset', learner: 'default', metadata: { backups: 2 } });
+  await recordConversationProfileUpdate({ signalType: 'profile.reset', command: 'profile.reset', learner: 'default', metadata: { backups: 2, preferencesBackup: `preferences.json.bak-${stamp}` } });
   console.log('Learner profile reset to defaults. Backups were created next to the original files.');
 }
 
