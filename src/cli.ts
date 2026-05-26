@@ -9,9 +9,10 @@ import { scanCommand } from './commands/scan.js';
 import { whyCommand } from './commands/why.js';
 import { installCommand } from './commands/install.js';
 import { setupCommand } from './commands/setup.js';
+import { hooksCommand } from './commands/hooks.js';
 
 function help(): string {
-  return `Contextbook — Learn the concepts behind the code you just touched.\n\nUsage:\n  contextbook init\n  contextbook scan\n  contextbook project [--json]\n  contextbook learner [--json]\n  contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]\n  contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]\n  contextbook memory signals [--json]\n  contextbook memory suggest-weak-terms [--json]\n  contextbook memory suggest-profile-updates [--json]\n  contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]\n  contextbook memory context [--json]\n  contextbook learn\n  contextbook why "<question>"\n  contextbook profile\n  contextbook profile diff\n  contextbook profile edit\n  contextbook profile reset\n  contextbook setup [--dry-run] [--hooks]\n  contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]\n  contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]\n  contextbook install claude-code [--dry-run] [--hooks]\n`;
+  return `Contextbook — Learn the concepts behind the code you just touched.\n\nUsage:\n  contextbook init\n  contextbook scan\n  contextbook project [--json]\n  contextbook learner [--json]\n  contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]\n  contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]\n  contextbook memory signals [--json]\n  contextbook memory suggest-weak-terms [--json]\n  contextbook memory suggest-profile-updates [--json]\n  contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]\n  contextbook memory context [--json]\n  contextbook learn\n  contextbook why "<question>"\n  contextbook profile\n  contextbook profile diff\n  contextbook profile edit\n  contextbook profile reset\n  contextbook setup [--dry-run] [--hooks]\n  contextbook hooks status [--json]\n  contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]\n  contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]\n  contextbook install claude-code [--dry-run] [--hooks]\n`;
 }
 
 async function main(argv: string[]): Promise<void> {
@@ -52,6 +53,9 @@ async function main(argv: string[]): Promise<void> {
       return;
     case 'install':
       await installCommand(args);
+      return;
+    case 'hooks':
+      await hooksCommand(args);
       return;
     default:
       throw new Error(`Unknown command: ${command}\n\n${help()}`);
