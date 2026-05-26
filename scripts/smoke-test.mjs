@@ -63,12 +63,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook setup --hooks --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook setup --hooks --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook hooks status [--json]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
+  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--dry-run] [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook hooks status [--json]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -408,6 +408,58 @@ try {
   const corePreferenceCandidates = core.classifyPreferenceSignals('한국어로 쉽게 설명해줘');
   assert(corePreferenceCandidates.some((item) => item.dimension === 'language' && item.value === 'ko'), 'core preference classifier missing language signal');
 
+  const applyPreferencePrompt = '앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명하고, 면접 문장은 짧게 줘. 명령어는 너무 많이 주지 마.';
+  const preferenceApplyProfileBefore = await readFile(join(learnerDir, 'profile.md'), 'utf8');
+  const preferenceApplyWeakBefore = await readFile(join(learnerDir, 'weak-terms.json'), 'utf8');
+  const preferenceApplyProjectBefore = await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8');
+  const preferenceApplyPreferencesBefore = await readFile(join(learnerDir, 'preferences.json'), 'utf8');
+  const preferenceApplyAuditBefore = await readFile(join(learnerDir, 'profile-updates.jsonl'), 'utf8');
+  const preferenceApplySignalsBefore = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
+  const preferenceApplyBackupsBefore = (await readdir(learnerDir)).filter((entry) => entry.startsWith('preferences.json.bak-'));
+  const dryPreferenceApply = JSON.parse(run(['memory', 'apply-preference-signals', '--prompt', applyPreferencePrompt, '--source', 'manual', '--dry-run', '--json']));
+  assert(dryPreferenceApply.schemaVersion === 1 && dryPreferenceApply.dryRun === true && dryPreferenceApply.applied === false, 'preference apply dry-run shape invalid');
+  assert(dryPreferenceApply.preferenceSignals.some((item) => item.dimension === 'language' && item.value === 'ko'), 'preference apply dry-run missing language signal');
+  assert(dryPreferenceApply.changes.some((change) => change.operation === 'set-language'), 'preference apply dry-run missing language change');
+  assert(dryPreferenceApply.safety.preferencesMutated === false && dryPreferenceApply.safety.rawPromptPersisted === false, 'preference apply dry-run safety invalid');
+  assert(await readFile(join(learnerDir, 'preferences.json'), 'utf8') === preferenceApplyPreferencesBefore, 'preference apply dry-run mutated preferences');
+  assert(await readFile(join(learnerDir, 'profile-updates.jsonl'), 'utf8') === preferenceApplyAuditBefore, 'preference apply dry-run appended audit');
+  assert((await readdir(learnerDir)).filter((entry) => entry.startsWith('preferences.json.bak-')).length === preferenceApplyBackupsBefore.length, 'preference apply dry-run created backup');
+  const realPreferenceApply = JSON.parse(run(['memory', 'apply-preference-signals', '--prompt', applyPreferencePrompt, '--source=codex', '--json']));
+  assert(realPreferenceApply.source === 'codex' && realPreferenceApply.applied === true && realPreferenceApply.dryRun === false, 'preference apply real apply did not apply');
+  assert(realPreferenceApply.auditEvent?.signalType === 'profile-update.applied' && realPreferenceApply.auditEvent?.command === 'memory.apply-preference-signals', 'preference apply missing typed audit event');
+  assert(realPreferenceApply.backupCreated?.startsWith('preferences.json.bak-'), 'preference apply missing backup basename');
+  const preferencesAfterPreferenceApply = await readJson(join(learnerDir, 'preferences.json'));
+  assert(preferencesAfterPreferenceApply.preferredLanguage === 'ko', 'preference apply did not set preferred language');
+  assert(preferencesAfterPreferenceApply.outputLength === 'short', 'preference apply did not set short output length');
+  assert(preferencesAfterPreferenceApply.explanationOrder[0] === 'project', 'preference apply did not move project first');
+  assert(preferencesAfterPreferenceApply.explanationOrder.includes('plain') && preferencesAfterPreferenceApply.explanationOrder.includes('interview-sentence'), 'preference apply missing explanation order entries');
+  assert(preferencesAfterPreferenceApply.avoid.includes('too many commands'), 'preference apply did not set fewer commands avoid rule');
+  assert(await readFile(join(learnerDir, 'profile.md'), 'utf8') === preferenceApplyProfileBefore, 'preference apply mutated profile.md');
+  assert(await readFile(join(learnerDir, 'weak-terms.json'), 'utf8') === preferenceApplyWeakBefore, 'preference apply mutated weak terms');
+  assert(await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8') === preferenceApplyProjectBefore, 'preference apply mutated project memory');
+  assert(await readFile(join(learnerDir, 'signals.jsonl'), 'utf8') === preferenceApplySignalsBefore, 'preference apply should not append to signals.jsonl');
+  const preferenceApplyAuditsAfter = await readJsonl(join(learnerDir, 'profile-updates.jsonl'));
+  const preferenceApplyAuditEvents = preferenceApplyAuditsAfter.filter((item) => item.command === 'memory.apply-preference-signals');
+  assert(preferenceApplyAuditEvents.length === 1, 'preference apply should append exactly one audit event');
+  assert(!JSON.stringify(preferenceApplyAuditEvents).includes(applyPreferencePrompt), 'preference apply audit persisted raw prompt');
+  assert((await readdir(learnerDir)).filter((entry) => entry.startsWith('preferences.json.bak-')).length === preferenceApplyBackupsBefore.length + 1, 'preference apply did not create exactly one backup');
+  const reapplyPreference = JSON.parse(run(['memory', 'apply-preference-signals', '--prompt', applyPreferencePrompt, '--source', 'manual', '--json']));
+  assert(reapplyPreference.applied === false && reapplyPreference.changes.every((change) => change.operation === 'skip-identical'), 'preference reapply should skip identical changes');
+  assert((await readdir(learnerDir)).filter((entry) => entry.startsWith('preferences.json.bak-')).length === preferenceApplyBackupsBefore.length + 1, 'preference reapply created extra backup');
+  assert((await readJsonl(join(learnerDir, 'profile-updates.jsonl'))).length === preferenceApplyAuditsAfter.length, 'preference reapply appended extra audit');
+  const selfAssessmentPreference = JSON.parse(run(['memory', 'apply-preference-signals', '--prompt', '나는 CS를 못해서 그런가 이해가 잘 안 돼. 앞으로 쉽게 설명해줘.', '--dry-run', '--json']));
+  assert(selfAssessmentPreference.preferenceSignals.some((item) => item.dimension === 'self-assessment'), 'preference apply self-assessment missing signal');
+  assert(selfAssessmentPreference.changes.some((change) => change.signal?.dimension === 'self-assessment' && change.operation === 'skip-unsafe-route'), 'preference apply self-assessment was not skipped');
+  const taskOnlyPreference = JSON.parse(run(['memory', 'apply-preference-signals', '--prompt', 'PR 머지하고 다음 작업 진행해줘.', '--json']));
+  assert(taskOnlyPreference.applied === false && taskOnlyPreference.preferenceSignals.length === 0 && taskOnlyPreference.changes.length === 0, 'task-only preference apply should no-op');
+  const claudePreference = JSON.parse(run(['memory', 'apply-preference-signals', '--prompt', '영어로 간결하게 설명해줘.', '--source', 'claude-code', '--dry-run', '--json']));
+  assert(claudePreference.source === 'claude-code' && claudePreference.preferenceSignals.some((item) => item.dimension === 'language' && item.value === 'en'), 'preference apply did not accept claude-code source');
+  const badPreferenceSource = runExpectFail(['memory', 'apply-preference-signals', '--prompt', '한국어로 설명해줘', '--source', 'bad']);
+  assert(badPreferenceSource.includes('Usage: contextbook memory apply-preference-signals'), 'preference apply invalid source missing usage');
+  const preferenceApplyMarkdown = run(['memory', 'apply-preference-signals', '--prompt', '한국어로 쉽게 설명해줘', '--dry-run']);
+  assert(preferenceApplyMarkdown.includes('# Apply Preference Signals') && preferenceApplyMarkdown.includes('## Preference Signals') && preferenceApplyMarkdown.includes('## Changes') && preferenceApplyMarkdown.includes('## Safety'), 'preference apply markdown missing sections');
+  await writeFile(join(learnerDir, 'preferences.json'), preferenceApplyPreferencesBefore, 'utf8');
+
   const weakTermsBeforeSignal = await readJson(join(learnerDir, 'weak-terms.json'));
   run(['memory', 'add-signal', '--type', 'feedback.confused', '--concept', 'event loop', '--note', 'too abstract '.repeat(40)]);
   run(['memory', 'add-signal', '--type', 'term.repeated', '--concept', 'Event Loop']);
@@ -617,6 +669,7 @@ try {
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory suggest-weak-terms --json'), 'setup codex skill missing weak suggestion guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory suggest-profile-updates --json'), 'setup codex skill missing profile suggestion guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'setup codex skill missing profile apply dry-run guidance');
+  assert((await readFile(codexSkill, 'utf8')).includes('contextbook memory apply-preference-signals --prompt'), 'setup codex skill missing preference apply dry-run guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook why'), 'setup claude skill missing why guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook project --json'), 'setup claude skill missing project json guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook learner --json') || (await readFile(claudeSkill, 'utf8')).includes('contextbook memory context --json'), 'setup claude skill missing learner/memory context guidance');
@@ -626,6 +679,7 @@ try {
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory suggest-weak-terms --json'), 'setup claude skill missing weak suggestion guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory suggest-profile-updates --json'), 'setup claude skill missing profile suggestion guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'setup claude skill missing profile apply dry-run guidance');
+  assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory apply-preference-signals --prompt'), 'setup claude skill missing preference apply dry-run guidance');
   assert(!existsSync(codexHookScript) && !existsSync(claudeHookScript), 'default setup installed hook files without --hooks');
 
   const setupHooksInstall = run(['setup', '--hooks']);

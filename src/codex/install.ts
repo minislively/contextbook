@@ -135,7 +135,8 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
    \`\`\`
 5. To record explicit user feedback as append-only Learner Memory, run \`contextbook memory add-signal --type <allowed-type> --concept "<concept>"\` only when the user clearly expresses feedback. For hook-ready prompt feedback capture, use \`contextbook memory capture-prompt --prompt "<user prompt>" --source codex --json\`; it stores sanitized signal notes, not raw transcript text. Do not infer ability or mutate profile.
 6. Profile update candidates are preview-first. Use \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` to show the exact preferences-only change, and run without \`--dry-run\` only after explicit user approval.
-7. For learning moments, run:
+7. Explicit prompt preferences are also preview-first. Use \`contextbook memory apply-preference-signals --prompt "<user prompt>" --source codex --dry-run\` to preview allowlisted language/order/length/command-volume updates without storing the raw prompt.
+8. For learning moments, run:
    \`\`\`bash
    contextbook learn
    \`\`\`
@@ -158,6 +159,7 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
 - \`contextbook memory suggest-weak-terms --json\` — inspect suggestion-only weak-term review candidates without mutating learner memory.
 - \`contextbook memory suggest-profile-updates --json\` — inspect suggestion-only profile update candidates without editing profile/preferences.
 - \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` — preview an explicit preferences-only profile candidate before any write.
+- \`contextbook memory apply-preference-signals --prompt "한국어로 쉽게 설명해줘" --source codex --dry-run\` — preview allowlisted preference writes from an explicit prompt without hook auto-apply.
 - \`contextbook memory add-signal --type feedback.confused --concept "event loop"\` — record explicit feedback only.
 - \`contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source codex --json\` — deterministically capture explicit prompt feedback without storing the raw prompt.
 - \`contextbook learn\` — produce 1-3 learning moments.
