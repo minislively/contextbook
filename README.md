@@ -122,7 +122,7 @@ contextbook install codex --hooks --dry-run
 contextbook install claude-code --hooks --dry-run
 ```
 
-This creates hook scripts and guide snippets, but it does not silently edit your existing Codex/Claude hook settings. The hook helper runs `contextbook memory hook-suggest` so agents can receive suggestion-only context for preference dry-runs; it never auto-applies profile/preferences or stores the raw prompt:
+This creates hook scripts and guide snippets, but it does not silently edit your existing Codex/Claude hook settings. The hook helper runs `contextbook memory hook-suggest` so agents can receive suggestion-only context for preference dry-runs and read-only Contextbook memory for learning questions; it never auto-applies profile/preferences or stores the raw prompt:
 
 ```txt
 Codex hook helpers:
@@ -135,6 +135,8 @@ Claude Code hook helpers:
 ```
 
 After install, run `contextbook hooks status` to see which helper files and hook configs are detected. Then merge the generated snippet into `~/.codex/hooks.json` or `~/.claude/settings.json` and use your agent's hook review/trust flow if required.
+
+Claude Code officially supports `UserPromptSubmit` additional context via hook stdout/JSON. Codex hook context behavior can vary by installed Codex runtime, so treat Codex hook context as best-effort and verify it with `/hooks` or a live local prompt before relying on it.
 
 Requires Node.js 20 or newer.
 
@@ -216,7 +218,7 @@ The default output is Markdown for humans. `--json` returns a compact agent-read
 ```bash
 contextbook memory add-signal --type feedback.confused --concept "event loop" --note "too abstract"
 contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual
-contextbook memory hook-suggest --prompt "앞으로 한국어로 짧게 설명해줘" --source codex --json
+contextbook memory hook-suggest --prompt "cleanup 왜 해야 돼?" --source codex --json
 contextbook memory signals
 contextbook memory suggest-weak-terms
 contextbook memory suggest-profile-updates
