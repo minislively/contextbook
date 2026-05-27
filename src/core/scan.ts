@@ -1,5 +1,5 @@
 import { mapEvidence } from '../concepts/mapper.js';
-import { changedFiles } from '../scan/git-diff.js';
+import { gitWorkingTreeState } from '../scan/git-diff.js';
 import { readPackageJson } from '../scan/package-json.js';
 import { scanProjectFiles } from '../scan/read-files.js';
 import { ensureProjectStore, recordScanRun, writeConcepts, writeEvidence, writeFileIndex } from '../storage/project-store.js';
@@ -12,7 +12,8 @@ export async function scanProject(options: ContextbookRuntimeOptions = {}): Prom
   await ensureProjectStore(root);
   const scannedAt = new Date().toISOString();
   const { files, fileIndex, warnings } = await scanProjectFiles(root, 500, scannedAt);
-  const changed = await changedFiles(root);
+  const workingTree = await gitWorkingTreeState(root);
+  const changed = workingTree.changedFiles;
   const packageJson = await readPackageJson(root);
   const { concepts, evidence } = mapEvidence(files, { changedFiles: changed, packageJson });
   const scanId = `scan-${scannedAt.replace(/[:.]/g, '-')}`;
@@ -28,6 +29,7 @@ export async function scanProject(options: ContextbookRuntimeOptions = {}): Prom
     filesScanned: fileIndex.totals.scanned,
     bytesScanned: fileIndex.totals.bytesScanned,
     changedFiles: changed.size,
+    workingTreeFingerprint: workingTree.fingerprint,
     conceptsDetected: concepts.length,
     evidenceDetected: evidence.length,
     warnings

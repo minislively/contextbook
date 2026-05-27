@@ -141,7 +141,7 @@ After install, run `contextbook hooks status` to see which helper files and hook
 
 Claude Code officially supports `UserPromptSubmit` additional context via hook stdout/JSON. Codex hook context behavior can vary by installed Codex runtime, so treat Codex hook context as best-effort and verify it with `/hooks` or a live local prompt before relying on it.
 
-Use `contextbook doctor --json` to inspect Project Memory, Learner Memory, and hook setup in one read-only report. Use `contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json` after `contextbook setup --hooks` to inspect the generated helper output locally before relying on a live agent runtime.
+Use `contextbook doctor --json` to inspect Project Memory, Learner Memory, hook setup, and whether project memory may be stale in one read-only report. Use `contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json` after `contextbook setup --hooks` to inspect the generated helper output locally before relying on a live agent runtime.
 
 Requires Node.js 20 or newer.
 
@@ -257,7 +257,7 @@ For one-off explicit preferences from a prompt, preview first with `contextbook 
 
 Preference updates are recoverable. Use `contextbook memory preference-history` to inspect audited preference snapshots and `contextbook memory undo-preference-update --entry <id|index> --dry-run` before restoring with `--yes`. Undo restores `preferences.json` from a backup snapshot, creates a fresh backup of the current state, and appends an audit event; it does not touch raw prompts, `profile.md`, weak terms, Project Memory, or signal logs.
 
-`contextbook memory context --json` bundles Project Memory, Learner Memory, signals, suggestions, freshness hints, safety flags, and preview-first next actions for AI agents in one payload.
+`contextbook memory context --json` bundles Project Memory, Learner Memory, signals, suggestions, freshness hints, working-tree staleness, safety flags, and preview-first next actions for AI agents in one payload.
 
 Allowed v1 signal types:
 
