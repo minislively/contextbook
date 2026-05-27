@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, stat } from 'node:fs/promises';
-import { basename, dirname } from 'node:path';
+import { copyFile, lstat, mkdir, realpath, stat } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, relative, sep } from 'node:path';
 import { backupManifestSafePath, projectPaths } from '../storage/project-store.js';
-import { learnerBackupManifestSafePath, learnerBackupPaths } from '../storage/user-store.js';
+import { learnerBackupManifestSafePath, learnerBackupPaths, learnerPaths } from '../storage/user-store.js';
 import { writeJson } from '../storage/fs-utils.js';
 import { knownMemoryFiles, type MemoryFileKey, type MemoryFileScope, type MemoryFileSpec } from './memory-files.js';
 
@@ -161,7 +161,7 @@ async function buildMemoryBackupPlan(options: BackupPlanOptions & { dryRun: bool
   const generatedAt = options.generatedAt ?? new Date().toISOString();
   const backupId = backupIdFromTimestamp(generatedAt);
   const targets = knownMemoryFiles(root, learner);
-  const items = await Promise.all(targets.map((target) => toBackupItem(target, learner, !options.dryRun)));
+  const items = await Promise.all(targets.map((target) => toBackupItem(target, root, learner, !options.dryRun)));
   const included = items.filter((item) => item.include).length;
   const missing = items.filter((item) => item.status === 'missing').length;
   const inspectErrors = items.filter((item) => item.status === 'inspect-error').length;
@@ -208,9 +208,23 @@ async function buildMemoryBackupPlan(options: BackupPlanOptions & { dryRun: bool
   };
 }
 
-async function toBackupItem(target: MemoryFileSpec, learner: string, includeHash: boolean): Promise<MemoryBackupItem> {
+async function toBackupItem(target: MemoryFileSpec, root: string, learner: string, includeHash: boolean): Promise<MemoryBackupItem> {
   try {
-    const file = await stat(target.path);
+    await assertMemoryRootSafe(target.scope, root, learner);
+    const file = await lstat(target.path);
+    if (file.isSymbolicLink()) {
+      return {
+        key: target.key,
+        scope: target.scope,
+        file: target.safePath,
+        backupPath: backupItemPath(target, learner),
+        status: 'inspect-error',
+        exists: false,
+        include: false,
+        reason: 'Known memory path is a symbolic link and cannot be backed up safely.',
+        inspectErrorCode: 'UNSAFE_BACKUP_SOURCE_SYMLINK'
+      };
+    }
     if (!file.isFile()) {
       return {
         key: target.key,
@@ -223,6 +237,7 @@ async function toBackupItem(target: MemoryFileSpec, learner: string, includeHash
         reason: 'Known memory path exists but is not a regular file.'
       };
     }
+    await assertRealPathInside(target.path, memoryRootFor(target.scope, root, learner));
     const item: MemoryBackupItem = {
       key: target.key,
       scope: target.scope,
@@ -277,6 +292,8 @@ async function writeBackupFiles(result: MemoryBackupResult, root: string, learne
     if (!spec) throw new Error(`Unknown memory backup item: ${item.key}`);
     const destination = destinationForItem(item, root, result.manifest.backupId);
     await mkdir(dirname(destination), { recursive: true });
+    await assertMemoryRootSafe(spec.scope, root, learner);
+    await assertRealPathInside(spec.path, memoryRootFor(spec.scope, root, learner));
     await copyFile(spec.path, destination);
     const copiedHash = await sha256File(destination);
     if (item.sha256 && copiedHash !== item.sha256) throw new Error(`Backup checksum mismatch for ${item.file}`);
@@ -319,6 +336,33 @@ async function assertBackupTargetAvailable(targetPath: string): Promise<void> {
     if (error instanceof Error && error.message.startsWith('Backup target already exists:')) throw error;
     if (errorCode(error) !== 'ENOENT') throw error;
   }
+}
+
+async function assertRealPathInside(path: string, root: string): Promise<void> {
+  const [resolvedPath, resolvedRoot] = await Promise.all([realpath(path), realpath(root)]);
+  if (!isPathInside(resolvedPath, resolvedRoot)) throw backupSafetyError('UNSAFE_BACKUP_SOURCE_PATH');
+}
+
+function isPathInside(path: string, root: string): boolean {
+  const candidate = relative(root, path);
+  return candidate === '' || Boolean(candidate && !candidate.startsWith('..') && !candidate.includes(`..${sep}`) && !isAbsolute(candidate));
+}
+
+async function assertMemoryRootSafe(scope: MemoryFileScope, root: string, learner: string): Promise<void> {
+  const memoryRoot = memoryRootFor(scope, root, learner);
+  const info = await lstat(memoryRoot);
+  if (info.isSymbolicLink()) throw backupSafetyError('UNSAFE_BACKUP_SOURCE_PATH');
+  if (!info.isDirectory()) throw backupSafetyError('UNSAFE_BACKUP_SOURCE_PATH');
+}
+
+function memoryRootFor(scope: MemoryFileScope, root: string, learner: string): string {
+  return scope === 'project' ? projectPaths(root).project : learnerPaths(learner).base;
+}
+
+function backupSafetyError(code: string): Error & { code: string } {
+  const error = new Error(code) as Error & { code: string };
+  error.code = code;
+  return error;
 }
 
 function destinationForItem(item: MemoryBackupItem, root: string, backupId: string): string {
