@@ -230,6 +230,7 @@ contextbook memory suggest-profile-updates
 contextbook memory context
 contextbook memory validate
 contextbook memory repair --dry-run
+contextbook memory repair --yes
 contextbook memory rebuild --dry-run
 contextbook memory backup --dry-run
 contextbook memory backup --yes
@@ -250,6 +251,7 @@ contextbook memory undo-preference-update --entry 1 --dry-run --json
 contextbook memory context --json
 contextbook memory validate --json
 contextbook memory repair --dry-run --json
+contextbook memory repair --yes --json
 contextbook memory rebuild --dry-run --json
 contextbook memory backup --dry-run --json
 contextbook memory backup --yes --json
@@ -275,7 +277,7 @@ Preference updates are recoverable. Use `contextbook memory preference-history` 
 
 `contextbook memory validate` is the read-only structural health check for the three memory layers before any future repair/rebuild flow. It validates Project Memory JSON/JSONL plus Learner Memory files, reports missing files as warnings, reports malformed JSON/JSONL as errors with line numbers, and never includes raw file contents or absolute local paths in output.
 
-`contextbook memory repair --dry-run` turns validation issues into a safe repair plan without writing files. Missing known memory files become supported create/rerun-scan plans, while malformed JSON/JSONL stays blocked for manual review so Contextbook does not guess or overwrite user memory.
+`contextbook memory repair --dry-run` turns validation issues into a safe repair plan without writing files. Missing known memory files become supported create/rerun-scan plans, while malformed JSON/JSONL stays blocked for manual review so Contextbook does not guess or overwrite user memory. `contextbook memory repair --yes` applies only supported missing-file repairs after creating a pre-repair backup; it never overwrites malformed files or follows symlinked memory paths.
 
 `contextbook memory rebuild --dry-run` previews a full Project Memory regeneration from the current repository scan. It reports projected concepts/evidence/file-index/scan-run operations, preserves Learner and Conversation Memory, and still performs no writes or backups.
 
@@ -468,7 +470,9 @@ contextbook memory context --json             # one-shot agent context bundle
 contextbook memory validate                   # read-only memory file health check
 contextbook memory validate --json            # structured validator output for agents
 contextbook memory repair --dry-run           # preview memory repair operations
+contextbook memory repair --yes               # apply supported missing-file repairs with backup
 contextbook memory repair --dry-run --json    # structured repair plan for agents
+contextbook memory repair --yes --json        # structured repair apply result
 contextbook memory rebuild --dry-run          # preview project memory rebuild
 contextbook memory rebuild --dry-run --json   # structured rebuild plan for agents
 contextbook memory backup --dry-run           # preview memory backup manifest
