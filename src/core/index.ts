@@ -4,6 +4,7 @@ export { executeMemoryBackup, formatMemoryBackupSummary, planMemoryBackup } from
 export { buildMemoryContext, formatMemoryContextSummary } from './memory-context.js';
 export { formatMemoryRebuildSummary, planMemoryRebuild } from './memory-rebuild.js';
 export { formatMemoryRepairSummary, planMemoryRepair } from './memory-repair.js';
+export { formatMemoryRestoreSummary, planMemoryRestore } from './memory-restore.js';
 export { formatMemoryValidateSummary, validateMemory } from './memory-validate.js';
 export { buildDoctor, formatDoctorMarkdown } from './doctor.js';
 export { buildProjectSummary, toProjectSummaryJson } from './project.js';
@@ -20,6 +21,7 @@ export { capturePromptSignals, classifyPromptSignals, formatHookSuggestSummary, 
 export { buildWeakTermSuggestions, weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
 export type { MemoryBackupItem, MemoryBackupItemStatus, MemoryBackupManifest, MemoryBackupResult, MemoryBackupTargets, MemoryBackupWrittenManifest, MemoryBackupSafety, MemoryBackupScope, MemoryBackupStatus, MemoryBackupSummary } from './memory-backup.js';
 export type { MemoryRebuildOperation, MemoryRebuildOperationKind, MemoryRebuildPreview, MemoryRebuildResult, MemoryRebuildSafety, MemoryRebuildStatus, MemoryRebuildSummary } from './memory-rebuild.js';
+export type { MemoryRestoreOperation, MemoryRestoreOperationKind, MemoryRestoreResult, MemoryRestoreSafety, MemoryRestoreStatus, MemoryRestoreSummary } from './memory-restore.js';
 export type { MemoryRepairOperation, MemoryRepairOperationKind, MemoryRepairResult, MemoryRepairSafety, MemoryRepairStatus, MemoryRepairSummary } from './memory-repair.js';
 export type { MemoryValidateIssue, MemoryValidateIssueCode, MemoryValidateResult, MemoryValidateSafety, MemoryValidateScope, MemoryValidateSeverity, MemoryValidateStatus, MemoryValidateSummary } from './memory-validate.js';
 export type { DoctorHooksSummary, DoctorJson, DoctorLearnerStatus, DoctorNextAction, DoctorProjectStatus, DoctorSafety } from './doctor.js';
