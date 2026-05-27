@@ -1,4 +1,5 @@
 import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
+import { formatMemoryValidateSummary, validateMemory } from '../core/memory-validate.js';
 import { addExplicitMemorySignal, formatMemorySignalsSummary, memorySignalsJson, memorySignalTypes } from '../learner/conversation-memory.js';
 import { applyPreferenceSignals, formatApplyPreferenceSignalsSummary } from '../learner/preference-signals-apply.js';
 import { applyProfileUpdateCandidate, formatApplyProfileUpdateSummary } from '../learner/profile-update-apply.js';
@@ -115,6 +116,16 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
         return;
       }
       console.log(formatMemoryContextSummary(result));
+      return;
+    }
+    case 'validate': {
+      const json = parseJsonFlag(rest, 'contextbook memory validate [--json]');
+      const result = await validateMemory({ learner: 'default' });
+      if (json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatMemoryValidateSummary(result));
       return;
     }
     default:
@@ -356,6 +367,7 @@ function memoryUsage(): string {
     '  contextbook memory preference-history [--json]',
     '  contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]',
     '  contextbook memory context [--json]',
+    '  contextbook memory validate [--json]',
     '',
     `Allowed types: ${memorySignalTypes.join(', ')}`
   ].join('\n');

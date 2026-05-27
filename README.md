@@ -228,6 +228,7 @@ contextbook memory signals
 contextbook memory suggest-weak-terms
 contextbook memory suggest-profile-updates
 contextbook memory context
+contextbook memory validate
 # or, for agents:
 contextbook memory capture-prompt --prompt "내 프로젝트에 빗대서 설명해줘" --source codex --json
 contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual --json
@@ -241,6 +242,7 @@ contextbook memory apply-preference-signals --prompt "앞으로 한국어로, �
 contextbook memory preference-history --json
 contextbook memory undo-preference-update --entry 1 --dry-run --json
 contextbook memory context --json
+contextbook memory validate --json
 ```
 
 Memory signals are append-only learning events for explicit feedback such as confusion, positive feedback, format requests, or analogy fit. They do not update your profile or weak terms automatically. `contextbook memory capture-prompt` is the hook-ready deterministic version: it classifies only explicit learning-feedback phrases from a prompt, stores sanitized signal notes, and does not persist the raw prompt. Its JSON output also includes read-only `preferenceSignals` / `preferenceSignalCounts`, so mixed prompts can be split into safe atomic labels such as `explanation.order=project-first`, `language=ko`, or `command.volume=fewer-commands` without mutating `preferences.json`.
@@ -258,6 +260,8 @@ For one-off explicit preferences from a prompt, preview first with `contextbook 
 Preference updates are recoverable. Use `contextbook memory preference-history` to inspect audited preference snapshots and `contextbook memory undo-preference-update --entry <id|index> --dry-run` before restoring with `--yes`. Undo restores `preferences.json` from a backup snapshot, creates a fresh backup of the current state, and appends an audit event; it does not touch raw prompts, `profile.md`, weak terms, Project Memory, or signal logs.
 
 `contextbook memory context --json` bundles Project Memory, Learner Memory, signals, suggestions, freshness hints, working-tree staleness, safety flags, and preview-first next actions for AI agents in one payload.
+
+`contextbook memory validate` is the read-only structural health check for the three memory layers before any future repair/rebuild flow. It validates Project Memory JSON/JSONL plus Learner Memory files, reports missing files as warnings, reports malformed JSON/JSONL as errors with line numbers, and never includes raw file contents or absolute local paths in output.
 
 Allowed v1 signal types:
 
@@ -443,6 +447,8 @@ contextbook memory undo-preference-update --entry <id|index> --dry-run [--json]
 contextbook memory undo-preference-update --entry <id|index> --yes [--json]
 contextbook memory context                    # inspect bundled memory context
 contextbook memory context --json             # one-shot agent context bundle
+contextbook memory validate                   # read-only memory file health check
+contextbook memory validate --json            # structured validator output for agents
 contextbook learn                  # generate 1-3 learning moments
 contextbook why "<question>"       # answer a concept question with evidence level
 contextbook profile                # view learner profile + conversation memory summary
