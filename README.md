@@ -91,6 +91,7 @@ Contextbook is designed as a simple learning loop.
 ```bash
 npm install -g contextbook
 contextbook setup
+contextbook doctor
 ```
 
 `contextbook setup` installs both Codex and Claude Code helper files by default:
@@ -118,6 +119,7 @@ contextbook setup --hooks --dry-run
 contextbook setup --hooks
 contextbook hooks status
 contextbook hooks status --json
+contextbook doctor --json
 contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json
 contextbook install codex --hooks --dry-run
 contextbook install claude-code --hooks --dry-run
@@ -139,7 +141,7 @@ After install, run `contextbook hooks status` to see which helper files and hook
 
 Claude Code officially supports `UserPromptSubmit` additional context via hook stdout/JSON. Codex hook context behavior can vary by installed Codex runtime, so treat Codex hook context as best-effort and verify it with `/hooks` or a live local prompt before relying on it.
 
-Use `contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json` after `contextbook setup --hooks` to inspect the generated helper output locally before relying on a live agent runtime.
+Use `contextbook doctor --json` to inspect Project Memory, Learner Memory, and hook setup in one read-only report. Use `contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json` after `contextbook setup --hooks` to inspect the generated helper output locally before relying on a live agent runtime.
 
 Requires Node.js 20 or newer.
 
@@ -415,6 +417,8 @@ contextbook install claude-code
 contextbook setup                  # install Codex + Claude Code helper files
 contextbook setup --dry-run        # preview helper file writes
 contextbook hooks status           # read-only hook helper/config diagnostic
+contextbook doctor                 # read-only project/learner/hooks setup report
+contextbook doctor --json          # inspect setup as structured agent context
 contextbook init                   # initialize .contextbook and learner memory
 contextbook scan                   # scan project evidence
 contextbook project                # inspect existing project memory

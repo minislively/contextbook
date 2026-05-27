@@ -1,6 +1,7 @@
 export { buildLearnerSummary, toLearnerSummaryJson } from './learner.js';
 export { buildLearningMoments } from './learn.js';
 export { buildMemoryContext, formatMemoryContextSummary } from './memory-context.js';
+export { buildDoctor, formatDoctorMarkdown } from './doctor.js';
 export { buildProjectSummary, toProjectSummaryJson } from './project.js';
 export { rankLearningMoments } from './ranking.js';
 export { scanProject } from './scan.js';
@@ -13,6 +14,7 @@ export { buildProfileUpdateCandidates, profileUpdateCandidatesJson } from '../le
 export { classifyPreferenceSignals, preferenceSignalCounts } from '../learner/preference-signals.js';
 export { capturePromptSignals, classifyPromptSignals, formatHookSuggestSummary, formatPromptCaptureSummary, hookSuggest } from '../learner/prompt-capture.js';
 export { buildWeakTermSuggestions, weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
+export type { DoctorHooksSummary, DoctorJson, DoctorLearnerStatus, DoctorNextAction, DoctorProjectStatus, DoctorSafety } from './doctor.js';
 export type { ApplyPreferenceSignalChange, ApplyPreferenceSignalOperation, ApplyPreferenceSignalsResult, ApplyPreferenceSignalsSafety, ApplyProfileUpdateChange, ApplyProfileUpdateResult, ApplyProfileUpdateSafety, ContextbookRuntimeOptions, ConversationMemoryEvent, ConversationSignalType, LearnerMemoryFileStatus, LearnerPreferences, LearnerRecommendedAction, LearnerSummary, LearnerSummaryJson, LearnerSummarySafety, LearnerWeakTermSummary, LearningMomentReason, MemoryContextFreshness, MemoryContextJson, MemoryContextRecommendedAction, MemoryContextSafety, MemoryContextStaleHint, HookSuggestRecommendedAction, HookSuggestResult, HookSuggestSafety, MemorySignalsJson, MemorySignalsSafety, PreferenceApplyRoute, PreferenceConfidence, PreferenceExplicitness, PreferencePolarity, PreferenceIntent, PreferencePolicy, PreferenceRisk, PreferenceScope, PreferenceScopeEvidenceCode, PreferenceSignalCandidate, PreferenceHistoryCommand, PreferenceHistoryEntry, PreferenceHistoryResult, PreferenceHistorySafety, UndoPreferenceUpdateChange, UndoPreferenceUpdateOperation, UndoPreferenceUpdateResult, UndoPreferenceUpdateSafety, PreferenceSignalCounts, PromptCaptureResult, PromptCaptureSafety, PromptCaptureSource, PromptSignalCandidate, ProfileUpdateCandidate, ProfileUpdateCandidateReason, ProfileUpdateCandidatesJson, ProfileUpdateCandidatesSafety, ProjectFileIndexSummary, ProjectMemoryFileStatus, ProjectRecommendedAction, ProjectSummary, ProjectSummaryConcept, ProjectSummaryJson, ProjectSummarySafety, RankedLearningMoment, LearnResult, ScanResult, WeakTermSuggestionCandidate, WeakTermSuggestionReason, WeakTermSuggestionsJson, WeakTermSuggestionsSafety, WhyResult } from '../types.js';
 export { adapters, adapterIds, getAdapter, codexAdapter, claudeCodeAdapter } from '../integrations/registry.js';
 export type { AdapterId, ContextbookAdapter } from '../integrations/registry.js';
