@@ -233,6 +233,7 @@ contextbook memory repair --dry-run
 contextbook memory rebuild --dry-run
 contextbook memory backup --dry-run
 contextbook memory backup --yes
+contextbook memory restore --backup-id <id> --dry-run
 # or, for agents:
 contextbook memory capture-prompt --prompt "내 프로젝트에 빗대서 설명해줘" --source codex --json
 contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual --json
@@ -251,6 +252,7 @@ contextbook memory repair --dry-run --json
 contextbook memory rebuild --dry-run --json
 contextbook memory backup --dry-run --json
 contextbook memory backup --yes --json
+contextbook memory restore --backup-id <id> --dry-run --json
 ```
 
 Memory signals are append-only learning events for explicit feedback such as confusion, positive feedback, format requests, or analogy fit. They do not update your profile or weak terms automatically. `contextbook memory capture-prompt` is the hook-ready deterministic version: it classifies only explicit learning-feedback phrases from a prompt, stores sanitized signal notes, and does not persist the raw prompt. Its JSON output also includes read-only `preferenceSignals` / `preferenceSignalCounts`, so mixed prompts can be split into safe atomic labels such as `explanation.order=project-first`, `language=ko`, or `command.volume=fewer-commands` without mutating `preferences.json`.
@@ -275,7 +277,7 @@ Preference updates are recoverable. Use `contextbook memory preference-history` 
 
 `contextbook memory rebuild --dry-run` previews a full Project Memory regeneration from the current repository scan. It reports projected concepts/evidence/file-index/scan-run operations, preserves Learner and Conversation Memory, and still performs no writes or backups.
 
-`contextbook memory backup --dry-run` previews the metadata-only manifest used before mutating memory. `contextbook memory backup --yes` creates real backup files with split roots: Project Memory under `.contextbook/backups/<backupId>/` and Learner/Conversation Memory under `~/.contextbook/backups/<backupId>/`. Manifests include metadata and checksums only; they do not include raw memory contents or absolute local paths. Its `status` only describes backup availability; run `contextbook memory validate --json` when you need structural memory health before writes.
+`contextbook memory backup --dry-run` previews the metadata-only manifest used before mutating memory. `contextbook memory backup --yes` creates real backup files with split roots: Project Memory under `.contextbook/backups/<backupId>/` and Learner/Conversation Memory under `~/.contextbook/backups/<backupId>/`. `contextbook memory restore --backup-id <id> --dry-run` verifies those manifests and backup checksums, then previews which allowlisted memory files would be restored without writing anything. Manifests and restore previews include metadata and checksums only; they do not include raw memory contents or absolute local paths. Its `status` only describes backup/restore availability; run `contextbook memory validate --json` when you need structural memory health before writes.
 
 Allowed v1 signal types:
 
@@ -471,6 +473,8 @@ contextbook memory backup --dry-run           # preview memory backup manifest
 contextbook memory backup --dry-run --json    # structured backup manifest for agents
 contextbook memory backup --yes               # create split project/learner backups
 contextbook memory backup --yes --json        # structured backup creation result
+contextbook memory restore --backup-id <id> --dry-run       # preview restore from backup
+contextbook memory restore --backup-id <id> --dry-run --json # structured restore preview
 contextbook learn                  # generate 1-3 learning moments
 contextbook why "<question>"       # answer a concept question with evidence level
 contextbook profile                # view learner profile + conversation memory summary

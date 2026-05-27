@@ -1,6 +1,7 @@
 import { executeMemoryBackup, formatMemoryBackupSummary, planMemoryBackup } from '../core/memory-backup.js';
 import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
 import { formatMemoryRebuildSummary, planMemoryRebuild } from '../core/memory-rebuild.js';
+import { formatMemoryRestoreSummary, planMemoryRestore } from '../core/memory-restore.js';
 import { formatMemoryRepairSummary, planMemoryRepair } from '../core/memory-repair.js';
 import { formatMemoryValidateSummary, validateMemory } from '../core/memory-validate.js';
 import { addExplicitMemorySignal, formatMemorySignalsSummary, memorySignalsJson, memorySignalTypes } from '../learner/conversation-memory.js';
@@ -161,6 +162,16 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
       console.log(formatMemoryBackupSummary(result));
       return;
     }
+    case 'restore': {
+      const input = parseRestoreDryRun(rest);
+      const result = await planMemoryRestore({ backupId: input.backupId, learner: 'default' });
+      if (input.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatMemoryRestoreSummary(result));
+      return;
+    }
     default:
       throw new Error(memoryUsage());
   }
@@ -293,6 +304,43 @@ function parseJsonFlag(args: string[], usage: string): boolean {
   if (args.length === 0) return false;
   if (args.length === 1 && args[0] === '--json') return true;
   throw new Error(`Usage: ${usage}`);
+}
+
+function parseRestoreDryRun(args: string[]): { backupId: string; json: boolean } {
+  let backupId: string | undefined;
+  let dryRun = false;
+  let json = false;
+  const usage = 'Usage: contextbook memory restore --backup-id <id> --dry-run [--json]';
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+    if (arg === '--json') {
+      json = true;
+      continue;
+    }
+    if (arg === '--backup-id') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) throw new Error(usage);
+      backupId = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--backup-id=')) {
+      backupId = arg.slice('--backup-id='.length);
+      if (!backupId) throw new Error(usage);
+      continue;
+    }
+    throw new Error(usage);
+  }
+  if (!backupId || !dryRun || !isSafeBackupId(backupId)) throw new Error(usage);
+  return { backupId, json };
+}
+
+function isSafeBackupId(backupId: string): boolean {
+  return /^backup-[0-9]{8}T[0-9]{9}Z$/.test(backupId);
 }
 
 function parseBackup(args: string[]): { json: boolean; yes: boolean } {
@@ -454,6 +502,7 @@ function memoryUsage(): string {
     '  contextbook memory repair --dry-run [--json]',
     '  contextbook memory rebuild --dry-run [--json]',
     '  contextbook memory backup (--dry-run|--yes) [--json]',
+    '  contextbook memory restore --backup-id <id> --dry-run [--json]',
     '',
     `Allowed types: ${memorySignalTypes.join(', ')}`
   ].join('\n');
