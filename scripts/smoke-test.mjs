@@ -63,12 +63,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook setup --hooks --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook hooks smoke', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory hook-suggest', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory preference-history', 'contextbook memory undo-preference-update', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook doctor', 'contextbook doctor --json', 'contextbook setup --hooks --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook hooks smoke', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory hook-suggest', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory preference-history', 'contextbook memory undo-preference-update', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--dry-run] [--json]', 'contextbook memory preference-history [--json]', 'contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook hooks status [--json]', 'contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
+  for (const text of ['contextbook doctor [--json]', 'contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--dry-run] [--json]', 'contextbook memory preference-history [--json]', 'contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook hooks status [--json]', 'contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -83,6 +83,14 @@ try {
   await writeFile(join(root, 'src', 'hooks', 'useWorkflowSSE.ts'), `export function useWorkflowSSE(url: string) {\n  return url;\n}\n`, 'utf8');
   git(['add', '.']);
   git(['commit', '-m', 'baseline']);
+
+  const doctorBeforeInit = run(['doctor']);
+  assert(doctorBeforeInit.includes('# Contextbook Doctor') && doctorBeforeInit.includes('project status: missing'), 'doctor before init missing project status');
+  assert(doctorBeforeInit.includes('contextbook init') && doctorBeforeInit.includes('contextbook scan'), 'doctor before init missing next action hints');
+  const doctorJsonBeforeInit = JSON.parse(run(['doctor', '--json']));
+  assert(doctorJsonBeforeInit.schemaVersion === 1 && doctorJsonBeforeInit.project.status === 'missing', 'doctor json before init invalid');
+  assert(doctorJsonBeforeInit.safety.readOnly === true && doctorJsonBeforeInit.safety.projectMemoryMutated === false && doctorJsonBeforeInit.safety.learnerMemoryMutated === false, 'doctor json safety invalid');
+  assert(runExpectFail(['doctor', '--bad']).includes('Usage: contextbook doctor [--json]'), 'doctor invalid usage should fail');
 
   const projectBeforeInit = run(['project']);
   assert(projectBeforeInit.includes('# Project Memory'), 'project before init missing heading');
@@ -665,6 +673,16 @@ try {
   const claudeHookScript = join(home, '.claude', 'hooks', 'contextbook-user-prompt-submit.js');
   const claudeHookGuide = join(home, '.claude', 'hooks', 'contextbook-user-prompt-submit.md');
 
+  const signalsBeforeDoctor = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
+  const evidenceBeforeDoctor = await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8');
+  const doctorAfterScan = JSON.parse(run(['doctor', '--json']));
+  assert(doctorAfterScan.project.status === 'scanned' && doctorAfterScan.project.counts.concepts > 0, 'doctor after scan should report scanned project memory');
+  assert(doctorAfterScan.learner.status === 'ready' && doctorAfterScan.learner.files.some((file) => file.name === 'signals'), 'doctor after scan should report learner memory files');
+  assert(doctorAfterScan.hooks.status === 'missing', 'doctor before hook setup should report missing hooks');
+  assert(doctorAfterScan.nextActions.some((action) => action.command === 'contextbook setup --hooks'), 'doctor should recommend hook setup before helpers exist');
+  assert((await readFile(join(learnerDir, 'signals.jsonl'), 'utf8')) === signalsBeforeDoctor, 'doctor should not mutate learner signals');
+  assert((await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8')) === evidenceBeforeDoctor, 'doctor should not mutate project evidence');
+
   const hooksStatusBefore = run(['hooks', 'status']);
   assert(hooksStatusBefore.includes('# Contextbook Hooks Status'), 'hooks status missing heading');
   assert(hooksStatusBefore.includes('helper script: missing'), 'hooks status before setup should show missing helpers');
@@ -762,6 +780,9 @@ try {
   }
   assert(codexHookGuideText.includes('~/.codex/hooks.json') && codexHookGuideText.includes('UserPromptSubmit') && codexHookGuideText.includes('review and trust'), 'codex hook guide missing config/trust guidance');
   assert(claudeHookGuideText.includes('~/.claude/settings.json') && claudeHookGuideText.includes('UserPromptSubmit'), 'claude hook guide missing config guidance');
+  const doctorAfterHooks = JSON.parse(run(['doctor', '--json']));
+  assert(doctorAfterHooks.hooks.status === 'helpers-installed' && doctorAfterHooks.nextActions.some((action) => action.command.includes('hooks smoke')), 'doctor after hook setup should report helpers and recommend smoke');
+
   const hooksStatusAfterSetup = JSON.parse(run(['hooks', 'status', '--json']));
   const codexPlatform = hooksStatusAfterSetup.platforms.find((platform) => platform.id === 'codex');
   const claudePlatform = hooksStatusAfterSetup.platforms.find((platform) => platform.id === 'claude-code');
@@ -790,6 +811,9 @@ try {
   await mkdir(join(root, '.codex'), { recursive: true });
   await writeFile(join(root, '.codex', 'hooks.json'), '{ invalid json', 'utf8');
   const signalsBeforeHookStatus = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
+  const doctorHooksEnabled = JSON.parse(run(['doctor', '--json']));
+  assert(doctorHooksEnabled.hooks.status === 'configured', 'doctor should report configured hooks after config snippets exist');
+
   const hooksStatusEnabled = JSON.parse(run(['hooks', 'status', '--json']));
   const codexEnabled = hooksStatusEnabled.platforms.find((platform) => platform.id === 'codex');
   const claudeEnabled = hooksStatusEnabled.platforms.find((platform) => platform.id === 'claude-code');
