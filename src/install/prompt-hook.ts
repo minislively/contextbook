@@ -15,7 +15,7 @@ process.stdin.on('end', () => {
     const prompt = typeof payload.prompt === 'string' ? payload.prompt : '';
     if (!prompt.trim()) return;
 
-    const result = spawnSync('contextbook', [
+    const args = [
       'memory',
       'hook-suggest',
       '--prompt',
@@ -23,7 +23,10 @@ process.stdin.on('end', () => {
       '--source',
       '${source}',
       '--json'
-    ], {
+    ];
+    if (process.env.CONTEXTBOOK_HOOK_SMOKE === '1') args.push('--no-capture');
+
+    const result = spawnSync('contextbook', args, {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 25_000
