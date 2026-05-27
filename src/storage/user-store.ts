@@ -7,6 +7,18 @@ export function learnerDir(learner = 'default'): string {
   return join(homedir(), '.contextbook', 'learners', learner);
 }
 
+export const learnerBackupPaths = (backupId: string) => {
+  const base = join(homedir(), '.contextbook', 'backups', backupId);
+  return {
+    base,
+    manifest: join(base, 'manifest.json')
+  };
+};
+
+export function learnerBackupManifestSafePath(backupId: string): string {
+  return `~/.contextbook/backups/${backupId}/manifest.json`;
+}
+
 export const learnerPaths = (learner = 'default') => {
   const base = learnerDir(learner);
   return {
