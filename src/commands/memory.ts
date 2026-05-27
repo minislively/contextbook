@@ -1,4 +1,5 @@
 import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
+import { formatMemoryRebuildSummary, planMemoryRebuild } from '../core/memory-rebuild.js';
 import { formatMemoryRepairSummary, planMemoryRepair } from '../core/memory-repair.js';
 import { formatMemoryValidateSummary, validateMemory } from '../core/memory-validate.js';
 import { addExplicitMemorySignal, formatMemorySignalsSummary, memorySignalsJson, memorySignalTypes } from '../learner/conversation-memory.js';
@@ -139,6 +140,16 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
       console.log(formatMemoryRepairSummary(result));
       return;
     }
+    case 'rebuild': {
+      const input = parseRebuildDryRun(rest);
+      const result = await planMemoryRebuild({ learner: 'default' });
+      if (input.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatMemoryRebuildSummary(result));
+      return;
+    }
     default:
       throw new Error(memoryUsage());
   }
@@ -273,10 +284,17 @@ function parseJsonFlag(args: string[], usage: string): boolean {
   throw new Error(`Usage: ${usage}`);
 }
 
+function parseRebuildDryRun(args: string[]): { json: boolean } {
+  return parseRequiredDryRun(args, 'Usage: contextbook memory rebuild --dry-run [--json]');
+}
+
 function parseRepairDryRun(args: string[]): { json: boolean } {
+  return parseRequiredDryRun(args, 'Usage: contextbook memory repair --dry-run [--json]');
+}
+
+function parseRequiredDryRun(args: string[], usage: string): { json: boolean } {
   let dryRun = false;
   let json = false;
-  const usage = 'Usage: contextbook memory repair --dry-run [--json]';
   for (const arg of args) {
     if (arg === '--dry-run') {
       dryRun = true;
@@ -399,6 +417,7 @@ function memoryUsage(): string {
     '  contextbook memory context [--json]',
     '  contextbook memory validate [--json]',
     '  contextbook memory repair --dry-run [--json]',
+    '  contextbook memory rebuild --dry-run [--json]',
     '',
     `Allowed types: ${memorySignalTypes.join(', ')}`
   ].join('\n');

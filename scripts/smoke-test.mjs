@@ -63,12 +63,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook doctor', 'contextbook doctor --json', 'contextbook setup --hooks --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook hooks smoke', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory hook-suggest', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory preference-history', 'contextbook memory undo-preference-update', 'contextbook memory context --json', 'contextbook memory validate', 'contextbook memory validate --json', 'contextbook memory repair --dry-run', 'contextbook memory repair --dry-run --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook doctor', 'contextbook doctor --json', 'contextbook setup --hooks --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook hooks smoke', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory hook-suggest', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory preference-history', 'contextbook memory undo-preference-update', 'contextbook memory context --json', 'contextbook memory validate', 'contextbook memory validate --json', 'contextbook memory repair --dry-run', 'contextbook memory repair --dry-run --json', 'contextbook memory rebuild --dry-run', 'contextbook memory rebuild --dry-run --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook doctor [--json]', 'contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--dry-run] [--json]', 'contextbook memory preference-history [--json]', 'contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]', 'contextbook memory context [--json]', 'contextbook memory validate [--json]', 'contextbook memory repair --dry-run [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook hooks status [--json]', 'contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
+  for (const text of ['contextbook doctor [--json]', 'contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--dry-run] [--json]', 'contextbook memory preference-history [--json]', 'contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]', 'contextbook memory context [--json]', 'contextbook memory validate [--json]', 'contextbook memory repair --dry-run [--json]', 'contextbook memory rebuild --dry-run [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook hooks status [--json]', 'contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -159,7 +159,15 @@ try {
   assert(!JSON.stringify(memoryRepairBefore).includes(root) && !JSON.stringify(memoryRepairBefore).includes(home), 'memory repair dry-run before init leaked absolute path');
   assert(runExpectFail(['memory', 'repair', '--json']).includes('Usage: contextbook memory repair --dry-run [--json]'), 'memory repair without dry-run should fail');
   assert(runExpectFail(['memory', 'repair', '--dry-run', '--bad']).includes('Usage: contextbook memory repair --dry-run [--json]'), 'memory repair unknown flag missing usage guidance');
-  assert(!existsSync(join(root, '.contextbook')), 'memory context/validate/repair dry-run should not create project memory before init');
+  const memoryRebuildBefore = JSON.parse(run(['memory', 'rebuild', '--dry-run', '--json']));
+  assert(memoryRebuildBefore.schemaVersion === 1 && memoryRebuildBefore.dryRun === true && memoryRebuildBefore.status === 'warning', 'memory rebuild dry-run before init should warn');
+  assert(memoryRebuildBefore.preview.filesScanned >= 1 && memoryRebuildBefore.operations.some((operation) => operation.operation === 'replace-project-concepts'), 'memory rebuild dry-run before init missing project rebuild operation');
+  assert(memoryRebuildBefore.operations.some((operation) => operation.operation === 'preserve-learner-memory' && operation.wouldWrite === false), 'memory rebuild dry-run missing learner preserve operation');
+  assert(memoryRebuildBefore.safety.readOnly === true && memoryRebuildBefore.safety.projectMemoryMutated === false && memoryRebuildBefore.safety.conversationMemoryMutated === false, 'memory rebuild dry-run safety invalid before init');
+  assert(!JSON.stringify(memoryRebuildBefore).includes(root) && !JSON.stringify(memoryRebuildBefore).includes(home), 'memory rebuild dry-run before init leaked absolute path');
+  assert(runExpectFail(['memory', 'rebuild', '--json']).includes('Usage: contextbook memory rebuild --dry-run [--json]'), 'memory rebuild without dry-run should fail');
+  assert(runExpectFail(['memory', 'rebuild', '--dry-run', '--bad']).includes('Usage: contextbook memory rebuild --dry-run [--json]'), 'memory rebuild unknown flag missing usage guidance');
+  assert(!existsSync(join(root, '.contextbook')), 'memory context/validate/repair/rebuild dry-run should not create project memory before init');
 
 
   run(['init']);
@@ -668,14 +676,24 @@ try {
   assert(memoryRepairMarkdown.includes('# Contextbook Memory Repair Dry Run') && memoryRepairMarkdown.includes('## Safety'), 'memory repair dry-run markdown missing sections');
   const coreMemoryRepair = await core.planMemoryRepair({ root, learner: 'default' });
   assert(coreMemoryRepair.schemaVersion === 1 && coreMemoryRepair.status === 'ok', 'core memory repair contract invalid');
-  assert(await readFile(join(learnerDir, 'signals.jsonl'), 'utf8') === validateSignalsBefore, 'memory validate/repair mutated learner signals');
-  assert(await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8') === validateEvidenceBefore, 'memory validate/repair mutated project evidence');
+  const memoryRebuild = JSON.parse(run(['memory', 'rebuild', '--dry-run', '--json']));
+  assert(memoryRebuild.schemaVersion === 1 && memoryRebuild.dryRun === true && memoryRebuild.status === 'warning', 'memory rebuild dry-run after setup should warn about planned writes');
+  assert(memoryRebuild.preview.conceptsDetected >= 1 && memoryRebuild.preview.evidenceDetected >= 1, 'memory rebuild dry-run preview counts invalid');
+  assert(memoryRebuild.summary.wouldWrite >= 4 && memoryRebuild.operations.some((operation) => operation.operation === 'preserve-learner-memory'), 'memory rebuild dry-run operations invalid');
+  const memoryRebuildMarkdown = run(['memory', 'rebuild', '--dry-run']);
+  assert(memoryRebuildMarkdown.includes('# Contextbook Memory Rebuild Dry Run') && memoryRebuildMarkdown.includes('## Safety'), 'memory rebuild dry-run markdown missing sections');
+  const coreMemoryRebuild = await core.planMemoryRebuild({ root, learner: 'default' });
+  assert(coreMemoryRebuild.schemaVersion === 1 && coreMemoryRebuild.preview.conceptsDetected >= 1, 'core memory rebuild contract invalid');
+  assert(await readFile(join(learnerDir, 'signals.jsonl'), 'utf8') === validateSignalsBefore, 'memory validate/repair/rebuild mutated learner signals');
+  assert(await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8') === validateEvidenceBefore, 'memory validate/repair/rebuild mutated project evidence');
   const conceptsBeforeCorrupt = await readFile(join(root, '.contextbook', 'project', 'concepts.json'), 'utf8');
   await writeFile(join(root, '.contextbook', 'project', 'concepts.json'), '{ invalid json', 'utf8');
   const invalidConceptsValidate = JSON.parse(run(['memory', 'validate', '--json']));
   assert(invalidConceptsValidate.status === 'error' && invalidConceptsValidate.issues.some((issue) => issue.file === '.contextbook/project/concepts.json' && issue.code === 'invalid-json'), 'memory validate did not catch invalid project json');
   const invalidConceptsRepair = JSON.parse(run(['memory', 'repair', '--dry-run', '--json']));
   assert(invalidConceptsRepair.status === 'blocked' && invalidConceptsRepair.operations.some((operation) => operation.file === '.contextbook/project/concepts.json' && operation.operation === 'skip-manual-review' && operation.supported === false), 'memory repair dry-run did not block invalid project json');
+  const invalidConceptsRebuild = JSON.parse(run(['memory', 'rebuild', '--dry-run', '--json']));
+  assert(invalidConceptsRebuild.status === 'blocked' && invalidConceptsRebuild.operations.some((operation) => operation.operation === 'skip-validation-blocked' && operation.files.includes('.contextbook/project/concepts.json')), 'memory rebuild dry-run did not block invalid project json');
   await writeFile(join(root, '.contextbook', 'project', 'concepts.json'), conceptsBeforeCorrupt, 'utf8');
   const signalsBeforeCorrupt = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
   const rawBadLine = '{\"rawSecret\":\"should-not-leak\"';
@@ -686,6 +704,9 @@ try {
   const invalidSignalsRepair = JSON.parse(run(['memory', 'repair', '--dry-run', '--json']));
   assert(invalidSignalsRepair.status === 'blocked' && invalidSignalsRepair.operations.some((operation) => operation.file === '~/.contextbook/learners/default/signals.jsonl' && operation.operation === 'skip-manual-review' && typeof operation.line === 'number'), 'memory repair dry-run did not block invalid learner jsonl');
   assert(!JSON.stringify(invalidSignalsRepair).includes('should-not-leak'), 'memory repair dry-run leaked raw invalid jsonl content');
+  const invalidSignalsRebuild = JSON.parse(run(['memory', 'rebuild', '--dry-run', '--json']));
+  assert(invalidSignalsRebuild.status === 'blocked' && invalidSignalsRebuild.operations.some((operation) => operation.operation === 'skip-validation-blocked' && operation.files.includes('~/.contextbook/learners/default/signals.jsonl')), 'memory rebuild dry-run did not block invalid learner jsonl');
+  assert(!JSON.stringify(invalidSignalsRebuild).includes('should-not-leak'), 'memory rebuild dry-run leaked raw invalid jsonl content');
   await writeFile(join(learnerDir, 'signals.jsonl'), signalsBeforeCorrupt, 'utf8');
 
   await writeFile(join(root, 'README.md'), '# Smoke project\n\nChanged after scan.\n', 'utf8');
