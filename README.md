@@ -234,6 +234,7 @@ contextbook memory rebuild --dry-run
 contextbook memory backup --dry-run
 contextbook memory backup --yes
 contextbook memory restore --backup-id <id> --dry-run
+contextbook memory restore --backup-id <id> --yes
 # or, for agents:
 contextbook memory capture-prompt --prompt "내 프로젝트에 빗대서 설명해줘" --source codex --json
 contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual --json
@@ -253,6 +254,7 @@ contextbook memory rebuild --dry-run --json
 contextbook memory backup --dry-run --json
 contextbook memory backup --yes --json
 contextbook memory restore --backup-id <id> --dry-run --json
+contextbook memory restore --backup-id <id> --yes --json
 ```
 
 Memory signals are append-only learning events for explicit feedback such as confusion, positive feedback, format requests, or analogy fit. They do not update your profile or weak terms automatically. `contextbook memory capture-prompt` is the hook-ready deterministic version: it classifies only explicit learning-feedback phrases from a prompt, stores sanitized signal notes, and does not persist the raw prompt. Its JSON output also includes read-only `preferenceSignals` / `preferenceSignalCounts`, so mixed prompts can be split into safe atomic labels such as `explanation.order=project-first`, `language=ko`, or `command.volume=fewer-commands` without mutating `preferences.json`.
@@ -277,7 +279,7 @@ Preference updates are recoverable. Use `contextbook memory preference-history` 
 
 `contextbook memory rebuild --dry-run` previews a full Project Memory regeneration from the current repository scan. It reports projected concepts/evidence/file-index/scan-run operations, preserves Learner and Conversation Memory, and still performs no writes or backups.
 
-`contextbook memory backup --dry-run` previews the metadata-only manifest used before mutating memory. `contextbook memory backup --yes` creates real backup files with split roots: Project Memory under `.contextbook/backups/<backupId>/` and Learner/Conversation Memory under `~/.contextbook/backups/<backupId>/`. `contextbook memory restore --backup-id <id> --dry-run` verifies those manifests and backup checksums, then previews which allowlisted memory files would be restored without writing anything. Manifests and restore previews include metadata and checksums only; they do not include raw memory contents or absolute local paths. Its `status` only describes backup/restore availability; run `contextbook memory validate --json` when you need structural memory health before writes.
+`contextbook memory backup --dry-run` previews the metadata-only manifest used before mutating memory. `contextbook memory backup --yes` creates real backup files with split roots: Project Memory under `.contextbook/backups/<backupId>/` and Learner/Conversation Memory under `~/.contextbook/backups/<backupId>/`. `contextbook memory restore --backup-id <id> --dry-run` verifies those manifests and backup checksums, then previews which allowlisted memory files would be restored without writing anything. `contextbook memory restore --backup-id <id> --yes` reruns the same verification, creates a fresh pre-restore backup, and writes only allowlisted restore-file operations. Manifests and restore previews include metadata and checksums only; they do not include raw memory contents or absolute local paths. Its `status` only describes backup/restore availability; run `contextbook memory validate --json` when you need structural memory health before writes.
 
 Allowed v1 signal types:
 
@@ -474,7 +476,9 @@ contextbook memory backup --dry-run --json    # structured backup manifest for a
 contextbook memory backup --yes               # create split project/learner backups
 contextbook memory backup --yes --json        # structured backup creation result
 contextbook memory restore --backup-id <id> --dry-run       # preview restore from backup
+contextbook memory restore --backup-id <id> --yes          # apply verified restore with pre-restore backup
 contextbook memory restore --backup-id <id> --dry-run --json # structured restore preview
+contextbook memory restore --backup-id <id> --yes --json     # structured restore apply result
 contextbook learn                  # generate 1-3 learning moments
 contextbook why "<question>"       # answer a concept question with evidence level
 contextbook profile                # view learner profile + conversation memory summary

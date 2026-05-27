@@ -1,11 +1,11 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { readFile, stat } from 'node:fs/promises';
-import { basename } from 'node:path';
+import { copyFile, lstat, mkdir, readFile, realpath, rename, rm } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, relative, sep } from 'node:path';
 import { backupManifestSafePath, projectPaths } from '../storage/project-store.js';
-import { learnerBackupManifestSafePath, learnerBackupPaths } from '../storage/user-store.js';
+import { learnerBackupManifestSafePath, learnerBackupPaths, learnerPaths } from '../storage/user-store.js';
 import { knownMemoryFiles, type MemoryFileKey, type MemoryFileScope } from './memory-files.js';
-import type { MemoryBackupItem, MemoryBackupWrittenManifest } from './memory-backup.js';
+import { executeMemoryBackup, type MemoryBackupItem, type MemoryBackupWrittenManifest } from './memory-backup.js';
 
 export type MemoryRestoreStatus = 'ok' | 'warning' | 'blocked';
 export type MemoryRestoreOperationKind = 'skip-identical' | 'restore-file' | 'blocked';
@@ -30,12 +30,13 @@ export interface MemoryRestoreSummary {
 }
 
 export interface MemoryRestoreSafety {
-  dryRunOnly: true;
-  readOnly: true;
-  restoreApplied: false;
-  projectMemoryMutated: false;
-  learnerMemoryMutated: false;
-  conversationMemoryMutated: false;
+  dryRunOnly: boolean;
+  readOnly: boolean;
+  restoreApplied: boolean;
+  preRestoreBackupCreated: boolean;
+  projectMemoryMutated: boolean;
+  learnerMemoryMutated: boolean;
+  conversationMemoryMutated: boolean;
   rawContentIncluded: false;
   absolutePathsIncluded: false;
   unsafeJudgmentIncluded: false;
@@ -45,14 +46,21 @@ export interface MemoryRestoreResult {
   schemaVersion: 1;
   generatedAt: string;
   backupId: string;
-  dryRun: true;
+  dryRun: boolean;
   status: MemoryRestoreStatus;
+  restoreApplied: boolean;
+  preRestoreBackupId?: string;
   targets: {
     projectManifest: string;
     learnerManifest: string;
   };
   operations: MemoryRestoreOperation[];
   summary: MemoryRestoreSummary;
+  applied?: {
+    written: number;
+    skipped: number;
+    blocked: number;
+  };
   safety: MemoryRestoreSafety;
 }
 
@@ -135,6 +143,7 @@ export async function planMemoryRestore(options: RestoreOptions): Promise<Memory
     backupId: options.backupId,
     dryRun: true,
     status: blocked > 0 ? 'blocked' : wouldWrite > 0 || missingManifests > 0 ? 'warning' : 'ok',
+    restoreApplied: false,
     targets: {
       projectManifest: backupManifestSafePath(options.backupId),
       learnerManifest: learnerBackupManifestSafePath(options.backupId)
@@ -147,8 +156,72 @@ export async function planMemoryRestore(options: RestoreOptions): Promise<Memory
       blocked,
       missingManifests
     },
-    safety: restoreSafety()
+    safety: restoreSafety({ dryRunOnly: true, readOnly: true, restoreApplied: false, preRestoreBackupCreated: false, projectMemoryMutated: false, learnerMemoryMutated: false, conversationMemoryMutated: false })
   };
+}
+
+export async function executeMemoryRestore(options: RestoreOptions): Promise<MemoryRestoreResult> {
+  const root = options.root ?? process.cwd();
+  const learner = options.learner ?? 'default';
+  const plan = await planMemoryRestore({ backupId: options.backupId, root, learner });
+  if (plan.status === 'blocked') {
+    throw new Error('Cannot apply memory restore while the restore plan is blocked. Run `contextbook memory restore --backup-id <id> --dry-run --json` for details.');
+  }
+  if (plan.summary.missingManifests > 0) {
+    throw new Error('Cannot apply memory restore while a split backup manifest is missing. Run `contextbook memory restore --backup-id <id> --dry-run --json` for details.');
+  }
+
+  const preRestoreBackup = await createPreRestoreBackup(root, learner);
+  const specs = new Map(knownMemoryFiles(root, learner).map((spec) => [spec.key, spec]));
+  let written = 0;
+
+  for (const operation of plan.operations) {
+    if (operation.operation !== 'restore-file') continue;
+    const spec = specs.get(operation.key as MemoryFileKey);
+    if (!spec) {
+      throw new Error('Cannot apply memory restore because the restore plan contains an unknown memory file.');
+    }
+    try {
+      await mkdir(dirname(spec.path), { recursive: true });
+      await applyRestoreFile(operation, spec.path, root, learner, options.backupId);
+    } catch (error) {
+      throw new Error(`Cannot apply memory restore for ${operation.destination}. Error code: ${errorCode(error)}.`);
+    }
+    written += 1;
+  }
+
+  const skipped = plan.operations.filter((operation) => operation.operation === 'skip-identical').length;
+  const blocked = plan.operations.filter((operation) => operation.operation === 'blocked').length;
+
+  return {
+    ...plan,
+    generatedAt: new Date().toISOString(),
+    dryRun: false,
+    restoreApplied: true,
+    preRestoreBackupId: preRestoreBackup.manifest.backupId,
+    applied: {
+      written,
+      skipped,
+      blocked
+    },
+    safety: restoreSafety({
+      dryRunOnly: false,
+      readOnly: false,
+      restoreApplied: true,
+      preRestoreBackupCreated: true,
+      projectMemoryMutated: plan.operations.some((operation) => operation.operation === 'restore-file' && operation.scope === 'project'),
+      learnerMemoryMutated: plan.operations.some((operation) => operation.operation === 'restore-file' && operation.scope === 'learner'),
+      conversationMemoryMutated: plan.operations.some((operation) => operation.operation === 'restore-file' && operation.scope === 'learner' && ['learner.signals', 'learner.answers', 'learner.profileUpdates'].includes(operation.key))
+    })
+  };
+}
+
+async function createPreRestoreBackup(root: string, learner: string) {
+  try {
+    return await executeMemoryBackup({ root, learner });
+  } catch (error) {
+    throw new Error(`Cannot create pre-restore backup safely. Error code: ${errorCode(error)}.`);
+  }
 }
 
 function blockedRestoreResult(input: { generatedAt: string; backupId: string; reason: string; code: string }): MemoryRestoreResult {
@@ -158,6 +231,7 @@ function blockedRestoreResult(input: { generatedAt: string; backupId: string; re
     backupId: input.backupId,
     dryRun: true,
     status: 'blocked',
+    restoreApplied: false,
     targets: {
       projectManifest: '.contextbook/backups/<backupId>/manifest.json',
       learnerManifest: '~/.contextbook/backups/<backupId>/manifest.json'
@@ -170,18 +244,19 @@ function blockedRestoreResult(input: { generatedAt: string; backupId: string; re
       blocked: 1,
       missingManifests: 0
     },
-    safety: restoreSafety()
+    safety: restoreSafety({ dryRunOnly: true, readOnly: true, restoreApplied: false, preRestoreBackupCreated: false, projectMemoryMutated: false, learnerMemoryMutated: false, conversationMemoryMutated: false })
   };
 }
 
-function restoreSafety(): MemoryRestoreSafety {
+function restoreSafety(input: { dryRunOnly: boolean; readOnly: boolean; restoreApplied: boolean; preRestoreBackupCreated: boolean; projectMemoryMutated: boolean; learnerMemoryMutated: boolean; conversationMemoryMutated: boolean }): MemoryRestoreSafety {
   return {
-    dryRunOnly: true,
-    readOnly: true,
-    restoreApplied: false,
-    projectMemoryMutated: false,
-    learnerMemoryMutated: false,
-    conversationMemoryMutated: false,
+    dryRunOnly: input.dryRunOnly,
+    readOnly: input.readOnly,
+    restoreApplied: input.restoreApplied,
+    preRestoreBackupCreated: input.preRestoreBackupCreated,
+    projectMemoryMutated: input.projectMemoryMutated,
+    learnerMemoryMutated: input.learnerMemoryMutated,
+    conversationMemoryMutated: input.conversationMemoryMutated,
     rawContentIncluded: false,
     absolutePathsIncluded: false,
     unsafeJudgmentIncluded: false
@@ -189,14 +264,17 @@ function restoreSafety(): MemoryRestoreSafety {
 }
 
 export function formatMemoryRestoreSummary(result: MemoryRestoreResult): string {
+  const title = result.dryRun ? '# Contextbook Memory Restore Dry Run' : '# Contextbook Memory Restore';
   const lines = [
-    '# Contextbook Memory Restore Dry Run',
+    title,
     '',
     `status: ${result.status}`,
     `backup id: ${result.backupId}`,
+    ...(result.preRestoreBackupId ? [`pre-restore backup id: ${result.preRestoreBackupId}`] : []),
     `project manifest: ${result.targets.projectManifest}`,
     `learner manifest: ${result.targets.learnerManifest}`,
     `operations: ${result.summary.operations} total, ${result.summary.wouldWrite} would write, ${result.summary.identical} identical, ${result.summary.blocked} blocked`,
+    ...(result.applied ? [`applied: ${result.applied.written} written, ${result.applied.skipped} skipped, ${result.applied.blocked} blocked`] : []),
     '',
     '## Operations'
   ];
@@ -209,12 +287,13 @@ export function formatMemoryRestoreSummary(result: MemoryRestoreResult): string 
     '',
     '## Safety',
     '',
-    '- dry-run only: yes',
-    '- read-only: yes',
-    '- restore applied: no',
-    '- project memory mutated: no',
-    '- learner memory mutated: no',
-    '- conversation memory mutated: no',
+    `- dry-run only: ${result.safety.dryRunOnly ? 'yes' : 'no'}`,
+    `- read-only: ${result.safety.readOnly ? 'yes' : 'no'}`,
+    `- restore applied: ${result.safety.restoreApplied ? 'yes' : 'no'}`,
+    `- pre-restore backup created: ${result.safety.preRestoreBackupCreated ? 'yes' : 'no'}`,
+    `- project memory mutated: ${result.safety.projectMemoryMutated ? 'yes' : 'no'}`,
+    `- learner memory mutated: ${result.safety.learnerMemoryMutated ? 'yes' : 'no'}`,
+    `- conversation memory mutated: ${result.safety.conversationMemoryMutated ? 'yes' : 'no'}`,
     '- raw file contents included: no',
     '- absolute paths included: no',
     '- unsafe learner judgment included: no'
@@ -239,20 +318,25 @@ async function readManifest(path: string, scope: MemoryFileScope): Promise<Manif
 
 async function planRestoreItem(input: { item: MemoryBackupItem; root: string; learner: string; backupId: string; destinationPath: string; destinationSafePath: string }): Promise<MemoryRestoreOperation> {
   const backupPath = backupFilePath(input.item, input.root, input.backupId);
+  const backupRoot = backupRootForScope(input.item.scope, input.root, input.backupId);
   if (!input.item.sha256) {
     return blockedOperation(input.item.scope, input.item.key, input.destinationSafePath, input.item.backupPath, 'Backup manifest item is missing sha256.', 'missing-backup-hash');
   }
   try {
-    const backupHash = await sha256File(backupPath);
+    const backupHash = await sha256FileInside(backupPath, backupRoot);
     if (backupHash !== input.item.sha256) {
       return blockedOperation(input.item.scope, input.item.key, input.destinationSafePath, input.item.backupPath, 'Backup file checksum does not match manifest.', 'backup-checksum-mismatch');
     }
   } catch (error) {
-    return blockedOperation(input.item.scope, input.item.key, input.destinationSafePath, input.item.backupPath, `Could not verify backup file. Error code: ${errorCode(error)}.`, errorCode(error) === 'ENOENT' ? 'missing-backup-file' : 'backup-inspect-error');
+    const code = errorCode(error);
+    return blockedOperation(input.item.scope, input.item.key, input.destinationSafePath, input.item.backupPath, `Could not verify backup file. Error code: ${code}.`, code === 'ENOENT' ? 'missing-backup-file' : code.startsWith('UNSAFE_BACKUP_') ? 'unsafe-backup-file' : 'backup-inspect-error');
   }
 
   try {
-    const destination = await stat(input.destinationPath);
+    const destination = await lstat(input.destinationPath);
+    if (destination.isSymbolicLink()) {
+      return blockedOperation(input.item.scope, input.item.key, input.destinationSafePath, input.item.backupPath, 'Current destination is a symbolic link and cannot be restored safely.', 'unsafe-destination-path');
+    }
     if (!destination.isFile()) {
       return {
         operation: 'restore-file',
@@ -264,7 +348,7 @@ async function planRestoreItem(input: { item: MemoryBackupItem; root: string; le
         reason: 'Current destination is not a regular file and would be replaced.'
       };
     }
-    const currentHash = await sha256File(input.destinationPath);
+    const currentHash = await sha256FileInside(input.destinationPath, memoryRootForScope(input.item.scope, input.root, input.learner));
     if (currentHash === input.item.sha256) {
       return {
         operation: 'skip-identical',
@@ -297,7 +381,23 @@ async function planRestoreItem(input: { item: MemoryBackupItem; root: string; le
         reason: 'Current file is missing and would be restored.'
       };
     }
-    return blockedOperation(input.item.scope, input.item.key, input.destinationSafePath, input.item.backupPath, `Could not inspect current destination safely. Error code: ${errorCode(error)}.`, 'destination-inspect-error');
+    const code = errorCode(error);
+    return blockedOperation(input.item.scope, input.item.key, input.destinationSafePath, input.item.backupPath, `Could not inspect current destination safely. Error code: ${code}.`, code.startsWith('UNSAFE_DESTINATION_') ? 'unsafe-destination-path' : 'destination-inspect-error');
+  }
+}
+
+async function applyRestoreFile(operation: MemoryRestoreOperation, destinationPath: string, root: string, learner: string, backupId: string): Promise<void> {
+  const backupPath = backupFilePathFromOperation(operation, root, backupId);
+  await assertRegularFileInside(backupPath, backupRootForScope(operation.scope, root, backupId), 'backup');
+  await assertDestinationInside(destinationPath, memoryRootForScope(operation.scope, root, learner), { allowMissing: true });
+  const tempPath = `${destinationPath}.contextbook-restore-${randomUUID()}.tmp`;
+  try {
+    await copyFile(backupPath, tempPath);
+    await assertRegularFileInside(tempPath, dirname(destinationPath), 'destination');
+    await rename(tempPath, destinationPath);
+  } catch (error) {
+    await rm(tempPath, { force: true }).catch(() => undefined);
+    throw error;
   }
 }
 
@@ -305,6 +405,12 @@ function backupFilePath(item: MemoryBackupItem, root: string, backupId: string):
   return item.scope === 'project'
     ? `${projectPaths(root).backups}/${backupId}/${item.backupPath}`
     : `${learnerBackupPaths(backupId).base}/${item.backupPath}`;
+}
+
+function backupFilePathFromOperation(operation: MemoryRestoreOperation, root: string, backupId: string): string {
+  return operation.scope === 'project'
+    ? `${projectPaths(root).backups}/${backupId}/${operation.backupPath}`
+    : `${learnerBackupPaths(backupId).base}/${operation.backupPath}`;
 }
 
 function parseManifestItem(rawItem: unknown, manifestScope: MemoryFileScope, knownKeys: Set<MemoryFileKey>): { state: 'valid'; item: MemoryBackupItem } | { state: 'invalid'; backupPath: string; reason: string; code: string } {
@@ -386,6 +492,60 @@ async function sha256File(path: string): Promise<string> {
     stream.on('end', resolve);
   });
   return hash.digest('hex');
+}
+
+async function sha256FileInside(path: string, root: string): Promise<string> {
+  await assertRegularFileInside(path, root, 'backup');
+  return sha256File(path);
+}
+
+async function assertRegularFileInside(path: string, root: string, type: 'backup' | 'destination'): Promise<void> {
+  const info = await lstat(path);
+  if (info.isSymbolicLink()) throw restoreSafetyError(type === 'backup' ? 'UNSAFE_BACKUP_SYMLINK' : 'UNSAFE_DESTINATION_SYMLINK');
+  if (!info.isFile()) throw restoreSafetyError(type === 'backup' ? 'UNSAFE_BACKUP_FILE' : 'UNSAFE_DESTINATION_FILE');
+  await assertRealPathInside(path, root, type === 'backup' ? 'UNSAFE_BACKUP_PATH' : 'UNSAFE_DESTINATION_PATH');
+}
+
+async function assertDestinationInside(path: string, root: string, options: { allowMissing: boolean }): Promise<void> {
+  try {
+    const info = await lstat(path);
+    if (info.isSymbolicLink()) throw restoreSafetyError('UNSAFE_DESTINATION_SYMLINK');
+    if (info.isFile()) {
+      await assertRealPathInside(path, root, 'UNSAFE_DESTINATION_PATH');
+      return;
+    }
+    throw restoreSafetyError('UNSAFE_DESTINATION_FILE');
+  } catch (error) {
+    if (options.allowMissing && errorCode(error) === 'ENOENT') {
+      await assertRealPathInside(dirname(path), root, 'UNSAFE_DESTINATION_PATH');
+      return;
+    }
+    throw error;
+  }
+}
+
+async function assertRealPathInside(path: string, root: string, code: string): Promise<void> {
+  const [resolvedPath, resolvedRoot] = await Promise.all([realpath(path), realpath(root)]);
+  if (!isPathInside(resolvedPath, resolvedRoot)) throw restoreSafetyError(code);
+}
+
+function isPathInside(path: string, root: string): boolean {
+  const candidate = relative(root, path);
+  return candidate === '' || Boolean(candidate && !candidate.startsWith('..') && !candidate.includes(`..${sep}`) && !isAbsolute(candidate));
+}
+
+function backupRootForScope(scope: MemoryFileScope, root: string, backupId: string): string {
+  return scope === 'project' ? `${projectPaths(root).backups}/${backupId}` : learnerBackupPaths(backupId).base;
+}
+
+function memoryRootForScope(scope: MemoryFileScope, root: string, learner: string): string {
+  return scope === 'project' ? projectPaths(root).project : learnerPaths(learner).base;
+}
+
+function restoreSafetyError(code: string): Error & { code: string } {
+  const error = new Error(code) as Error & { code: string };
+  error.code = code;
+  return error;
 }
 
 function errorCode(error: unknown): string {
