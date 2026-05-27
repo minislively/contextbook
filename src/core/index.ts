@@ -4,7 +4,7 @@ export { executeMemoryBackup, formatMemoryBackupSummary, planMemoryBackup } from
 export { buildMemoryContext, formatMemoryContextSummary } from './memory-context.js';
 export { formatMemoryRebuildSummary, planMemoryRebuild } from './memory-rebuild.js';
 export { formatMemoryRepairSummary, planMemoryRepair } from './memory-repair.js';
-export { formatMemoryRestoreSummary, planMemoryRestore } from './memory-restore.js';
+export { executeMemoryRestore, formatMemoryRestoreSummary, planMemoryRestore } from './memory-restore.js';
 export { formatMemoryValidateSummary, validateMemory } from './memory-validate.js';
 export { buildDoctor, formatDoctorMarkdown } from './doctor.js';
 export { buildProjectSummary, toProjectSummaryJson } from './project.js';
