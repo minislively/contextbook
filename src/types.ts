@@ -69,6 +69,7 @@ export interface ProjectScanRun {
   filesScanned: number;
   bytesScanned: number;
   changedFiles: number;
+  workingTreeFingerprint?: string;
   conceptsDetected: number;
   evidenceDetected: number;
   warnings: ProjectScanWarning[];
@@ -678,6 +679,7 @@ export interface MemoryContextRecommendedAction extends LearnerRecommendedAction
 export type MemoryContextStaleHintCode =
   | 'project-not-initialized'
   | 'project-not-scanned'
+  | 'working-tree-changed'
   | 'scan-has-warnings'
   | 'no-learner-signals';
 
@@ -689,6 +691,8 @@ export interface MemoryContextStaleHint {
 
 export interface MemoryContextFreshness {
   projectScannedAt?: string;
+  workingTreeChanged: boolean;
+  changedFilesSinceScan: number;
   signalsGeneratedAt: string;
   contextGeneratedAt: string;
   staleHints: MemoryContextStaleHint[];

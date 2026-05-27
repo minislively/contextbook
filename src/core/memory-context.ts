@@ -2,6 +2,7 @@ import { memorySignalsJson } from '../learner/conversation-memory.js';
 import { profileUpdateCandidatesJson } from '../learner/profile-update-candidates.js';
 import { weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
 import { buildProjectSummary, toProjectSummaryJson } from './project.js';
+import { gitWorkingTreeState } from '../scan/git-diff.js';
 import { buildLearnerSummary, toLearnerSummaryJson } from './learner.js';
 import type {
   ContextbookRuntimeOptions,
@@ -28,7 +29,7 @@ export async function buildMemoryContext(options: ContextbookRuntimeOptions = {}
   ]);
   const project = toProjectSummaryJson(projectSummary);
   const learnerMemory = toLearnerSummaryJson(learnerSummary);
-  const freshness = memoryContextFreshness(generatedAt, project, conversation);
+  const freshness = await memoryContextFreshness(root, generatedAt, project, conversation);
   return {
     schemaVersion: 1,
     generatedAt,
@@ -64,6 +65,8 @@ export function formatMemoryContextSummary(context: MemoryContextJson): string {
     '- safety: read-only, no raw transcript, no profile/preferences/weak-term mutation',
     '',
     '## Freshness',
+    `- working tree changed: ${context.freshness.workingTreeChanged}`,
+    `- changed files since scan: ${context.freshness.changedFilesSinceScan}`,
     staleHints,
     '',
     '## Next Actions',
@@ -71,12 +74,15 @@ export function formatMemoryContextSummary(context: MemoryContextJson): string {
   ].join('\n');
 }
 
-function memoryContextFreshness(
+async function memoryContextFreshness(
+  root: string,
   contextGeneratedAt: string,
   project: MemoryContextJson['project'],
   conversation: MemoryContextJson['conversation']
-): MemoryContextFreshness {
+): Promise<MemoryContextFreshness> {
   const latestScan = project.recentScanRuns[0];
+  const workingTree = await gitWorkingTreeState(root);
+  const workingTreeChanged = Boolean(latestScan && workingTree.available && latestScan.workingTreeFingerprint && latestScan.workingTreeFingerprint !== workingTree.fingerprint);
   const staleHints: MemoryContextStaleHint[] = [];
   if (!project.memoryFiles.some((file) => file.exists)) {
     staleHints.push({
@@ -89,6 +95,13 @@ function memoryContextFreshness(
     staleHints.push({
       code: 'project-not-scanned',
       message: 'No project scan run was found.',
+      recommendedCommand: 'contextbook scan'
+    });
+  }
+  if (workingTreeChanged) {
+    staleHints.push({
+      code: 'working-tree-changed',
+      message: 'Working tree has changed since the latest project scan.',
       recommendedCommand: 'contextbook scan'
     });
   }
@@ -108,6 +121,8 @@ function memoryContextFreshness(
   }
   return {
     projectScannedAt: latestScan?.scannedAt,
+    workingTreeChanged,
+    changedFilesSinceScan: workingTreeChanged ? Math.max(0, workingTree.changedFileCount - (latestScan?.changedFiles ?? 0)) || workingTree.changedFileCount : 0,
     signalsGeneratedAt: conversation.generatedAt,
     contextGeneratedAt,
     staleHints

@@ -2,6 +2,7 @@ import { basename } from 'node:path';
 import { hooksStatus } from '../hooks/status.js';
 import type { HooksStatusJson } from '../hooks/types.js';
 import { exists, readJson, readJsonl } from '../storage/fs-utils.js';
+import { gitWorkingTreeState } from '../scan/git-diff.js';
 import { projectPaths } from '../storage/project-store.js';
 import { learnerPaths } from '../storage/user-store.js';
 import type { ContextbookRuntimeOptions, LearnerPreferences, WeakTerms } from '../types.js';
@@ -21,6 +22,13 @@ export interface DoctorProjectStatus {
   initialized: boolean;
   scanned: boolean;
   files: Array<{ name: 'config' | 'concepts' | 'evidence' | 'fileIndex' | 'scanRuns'; path: string; exists: boolean; records?: number }>;
+  freshness: {
+    lastScanAt?: string;
+    workingTreeChanged: boolean;
+    changedFilesSinceScan: number;
+    stale: boolean;
+    staleReasons: string[];
+  };
   counts: {
     concepts: number;
     evidence: number;
@@ -117,6 +125,8 @@ export function formatDoctorMarkdown(result: DoctorJson): string {
     `- evidence records: ${result.project.counts.evidence}`,
     `- scan runs: ${result.project.counts.scanRuns}`,
     `- indexed files: ${result.project.counts.indexedFiles}`,
+    `- working tree changed: ${result.project.freshness.workingTreeChanged}`,
+    `- stale: ${result.project.freshness.stale}`,
     '',
     '### Project Files',
     projectFiles,
@@ -156,11 +166,12 @@ async function projectDoctorStatus(root: string): Promise<DoctorProjectStatus> {
     exists(paths.fileIndex),
     exists(paths.scanRuns)
   ]);
-  const [concepts, evidence, scanRuns, fileIndex] = await Promise.all([
+  const [concepts, evidence, scanRuns, fileIndex, workingTree] = await Promise.all([
     readJson<unknown[]>(paths.concepts, []),
     readJsonl(paths.evidence),
     readJsonl(paths.scanRuns),
-    readJson<{ files?: unknown[] }>(paths.fileIndex, { files: [] })
+    readJson<{ files?: unknown[] }>(paths.fileIndex, { files: [] }),
+    gitWorkingTreeState(root)
   ]);
   const counts = {
     concepts: concepts.length,
@@ -168,8 +179,18 @@ async function projectDoctorStatus(root: string): Promise<DoctorProjectStatus> {
     scanRuns: scanRuns.length,
     indexedFiles: Array.isArray(fileIndex.files) ? fileIndex.files.length : 0
   };
+  const latestScan = scanRuns
+    .filter((run): run is { scannedAt: string; changedFiles: number; workingTreeFingerprint?: string; warnings?: unknown[] } => Boolean(run) && typeof (run as { scannedAt?: unknown }).scannedAt === 'string')
+    .sort((a, b) => b.scannedAt.localeCompare(a.scannedAt))[0];
   const initialized = configExists || conceptsExists || evidenceExists || fileIndexExists || scanRunsExists;
   const scanned = counts.scanRuns > 0 || counts.concepts > 0 || counts.evidence > 0 || counts.indexedFiles > 0;
+  const workingTreeChanged = Boolean(latestScan && workingTree.available && latestScan.workingTreeFingerprint && latestScan.workingTreeFingerprint !== workingTree.fingerprint);
+  const staleReasons = [
+    ...(!initialized ? ['project-not-initialized'] : []),
+    ...(!scanned ? ['project-not-scanned'] : []),
+    ...(workingTreeChanged ? ['working-tree-changed'] : []),
+    ...((latestScan?.warnings?.length ?? 0) > 0 ? ['scan-has-warnings'] : [])
+  ];
   const files: DoctorProjectStatus['files'] = [
     { name: 'config', path: '.contextbook/project/config.json', exists: configExists },
     { name: 'concepts', path: '.contextbook/project/concepts.json', exists: conceptsExists, records: counts.concepts },
@@ -182,6 +203,13 @@ async function projectDoctorStatus(root: string): Promise<DoctorProjectStatus> {
     initialized,
     scanned,
     files,
+    freshness: {
+      lastScanAt: latestScan?.scannedAt,
+      workingTreeChanged,
+      changedFilesSinceScan: workingTreeChanged ? Math.max(0, workingTree.changedFileCount - (latestScan?.changedFiles ?? 0)) || workingTree.changedFileCount : 0,
+      stale: staleReasons.length > 0,
+      staleReasons
+    },
     counts,
     status: scanned ? 'scanned' : initialized ? 'initialized' : 'missing'
   };
@@ -247,6 +275,7 @@ function nextActions(project: DoctorProjectStatus, learner: DoctorLearnerStatus,
   const actions: DoctorNextAction[] = [];
   if (!project.initialized) actions.push({ command: 'contextbook init', reason: 'Create project memory before scanning.' });
   if (!project.scanned) actions.push({ command: 'contextbook scan', reason: 'Collect project evidence and concept mappings.' });
+  if (project.scanned && project.freshness.workingTreeChanged) actions.push({ command: 'contextbook scan', reason: 'Refresh project memory because the working tree changed since the latest scan.' });
   if (!learner.initialized) actions.push({ command: 'contextbook learner', reason: 'Create or inspect learner memory in your home directory.' });
   if (hooks.status === 'missing') actions.push({ command: 'contextbook setup --hooks', reason: 'Install optional Codex and Claude Code hook helpers.' });
   if (hooks.status === 'helpers-installed') actions.push({ command: 'contextbook hooks status', reason: 'Review generated hook config snippets and trust settings.' });

@@ -274,6 +274,7 @@ try {
   assert(typeof scanRun.scannedAt === 'string' && !Number.isNaN(Date.parse(scanRun.scannedAt)), 'scan run missing timestamp');
   assert(scanRun.filesScanned > 0 && scanRun.bytesScanned > 0, 'scan run missing scan size fields');
   assert(scanRun.changedFiles >= 1, 'scan run missing changed-file count');
+  assert(typeof scanRun.workingTreeFingerprint === 'string' && scanRun.workingTreeFingerprint.length >= 16, 'scan run missing working tree fingerprint');
   assert(scanRun.conceptsDetected >= 1 && scanRun.evidenceDetected >= 1, 'scan run missing detection counts');
   assert(Array.isArray(scanRun.warnings), 'scan run warnings should be an array');
   assert(scanRun.warnings.some((warning) => warning.code === 'scan-partial' && warning.message.includes('hidden file')), 'scan run missing hidden file privacy warning');
@@ -621,6 +622,8 @@ try {
   assert(memoryContext.suggestions.weakTerms.candidates.some((item) => item.term.toLowerCase() === 'event loop'), 'memory context suggestions missing weak-term candidate');
   assert(memoryContext.suggestions.profileUpdates.candidates.some((item) => item.targetSection === 'Preferred Explanation'), 'memory context suggestions missing profile update candidate');
   assert(memoryContext.freshness.projectScannedAt === scanRunsAfterSecondScan[1].scannedAt, 'memory context freshness should use latest scan timestamp');
+  assert(memoryContext.freshness.workingTreeChanged === false && memoryContext.freshness.changedFilesSinceScan === 0, 'memory context should be fresh immediately after scan');
+  assert(!memoryContext.freshness.staleHints.some((hint) => hint.code === 'working-tree-changed'), 'memory context should not report working tree stale immediately after scan');
   assert(memoryContext.recommendedActions.every((action) => action.source), 'memory context recommended actions missing source');
   assert(memoryContext.recommendedActions.some((action) => action.command.includes('memory apply-profile-update') && action.command.includes('--dry-run')), 'memory context missing profile apply dry-run recommendation');
   assert(new Set(memoryContext.recommendedActions.map((action) => action.command)).size === memoryContext.recommendedActions.length, 'memory context recommended actions should be deduped by command');
@@ -634,6 +637,15 @@ try {
   const coreMemoryContext = await core.buildMemoryContext({ root, learner: 'default' });
   assert(coreMemoryContext.schemaVersion === 1 && coreMemoryContext.recommendedActions.length >= 1, 'core memory context contract invalid');
 
+  await writeFile(join(root, 'README.md'), '# Smoke project\n\nChanged after scan.\n', 'utf8');
+  const staleMemoryContext = JSON.parse(run(['memory', 'context', '--json']));
+  assert(staleMemoryContext.freshness.workingTreeChanged === true, 'memory context should report stale working tree after post-scan edit');
+  assert(staleMemoryContext.freshness.changedFilesSinceScan >= 1, 'memory context should report changed file count after post-scan edit');
+  assert(staleMemoryContext.freshness.staleHints.some((hint) => hint.code === 'working-tree-changed' && hint.recommendedCommand === 'contextbook scan'), 'memory context missing working-tree stale hint');
+  assert(staleMemoryContext.recommendedActions.some((action) => action.command === 'contextbook scan' && action.source === 'freshness'), 'memory context missing scan recommendation for stale project');
+  const staleDoctor = JSON.parse(run(['doctor', '--json']));
+  assert(staleDoctor.project.freshness.workingTreeChanged === true && staleDoctor.project.freshness.staleReasons.includes('working-tree-changed'), 'doctor should report stale project freshness after post-scan edit');
+  assert(staleDoctor.nextActions.some((action) => action.command === 'contextbook scan'), 'doctor missing scan action for stale project');
 
   const profileOutput = run(['profile']);
   assert(profileOutput.includes('## Conversation Memory'), 'profile did not expose conversation memory summary');
