@@ -3,6 +3,7 @@ import { gitWorkingTreeState } from '../scan/git-diff.js';
 import { readPackageJson } from '../scan/package-json.js';
 import { scanProjectFiles } from '../scan/read-files.js';
 import { validateMemory, type MemoryValidateIssue, type MemoryValidateResult } from './memory-validate.js';
+import { knownMemoryFiles } from './memory-files.js';
 
 export type MemoryRebuildStatus = 'warning' | 'blocked';
 export type MemoryRebuildOperationKind = 'replace-project-concepts' | 'replace-project-evidence' | 'replace-project-file-index' | 'append-scan-run' | 'preserve-learner-memory' | 'skip-validation-blocked';
@@ -77,7 +78,7 @@ export async function planMemoryRebuild(options: RebuildOptions = {}): Promise<M
   ]);
   const mapped = mapEvidence(scanned.files, { changedFiles: workingTree.changedFiles, packageJson });
   const blockingIssues = validation.issues.filter((issue) => issue.severity === 'error');
-  const operations = rebuildOperations(blockingIssues);
+  const operations = rebuildOperations(blockingIssues, options.root ?? process.cwd(), options.learner ?? 'default');
   const blocked = operations.filter((operation) => !operation.supported).length;
   const supported = operations.filter((operation) => operation.supported).length;
   const wouldWrite = operations.filter((operation) => operation.wouldWrite).length;
@@ -159,7 +160,8 @@ export function formatMemoryRebuildSummary(result: MemoryRebuildResult): string 
   return `${lines.join('\n')}\n`;
 }
 
-function rebuildOperations(blockingIssues: MemoryValidateIssue[]): MemoryRebuildOperation[] {
+function rebuildOperations(blockingIssues: MemoryValidateIssue[], root: string, learner: string): MemoryRebuildOperation[] {
+  const learnerFiles = knownMemoryFiles(root, learner).filter((file) => file.scope === 'learner').map((file) => file.safePath);
   const operations: MemoryRebuildOperation[] = [
     {
       id: 'rebuild:project:concepts',
@@ -208,7 +210,7 @@ function rebuildOperations(blockingIssues: MemoryValidateIssue[]): MemoryRebuild
       supported: true,
       wouldWrite: false,
       destructive: false,
-      files: ['~/.contextbook/learners/default/profile.md', '~/.contextbook/learners/default/preferences.json', '~/.contextbook/learners/default/signals.jsonl'],
+      files: learnerFiles,
       message: 'Would preserve Learner and Conversation Memory unchanged.'
     }
   ];

@@ -1,3 +1,4 @@
+import { formatMemoryBackupSummary, planMemoryBackup } from '../core/memory-backup.js';
 import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
 import { formatMemoryRebuildSummary, planMemoryRebuild } from '../core/memory-rebuild.js';
 import { formatMemoryRepairSummary, planMemoryRepair } from '../core/memory-repair.js';
@@ -150,6 +151,16 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
       console.log(formatMemoryRebuildSummary(result));
       return;
     }
+    case 'backup': {
+      const input = parseBackupDryRun(rest);
+      const result = await planMemoryBackup({ learner: 'default' });
+      if (input.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatMemoryBackupSummary(result));
+      return;
+    }
     default:
       throw new Error(memoryUsage());
   }
@@ -282,6 +293,10 @@ function parseJsonFlag(args: string[], usage: string): boolean {
   if (args.length === 0) return false;
   if (args.length === 1 && args[0] === '--json') return true;
   throw new Error(`Usage: ${usage}`);
+}
+
+function parseBackupDryRun(args: string[]): { json: boolean } {
+  return parseRequiredDryRun(args, 'Usage: contextbook memory backup --dry-run [--json]');
 }
 
 function parseRebuildDryRun(args: string[]): { json: boolean } {
@@ -418,6 +433,7 @@ function memoryUsage(): string {
     '  contextbook memory validate [--json]',
     '  contextbook memory repair --dry-run [--json]',
     '  contextbook memory rebuild --dry-run [--json]',
+    '  contextbook memory backup --dry-run [--json]',
     '',
     `Allowed types: ${memorySignalTypes.join(', ')}`
   ].join('\n');

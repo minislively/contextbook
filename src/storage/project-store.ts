@@ -21,6 +21,8 @@ export const projectPaths = (root = projectRoot()) => {
     evidence: join(base, 'project', 'evidence.jsonl'),
     fileIndex: join(base, 'project', 'file-index.json'),
     scanRuns: join(base, 'project', 'scan-runs.jsonl'),
+    backups: join(base, 'backups'),
+    backupManifest: (backupId: string) => join(base, 'backups', backupId, 'manifest.json'),
     learnPrompt: join(base, 'prompts', 'learn.md'),
     whyPrompt: join(base, 'prompts', 'why.md')
   };
@@ -84,4 +86,8 @@ export async function writeFileIndex(index: ProjectFileIndex, root = projectRoot
 
 export async function recordScanRun(run: ProjectScanRun, root = projectRoot()): Promise<void> {
   await appendJsonl(projectPaths(root).scanRuns, run);
+}
+
+export function backupManifestSafePath(backupId: string): string {
+  return `.contextbook/backups/${backupId}/manifest.json`;
 }

@@ -1,12 +1,11 @@
 import { readFile } from 'node:fs/promises';
-import { projectPaths, projectRoot } from '../storage/project-store.js';
-import { learnerPaths } from '../storage/user-store.js';
-import { exists } from '../storage/fs-utils.js';
+import { projectRoot } from '../storage/project-store.js';
+import { knownMemoryFiles, type MemoryFileKey, type MemoryFileKind, type MemoryFileScope } from './memory-files.js';
 
 export type MemoryValidateStatus = 'ok' | 'warning' | 'error';
 export type MemoryValidateSeverity = 'warning' | 'error';
-export type MemoryValidateScope = 'project' | 'learner';
-export type MemoryValidateIssueCode = 'missing-file' | 'invalid-json' | 'invalid-jsonl' | 'invalid-shape';
+export type MemoryValidateScope = MemoryFileScope;
+export type MemoryValidateIssueCode = 'missing-file' | 'inspect-error' | 'invalid-json' | 'invalid-jsonl' | 'invalid-shape';
 
 export interface MemoryValidateIssue {
   severity: MemoryValidateSeverity;
@@ -51,10 +50,11 @@ interface ValidateOptions {
 }
 
 interface FileSpec {
+  key: MemoryFileKey;
   scope: MemoryValidateScope;
   path: string;
   safePath: string;
-  kind: 'json' | 'jsonl' | 'markdown';
+  kind: MemoryFileKind;
   requiredShape?: (value: unknown) => string | undefined;
   recommendedCommand: string;
 }
@@ -66,19 +66,10 @@ export async function validateMemory(options: ValidateOptions = {}): Promise<Mem
   const issues: MemoryValidateIssue[] = [];
 
   for (const spec of specs) {
-    if (!(await exists(spec.path))) {
-      issues.push({
-        severity: 'warning',
-        scope: spec.scope,
-        file: spec.safePath,
-        code: 'missing-file',
-        message: `${spec.safePath} is missing.`,
-        recommendedCommand: spec.recommendedCommand
-      });
+    if (spec.kind === 'markdown') {
+      issues.push(...await validateReadableFile(spec));
       continue;
     }
-
-    if (spec.kind === 'markdown') continue;
     if (spec.kind === 'json') {
       issues.push(...await validateJsonFile(spec));
       continue;
@@ -150,26 +141,53 @@ export function formatMemoryValidateSummary(result: MemoryValidateResult): strin
 }
 
 function memoryFileSpecs(root: string, learner: string): FileSpec[] {
-  const project = projectPaths(root);
-  const learnerMemory = learnerPaths(learner);
-  return [
-    { scope: 'project', path: project.config, safePath: '.contextbook/project/config.json', kind: 'json', requiredShape: validateProjectConfigShape, recommendedCommand: 'contextbook init' },
-    { scope: 'project', path: project.concepts, safePath: '.contextbook/project/concepts.json', kind: 'json', requiredShape: validateConceptsShape, recommendedCommand: 'contextbook scan' },
-    { scope: 'project', path: project.evidence, safePath: '.contextbook/project/evidence.jsonl', kind: 'jsonl', requiredShape: validateObjectEntryShape, recommendedCommand: 'contextbook scan' },
-    { scope: 'project', path: project.fileIndex, safePath: '.contextbook/project/file-index.json', kind: 'json', requiredShape: validateFileIndexShape, recommendedCommand: 'contextbook scan' },
-    { scope: 'project', path: project.scanRuns, safePath: '.contextbook/project/scan-runs.jsonl', kind: 'jsonl', requiredShape: validateScanRunShape, recommendedCommand: 'contextbook scan' },
-    { scope: 'learner', path: learnerMemory.profile, safePath: '~/.contextbook/learners/default/profile.md', kind: 'markdown', recommendedCommand: 'contextbook init' },
-    { scope: 'learner', path: learnerMemory.preferences, safePath: '~/.contextbook/learners/default/preferences.json', kind: 'json', requiredShape: validatePreferencesShape, recommendedCommand: 'contextbook init' },
-    { scope: 'learner', path: learnerMemory.weakTerms, safePath: '~/.contextbook/learners/default/weak-terms.json', kind: 'json', requiredShape: validatePlainObjectShape, recommendedCommand: 'contextbook init' },
-    { scope: 'learner', path: learnerMemory.signals, safePath: '~/.contextbook/learners/default/signals.jsonl', kind: 'jsonl', requiredShape: validateObjectEntryShape, recommendedCommand: 'contextbook init' },
-    { scope: 'learner', path: learnerMemory.answers, safePath: '~/.contextbook/learners/default/answers.jsonl', kind: 'jsonl', requiredShape: validateObjectEntryShape, recommendedCommand: 'contextbook init' },
-    { scope: 'learner', path: learnerMemory.profileUpdates, safePath: '~/.contextbook/learners/default/profile-updates.jsonl', kind: 'jsonl', requiredShape: validateObjectEntryShape, recommendedCommand: 'contextbook init' }
-  ];
+  return knownMemoryFiles(root, learner).map((spec) => ({
+    ...spec,
+    requiredShape: requiredShapeFor(spec.key)
+  }));
+}
+
+function requiredShapeFor(key: MemoryFileKey): ((value: unknown) => string | undefined) | undefined {
+  switch (key) {
+    case 'project.config':
+      return validateProjectConfigShape;
+    case 'project.concepts':
+      return validateConceptsShape;
+    case 'project.evidence':
+    case 'learner.signals':
+    case 'learner.answers':
+    case 'learner.profileUpdates':
+      return validateObjectEntryShape;
+    case 'project.fileIndex':
+      return validateFileIndexShape;
+    case 'project.scanRuns':
+      return validateScanRunShape;
+    case 'learner.preferences':
+      return validatePreferencesShape;
+    case 'learner.weakTerms':
+      return validatePlainObjectShape;
+    case 'learner.profile':
+      return undefined;
+  }
+}
+
+async function validateReadableFile(spec: FileSpec): Promise<MemoryValidateIssue[]> {
+  try {
+    await readFile(spec.path, 'utf8');
+    return [];
+  } catch (error) {
+    return [readIssue(spec, error)];
+  }
 }
 
 async function validateJsonFile(spec: FileSpec): Promise<MemoryValidateIssue[]> {
+  let raw: string;
   try {
-    const raw = await readFile(spec.path, 'utf8');
+    raw = await readFile(spec.path, 'utf8');
+  } catch (error) {
+    return [readIssue(spec, error)];
+  }
+  try {
     const parsed = raw.trim() ? JSON.parse(raw) as unknown : undefined;
     const shapeError = spec.requiredShape?.(parsed);
     if (!shapeError) return [];
@@ -181,7 +199,12 @@ async function validateJsonFile(spec: FileSpec): Promise<MemoryValidateIssue[]> 
 
 async function validateJsonlFile(spec: FileSpec): Promise<MemoryValidateIssue[]> {
   const issues: MemoryValidateIssue[] = [];
-  const raw = await readFile(spec.path, 'utf8');
+  let raw: string;
+  try {
+    raw = await readFile(spec.path, 'utf8');
+  } catch (error) {
+    return [readIssue(spec, error)];
+  }
   const lines = raw.split(/\r?\n/);
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -195,6 +218,28 @@ async function validateJsonlFile(spec: FileSpec): Promise<MemoryValidateIssue[]>
     }
   }
   return issues;
+}
+
+function readIssue(spec: FileSpec, error: unknown): MemoryValidateIssue {
+  const code = errorCode(error);
+  if (code === 'ENOENT') {
+    return {
+      severity: 'warning',
+      scope: spec.scope,
+      file: spec.safePath,
+      code: 'missing-file',
+      message: `${spec.safePath} is missing.`,
+      recommendedCommand: spec.recommendedCommand
+    };
+  }
+  return {
+    severity: 'error',
+    scope: spec.scope,
+    file: spec.safePath,
+    code: 'inspect-error',
+    message: `Could not inspect known memory file safely. Error code: ${code}.`,
+    recommendedCommand: spec.recommendedCommand
+  };
 }
 
 function parseIssue(spec: FileSpec, code: 'invalid-json' | 'invalid-jsonl', error: unknown, line?: number): MemoryValidateIssue {
@@ -265,4 +310,8 @@ function validatePlainObjectShape(value: unknown): string | undefined {
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function errorCode(error: unknown): string {
+  return error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : 'UNKNOWN';
 }
