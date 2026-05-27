@@ -231,6 +231,7 @@ contextbook memory context
 contextbook memory validate
 contextbook memory repair --dry-run
 contextbook memory rebuild --dry-run
+contextbook memory backup --dry-run
 # or, for agents:
 contextbook memory capture-prompt --prompt "내 프로젝트에 빗대서 설명해줘" --source codex --json
 contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual --json
@@ -247,6 +248,7 @@ contextbook memory context --json
 contextbook memory validate --json
 contextbook memory repair --dry-run --json
 contextbook memory rebuild --dry-run --json
+contextbook memory backup --dry-run --json
 ```
 
 Memory signals are append-only learning events for explicit feedback such as confusion, positive feedback, format requests, or analogy fit. They do not update your profile or weak terms automatically. `contextbook memory capture-prompt` is the hook-ready deterministic version: it classifies only explicit learning-feedback phrases from a prompt, stores sanitized signal notes, and does not persist the raw prompt. Its JSON output also includes read-only `preferenceSignals` / `preferenceSignalCounts`, so mixed prompts can be split into safe atomic labels such as `explanation.order=project-first`, `language=ko`, or `command.volume=fewer-commands` without mutating `preferences.json`.
@@ -270,6 +272,8 @@ Preference updates are recoverable. Use `contextbook memory preference-history` 
 `contextbook memory repair --dry-run` turns validation issues into a safe repair plan without writing files. Missing known memory files become supported create/rerun-scan plans, while malformed JSON/JSONL stays blocked for manual review so Contextbook does not guess or overwrite user memory.
 
 `contextbook memory rebuild --dry-run` previews a full Project Memory regeneration from the current repository scan. It reports projected concepts/evidence/file-index/scan-run operations, preserves Learner and Conversation Memory, and still performs no writes or backups.
+
+`contextbook memory backup --dry-run` previews the metadata-only manifest that future write-capable repair/rebuild flows will use before mutating memory. It lists known Project/Learner/Conversation memory files, reports missing files and byte counts, and never creates backup files, reads raw memory contents, or emits absolute local paths. Its `status` only describes backup-preview availability; run `contextbook memory validate --json` when you need structural memory health before writes.
 
 Allowed v1 signal types:
 
@@ -461,6 +465,8 @@ contextbook memory repair --dry-run           # preview memory repair operations
 contextbook memory repair --dry-run --json    # structured repair plan for agents
 contextbook memory rebuild --dry-run          # preview project memory rebuild
 contextbook memory rebuild --dry-run --json   # structured rebuild plan for agents
+contextbook memory backup --dry-run           # preview memory backup manifest
+contextbook memory backup --dry-run --json    # structured backup manifest for agents
 contextbook learn                  # generate 1-3 learning moments
 contextbook why "<question>"       # answer a concept question with evidence level
 contextbook profile                # view learner profile + conversation memory summary

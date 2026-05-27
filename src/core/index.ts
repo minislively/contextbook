@@ -1,5 +1,6 @@
 export { buildLearnerSummary, toLearnerSummaryJson } from './learner.js';
 export { buildLearningMoments } from './learn.js';
+export { formatMemoryBackupSummary, planMemoryBackup } from './memory-backup.js';
 export { buildMemoryContext, formatMemoryContextSummary } from './memory-context.js';
 export { formatMemoryRebuildSummary, planMemoryRebuild } from './memory-rebuild.js';
 export { formatMemoryRepairSummary, planMemoryRepair } from './memory-repair.js';
@@ -17,6 +18,7 @@ export { buildProfileUpdateCandidates, profileUpdateCandidatesJson } from '../le
 export { classifyPreferenceSignals, preferenceSignalCounts } from '../learner/preference-signals.js';
 export { capturePromptSignals, classifyPromptSignals, formatHookSuggestSummary, formatPromptCaptureSummary, hookSuggest } from '../learner/prompt-capture.js';
 export { buildWeakTermSuggestions, weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
+export type { MemoryBackupItem, MemoryBackupItemStatus, MemoryBackupManifest, MemoryBackupResult, MemoryBackupSafety, MemoryBackupScope, MemoryBackupStatus, MemoryBackupSummary } from './memory-backup.js';
 export type { MemoryRebuildOperation, MemoryRebuildOperationKind, MemoryRebuildPreview, MemoryRebuildResult, MemoryRebuildSafety, MemoryRebuildStatus, MemoryRebuildSummary } from './memory-rebuild.js';
 export type { MemoryRepairOperation, MemoryRepairOperationKind, MemoryRepairResult, MemoryRepairSafety, MemoryRepairStatus, MemoryRepairSummary } from './memory-repair.js';
 export type { MemoryValidateIssue, MemoryValidateIssueCode, MemoryValidateResult, MemoryValidateSafety, MemoryValidateScope, MemoryValidateSeverity, MemoryValidateStatus, MemoryValidateSummary } from './memory-validate.js';
