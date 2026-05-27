@@ -118,6 +118,7 @@ contextbook setup --hooks --dry-run
 contextbook setup --hooks
 contextbook hooks status
 contextbook hooks status --json
+contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json
 contextbook install codex --hooks --dry-run
 contextbook install claude-code --hooks --dry-run
 ```
@@ -137,6 +138,8 @@ Claude Code hook helpers:
 After install, run `contextbook hooks status` to see which helper files and hook configs are detected. Then merge the generated snippet into `~/.codex/hooks.json` or `~/.claude/settings.json` and use your agent's hook review/trust flow if required.
 
 Claude Code officially supports `UserPromptSubmit` additional context via hook stdout/JSON. Codex hook context behavior can vary by installed Codex runtime, so treat Codex hook context as best-effort and verify it with `/hooks` or a live local prompt before relying on it.
+
+Use `contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json` after `contextbook setup --hooks` to inspect the generated helper output locally before relying on a live agent runtime.
 
 Requires Node.js 20 or newer.
 

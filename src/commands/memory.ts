@@ -28,7 +28,7 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
     }
     case 'hook-suggest': {
       const input = parseHookSuggest(rest);
-      const result = await hookSuggest({ prompt: input.prompt, source: input.source, learner: 'default', includeMemoryContext: input.includeMemoryContext });
+      const result = await hookSuggest({ prompt: input.prompt, source: input.source, learner: 'default', includeMemoryContext: input.includeMemoryContext, captureSignals: input.captureSignals });
       if (input.json) {
         console.log(JSON.stringify(result, null, 2));
         return;
@@ -176,19 +176,25 @@ function parseCapturePrompt(args: string[], usage = 'Usage: contextbook memory c
   return { prompt, source, json };
 }
 
-function parseHookSuggest(args: string[]): { prompt: string; source: 'manual' | 'codex' | 'claude-code'; json: boolean; includeMemoryContext: boolean } {
+function parseHookSuggest(args: string[]): { prompt: string; source: 'manual' | 'codex' | 'claude-code'; json: boolean; includeMemoryContext: boolean; captureSignals: boolean } {
   const filtered: string[] = [];
   let includeMemoryContext = false;
+  let captureSignals = true;
   for (const arg of args) {
     if (arg === '--include-memory-context') {
       includeMemoryContext = true;
+      continue;
+    }
+    if (arg === '--no-capture') {
+      captureSignals = false;
       continue;
     }
     filtered.push(arg);
   }
   return {
     ...parseCapturePrompt(filtered, 'Usage: contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]'),
-    includeMemoryContext
+    includeMemoryContext,
+    captureSignals
   };
 }
 

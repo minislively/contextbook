@@ -1,6 +1,7 @@
 import type { PromptCaptureHookSource } from '../install/prompt-hook.js';
 
 export type PlatformId = 'codex' | 'claude-code';
+export type HookSmokePlatform = PlatformId | 'all';
 export type ConfigFormat = 'json' | 'toml';
 export type ConfigStatus = 'enabled' | 'not-enabled' | 'unknown' | 'parse-error' | 'detected-text';
 export type HelperSmokeStatus = 'ok' | 'missing' | 'failed' | 'skipped';
@@ -63,4 +64,34 @@ export type HookPlatformDefinition = {
   configs: Array<{ path: string; format: ConfigFormat }>;
   hookSource: PromptCaptureHookSource;
   recommendedActions(input: { helperExists: boolean; configs: HookConfigStatus[] }): Array<{ command: string; reason: string }>;
+};
+
+export type HookSmokePlatformResult = {
+  id: PlatformId;
+  helper: FileStatus;
+  ran: boolean;
+  exitCode?: number | null;
+  stdoutPreview: string;
+  stderrPreview: string;
+  outputKind: 'none' | 'plain-context' | 'json-additional-context' | 'other';
+  additionalContextDetected: boolean;
+  rawPromptDetected: boolean;
+  message?: string;
+};
+
+export type HooksSmokeJson = {
+  schemaVersion: 1;
+  generatedAt: string;
+  promptLength: number;
+  platform: HookSmokePlatform;
+  safety: {
+    readOnly: true;
+    configMutated: false;
+    rawPromptPersisted: false;
+    learnerMemoryMutated: false;
+    profileMutated: false;
+    preferencesMutated: false;
+    projectMemoryMutated: false;
+  };
+  platforms: HookSmokePlatformResult[];
 };

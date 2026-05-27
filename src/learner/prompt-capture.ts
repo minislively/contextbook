@@ -79,6 +79,7 @@ export interface CapturePromptOptions {
   source?: PromptCaptureSource;
   learner?: string;
   includeMemoryContext?: boolean;
+  captureSignals?: boolean;
 }
 
 export function isPromptCaptureSource(value: string): value is PromptCaptureSource {
@@ -113,8 +114,9 @@ export async function capturePromptSignals(options: CapturePromptOptions): Promi
   const candidates = classifyPromptSignals(options.prompt, source);
   const preferenceSignals = classifyPreferenceSignals(options.prompt, source);
   const capturedSignals: ConversationMemoryEvent[] = [];
-  for (const candidate of candidates) {
-    capturedSignals.push(await addExplicitMemorySignal({
+  if (options.captureSignals !== false) {
+    for (const candidate of candidates) {
+      capturedSignals.push(await addExplicitMemorySignal({
       signalType: candidate.signalType,
       learner,
       note: candidate.note,
@@ -125,7 +127,8 @@ export async function capturePromptSignals(options: CapturePromptOptions): Promi
         capturedBy: 'capture-prompt',
         reason: candidate.reason
       }
-    }));
+      }));
+    }
   }
   return {
     schemaVersion: 1,
@@ -135,7 +138,7 @@ export async function capturePromptSignals(options: CapturePromptOptions): Promi
     capturedSignals,
     preferenceSignals,
     preferenceSignalCounts: preferenceSignalCounts(preferenceSignals),
-    skippedReasons: capturedSignals.length || preferenceSignals.length ? [] : ['no-explicit-learning-signal'],
+    skippedReasons: capturedSignals.length || preferenceSignals.length ? [] : candidates.length > 0 && options.captureSignals === false ? ['capture-disabled'] : ['no-explicit-learning-signal'],
     safety: promptCaptureSafety()
   };
 }
