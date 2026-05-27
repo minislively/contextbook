@@ -63,12 +63,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook doctor', 'contextbook doctor --json', 'contextbook setup --hooks --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook hooks smoke', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory hook-suggest', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory preference-history', 'contextbook memory undo-preference-update', 'contextbook memory context --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook doctor', 'contextbook doctor --json', 'contextbook setup --hooks --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook hooks smoke', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory hook-suggest', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory preference-history', 'contextbook memory undo-preference-update', 'contextbook memory context --json', 'contextbook memory validate', 'contextbook memory validate --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook doctor [--json]', 'contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--dry-run] [--json]', 'contextbook memory preference-history [--json]', 'contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]', 'contextbook memory context [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook hooks status [--json]', 'contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
+  for (const text of ['contextbook doctor [--json]', 'contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--dry-run] [--json]', 'contextbook memory preference-history [--json]', 'contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]', 'contextbook memory context [--json]', 'contextbook memory validate [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook hooks status [--json]', 'contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -145,7 +145,14 @@ try {
   assert(memoryContextBefore.project.safety.persistedSummaryCreated === false, 'memory context project safety flag invalid');
   const memoryContextBadFlag = runExpectFail(['memory', 'context', '--bad']);
   assert(memoryContextBadFlag.includes('Usage: contextbook memory context [--json]'), 'memory context unknown flag missing usage guidance');
-  assert(!existsSync(join(root, '.contextbook')), 'memory context should not create project memory before init');
+  const memoryValidateBefore = JSON.parse(run(['memory', 'validate', '--json']));
+  assert(memoryValidateBefore.schemaVersion === 1 && memoryValidateBefore.status === 'warning', 'memory validate before init should warn');
+  assert(memoryValidateBefore.issues.some((issue) => issue.scope === 'project' && issue.code === 'missing-file' && issue.recommendedCommand === 'contextbook init'), 'memory validate before init missing project warning');
+  assert(memoryValidateBefore.safety.readOnly === true && memoryValidateBefore.safety.projectMemoryMutated === false && memoryValidateBefore.safety.learnerMemoryMutated === false, 'memory validate safety invalid before init');
+  assert(!JSON.stringify(memoryValidateBefore).includes(root) && !JSON.stringify(memoryValidateBefore).includes(home), 'memory validate before init leaked absolute path');
+  const memoryValidateBadFlag = runExpectFail(['memory', 'validate', '--bad']);
+  assert(memoryValidateBadFlag.includes('Usage: contextbook memory validate [--json]'), 'memory validate unknown flag missing usage guidance');
+  assert(!existsSync(join(root, '.contextbook')), 'memory context/validate should not create project memory before init');
 
 
   run(['init']);
@@ -636,6 +643,31 @@ try {
   assert(memoryContextMarkdown.includes('# Contextbook Memory Context') && memoryContextMarkdown.includes('## Next Actions'), 'memory context markdown missing summary sections');
   const coreMemoryContext = await core.buildMemoryContext({ root, learner: 'default' });
   assert(coreMemoryContext.schemaVersion === 1 && coreMemoryContext.recommendedActions.length >= 1, 'core memory context contract invalid');
+  const validateSignalsBefore = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
+  const validateEvidenceBefore = await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8');
+  const memoryValidate = JSON.parse(run(['memory', 'validate', '--json']));
+  assert(memoryValidate.schemaVersion === 1 && memoryValidate.status === 'ok', 'memory validate after setup should pass');
+  assert(memoryValidate.summary.projectFilesChecked >= 5 && memoryValidate.summary.learnerFilesChecked >= 6, 'memory validate summary counts invalid');
+  assert(memoryValidate.safety.rawContentIncluded === false && memoryValidate.safety.absolutePathsIncluded === false, 'memory validate safety flags invalid');
+  assert(!JSON.stringify(memoryValidate).includes(root) && !JSON.stringify(memoryValidate).includes(home), 'memory validate leaked absolute local path');
+  const memoryValidateMarkdown = run(['memory', 'validate']);
+  assert(memoryValidateMarkdown.includes('# Contextbook Memory Validate') && memoryValidateMarkdown.includes('## Safety'), 'memory validate markdown missing sections');
+  const coreMemoryValidate = await core.validateMemory({ root, learner: 'default' });
+  assert(coreMemoryValidate.schemaVersion === 1 && coreMemoryValidate.status === 'ok', 'core memory validate contract invalid');
+  assert(await readFile(join(learnerDir, 'signals.jsonl'), 'utf8') === validateSignalsBefore, 'memory validate mutated learner signals');
+  assert(await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8') === validateEvidenceBefore, 'memory validate mutated project evidence');
+  const conceptsBeforeCorrupt = await readFile(join(root, '.contextbook', 'project', 'concepts.json'), 'utf8');
+  await writeFile(join(root, '.contextbook', 'project', 'concepts.json'), '{ invalid json', 'utf8');
+  const invalidConceptsValidate = JSON.parse(run(['memory', 'validate', '--json']));
+  assert(invalidConceptsValidate.status === 'error' && invalidConceptsValidate.issues.some((issue) => issue.file === '.contextbook/project/concepts.json' && issue.code === 'invalid-json'), 'memory validate did not catch invalid project json');
+  await writeFile(join(root, '.contextbook', 'project', 'concepts.json'), conceptsBeforeCorrupt, 'utf8');
+  const signalsBeforeCorrupt = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
+  const rawBadLine = '{\"rawSecret\":\"should-not-leak\"';
+  await writeFile(join(learnerDir, 'signals.jsonl'), `${signalsBeforeCorrupt}${rawBadLine}\n`, 'utf8');
+  const invalidSignalsValidate = JSON.parse(run(['memory', 'validate', '--json']));
+  assert(invalidSignalsValidate.status === 'error' && invalidSignalsValidate.issues.some((issue) => issue.file === '~/.contextbook/learners/default/signals.jsonl' && issue.code === 'invalid-jsonl' && typeof issue.line === 'number'), 'memory validate did not catch invalid learner jsonl line');
+  assert(!JSON.stringify(invalidSignalsValidate).includes('should-not-leak'), 'memory validate leaked raw invalid jsonl content');
+  await writeFile(join(learnerDir, 'signals.jsonl'), signalsBeforeCorrupt, 'utf8');
 
   await writeFile(join(root, 'README.md'), '# Smoke project\n\nChanged after scan.\n', 'utf8');
   const staleMemoryContext = JSON.parse(run(['memory', 'context', '--json']));
