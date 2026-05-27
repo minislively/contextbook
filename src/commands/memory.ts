@@ -1,4 +1,5 @@
 import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
+import { formatMemoryRepairSummary, planMemoryRepair } from '../core/memory-repair.js';
 import { formatMemoryValidateSummary, validateMemory } from '../core/memory-validate.js';
 import { addExplicitMemorySignal, formatMemorySignalsSummary, memorySignalsJson, memorySignalTypes } from '../learner/conversation-memory.js';
 import { applyPreferenceSignals, formatApplyPreferenceSignalsSummary } from '../learner/preference-signals-apply.js';
@@ -126,6 +127,16 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
         return;
       }
       console.log(formatMemoryValidateSummary(result));
+      return;
+    }
+    case 'repair': {
+      const input = parseRepairDryRun(rest);
+      const result = await planMemoryRepair({ learner: 'default' });
+      if (input.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatMemoryRepairSummary(result));
       return;
     }
     default:
@@ -262,6 +273,25 @@ function parseJsonFlag(args: string[], usage: string): boolean {
   throw new Error(`Usage: ${usage}`);
 }
 
+function parseRepairDryRun(args: string[]): { json: boolean } {
+  let dryRun = false;
+  let json = false;
+  const usage = 'Usage: contextbook memory repair --dry-run [--json]';
+  for (const arg of args) {
+    if (arg === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+    if (arg === '--json') {
+      json = true;
+      continue;
+    }
+    throw new Error(usage);
+  }
+  if (!dryRun) throw new Error(usage);
+  return { json };
+}
+
 function parseApplyProfileUpdate(args: string[]): { candidate: string; dryRun: boolean; json: boolean } {
   let candidate: string | undefined;
   let dryRun = false;
@@ -368,6 +398,7 @@ function memoryUsage(): string {
     '  contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]',
     '  contextbook memory context [--json]',
     '  contextbook memory validate [--json]',
+    '  contextbook memory repair --dry-run [--json]',
     '',
     `Allowed types: ${memorySignalTypes.join(', ')}`
   ].join('\n');
