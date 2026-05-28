@@ -35,6 +35,6 @@ export { installCodex, codexFiles } from '../codex/install.js';
 export { installClaudeCode, claudeCodeFiles } from '../claude-code/install.js';
 export { hooksStatus, formatHooksStatusMarkdown } from '../hooks/status.js';
 export { hooksSmoke, formatHooksSmokeMarkdown } from '../hooks/smoke.js';
-export type { InstallAction, InstallActionStatus, InstallFile, InstallOptions, InstallResult, InstallTarget } from '../install/types.js';
+export type { DeprecatedInstallFile, InstallAction, InstallActionStatus, InstallFile, InstallOptions, InstallResult, InstallTarget } from '../install/types.js';
 export type { HooksStatusJson, HookPlatformStatus } from '../hooks/status.js';
 export type { HookSmokePlatform, HookSmokePlatformResult, HooksSmokeJson } from '../hooks/types.js';

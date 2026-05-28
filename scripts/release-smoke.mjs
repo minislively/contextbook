@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, mkdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -24,6 +24,109 @@ const report = {
     cleanupAttempted: false
   }
 };
+
+function legacyClaudeLearnCommandContent() {
+  return `---
+description: Generate Contextbook learning moments from the current repository.
+---
+
+Run Contextbook locally and report the result without inventing extra evidence:
+
+1. Run \`contextbook scan\` if project evidence may be stale.
+2. Run \`contextbook memory context --json\` for the one-shot AI context bundle before summarizing.
+3. Run lower-level \`contextbook project --json\`, \`contextbook learner --json\`, or suggestion commands only when debugging a specific layer.
+4. If a profile update candidate matters, preview it with \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` and wait for explicit user approval before applying.
+5. If the user explicitly states a safe preference, preview \`contextbook memory apply-preference-signals --prompt "$ARGUMENTS" --source claude-code --mode auto-safe --dry-run\`; generated setup hooks may apply only low-risk auto-safe preferences.
+6. Run \`contextbook learn\`.
+7. Preserve the evidence level and evidence files from the output.
+`;
+}
+
+function legacyClaudeWhyCommandContent() {
+  return `---
+description: Answer a concept question with Contextbook project evidence.
+---
+
+Answer this question using Contextbook:
+
+$ARGUMENTS
+
+Run:
+
+\`\`\`bash
+contextbook why "$ARGUMENTS"
+\`\`\`
+
+Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
+`;
+}
+
+function legacyCodexLearnSkillContent(name) {
+  return `---
+name: ${name}
+description: Generate Contextbook learning moments from the current repository using local project evidence.
+---
+
+# Contextbook Learn
+
+Use this skill when the user asks what they can learn from the code they just touched.
+
+## Workflow
+
+1. Prefer deterministic local evidence over generic explanation.
+2. If project memory may be stale, run:
+   \`\`\`bash
+   contextbook scan
+   \`\`\`
+3. Load the one-shot AI context bundle:
+   \`\`\`bash
+   contextbook memory context --json
+   \`\`\`
+4. Generate learning moments:
+   \`\`\`bash
+   contextbook learn
+   \`\`\`
+5. Preserve Contextbook's evidence level and evidence files. Do not invent project evidence.
+`;
+}
+
+function legacyCodexWhySkillContent(name) {
+  return `---
+name: ${name}
+description: Answer why a development or CS concept matters in this repository using Contextbook project evidence.
+---
+
+# Contextbook Why
+
+Use this skill when the user asks why a concept, pattern, or code behavior matters in this project.
+
+## Workflow
+
+1. Treat text after the skill name as the question. For example, in \`$why "cleanup 왜 해야 돼?"\`, \`cleanup 왜 해야 돼?\` is the question text, not a cleanup command.
+2. Prefer deterministic local evidence over generic explanation.
+3. Run:
+   \`\`\`bash
+   contextbook why "<question>"
+   \`\`\`
+4. Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files.
+5. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
+`;
+}
+
+async function seedDeprecatedAliases(homeDir, rootDir = '.codex') {
+  const codexLearn = join(homeDir, rootDir, 'skills', 'contextbook-learn', 'SKILL.md');
+  const codexWhy = join(homeDir, rootDir, 'skills', 'contextbook-why', 'SKILL.md');
+  await mkdir(join(homeDir, rootDir, 'skills', 'contextbook-learn'), { recursive: true });
+  await mkdir(join(homeDir, rootDir, 'skills', 'contextbook-why'), { recursive: true });
+  await writeFile(codexLearn, legacyCodexLearnSkillContent('contextbook-learn'), 'utf8');
+  await writeFile(codexWhy, legacyCodexWhySkillContent('contextbook-why'), 'utf8');
+}
+
+async function seedDeprecatedClaudeAliases(homeDir) {
+  await mkdir(join(homeDir, '.claude', 'commands'), { recursive: true });
+  await writeFile(join(homeDir, '.claude', 'commands', 'contextbook-learn.md'), legacyClaudeLearnCommandContent(), 'utf8');
+  await writeFile(join(homeDir, '.claude', 'commands', 'contextbook-why.md'), legacyClaudeWhyCommandContent(), 'utf8');
+}
 
 function record(name, result, extra = {}) {
   const ok = result.status === 0;
@@ -112,7 +215,30 @@ try {
 
   record('npm-install-global-from-tarball', run('npm', ['install', '-g', tarballPath, '--prefix', npmPrefix], { timeout: 180_000 }));
   record('contextbook-help', contextbook(['--help']));
-  record('contextbook-setup', contextbook(['setup']));
+  await seedDeprecatedAliases(home);
+  await seedDeprecatedAliases(home, '.agents');
+  await seedDeprecatedClaudeAliases(home);
+  const setupStdout = record('contextbook-setup-auto', contextbook(['setup', '--auto']));
+  assert(setupStdout.includes('removed deprecated Contextbook alias'), 'packaged setup should remove generated deprecated long aliases during upgrade');
+  for (const [label, file, expected] of [
+    ['codex-contextbook-skill', join(home, '.codex', 'skills', 'contextbook', 'SKILL.md'), 'contextbook learn'],
+    ['codex-learn-alias', join(home, '.codex', 'skills', 'learn', 'SKILL.md'), 'Contextbook managed alias'],
+    ['codex-why-alias', join(home, '.codex', 'skills', 'why', 'SKILL.md'), 'contextbook why'],
+    ['claude-learn-alias', join(home, '.claude', 'commands', 'learn.md'), 'Contextbook managed alias'],
+    ['claude-why-alias', join(home, '.claude', 'commands', 'why.md'), '$ARGUMENTS']
+  ]) {
+    assert(existsSync(file), `${label} missing after packaged setup: ${file}`);
+    assert((await readFile(file, 'utf8')).includes(expected), `${label} missing expected content: ${expected}`);
+  }
+
+  for (const [label, file] of [
+    ['codex-contextbook-learn-removed', join(home, '.codex', 'skills', 'contextbook-learn', 'SKILL.md')],
+    ['codex-contextbook-why-removed', join(home, '.codex', 'skills', 'contextbook-why', 'SKILL.md')],
+    ['claude-contextbook-learn-removed', join(home, '.claude', 'commands', 'contextbook-learn.md')],
+    ['claude-contextbook-why-removed', join(home, '.claude', 'commands', 'contextbook-why.md')]
+  ]) {
+    assert(!existsSync(file), `${label} should not be installed by simplified setup: ${file}`);
+  }
 
   const statusStdout = record('hooks-status-json', contextbook(['hooks', 'status', '--json']));
   const status = parseJsonCheck('hooks status', statusStdout);

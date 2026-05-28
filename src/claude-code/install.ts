@@ -2,10 +2,14 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { installFiles } from '../install/file-writer.js';
 import { escapeJsonString, promptCaptureHookScript } from '../install/prompt-hook.js';
-import type { InstallFile, InstallOptions, InstallResult } from '../install/types.js';
+import type { DeprecatedInstallFile, InstallFile, InstallOptions, InstallResult } from '../install/types.js';
+
+const CONTEXTBOOK_LEARN_ALIAS_MARKER = '<!-- Contextbook managed alias: learn -->';
+const CONTEXTBOOK_WHY_ALIAS_MARKER = '<!-- Contextbook managed alias: why -->';
 
 export async function installClaudeCode(options: InstallOptions = {}): Promise<InstallResult> {
-  return installFiles('claude-code', claudeCodeFiles(options.homeDir ?? homedir(), options.includeHooks, options.autoSafePreferences), options);
+  const homeDir = options.homeDir ?? homedir();
+  return installFiles('claude-code', claudeCodeFiles(homeDir, options.includeHooks, options.autoSafePreferences), options, deprecatedClaudeCodeFiles(homeDir));
 }
 
 export function claudeCodeFiles(homeDir = homedir(), includeHooks = false, autoSafePreferences = false): InstallFile[] {
@@ -16,19 +20,37 @@ export function claudeCodeFiles(homeDir = homedir(), includeHooks = false, autoS
       content: claudeSkillContent()
     },
     {
-      path: join(homeDir, '.claude', 'commands', 'contextbook-learn.md'),
-      description: 'Claude Code slash command compatibility file for /contextbook-learn',
-      content: claudeLearnCommandContent()
+      path: join(homeDir, '.claude', 'commands', 'learn.md'),
+      description: 'Claude Code short slash alias for /learn',
+      content: claudeLearnCommandContent(),
+      managedMarkers: [CONTEXTBOOK_LEARN_ALIAS_MARKER]
     },
     {
-      path: join(homeDir, '.claude', 'commands', 'contextbook-why.md'),
-      description: 'Claude Code slash command compatibility file for /contextbook-why',
-      content: claudeWhyCommandContent()
+      path: join(homeDir, '.claude', 'commands', 'why.md'),
+      description: 'Claude Code short slash alias for /why',
+      content: claudeWhyCommandContent(),
+      managedMarkers: [CONTEXTBOOK_WHY_ALIAS_MARKER]
     }
   ];
 
   if (includeHooks) files.push(...claudeHookFiles(homeDir, autoSafePreferences));
   return files;
+}
+
+
+function deprecatedClaudeCodeFiles(homeDir: string): DeprecatedInstallFile[] {
+  return [
+    {
+      path: join(homeDir, '.claude', 'commands', 'contextbook-learn.md'),
+      description: 'Deprecated Contextbook long slash alias for /contextbook-learn',
+      removeIfContentMatches: [legacyClaudeLearnCommandContent()]
+    },
+    {
+      path: join(homeDir, '.claude', 'commands', 'contextbook-why.md'),
+      description: 'Deprecated Contextbook long slash alias for /contextbook-why',
+      removeIfContentMatches: [legacyClaudeWhyCommandContent()]
+    }
+  ];
 }
 
 function claudeHookFiles(homeDir: string, autoSafePreferences: boolean): InstallFile[] {
@@ -125,6 +147,7 @@ function claudeLearnCommandContent(): string {
 description: Generate Contextbook learning moments from the current repository.
 ---
 
+${CONTEXTBOOK_LEARN_ALIAS_MARKER}
 Run Contextbook locally and report the result without inventing extra evidence:
 
 1. Run \`contextbook scan\` if project evidence may be stale.
@@ -137,11 +160,48 @@ Run Contextbook locally and report the result without inventing extra evidence:
 `;
 }
 
+function legacyClaudeLearnCommandContent(): string {
+  return `---
+description: Generate Contextbook learning moments from the current repository.
+---
+
+Run Contextbook locally and report the result without inventing extra evidence:
+
+1. Run \`contextbook scan\` if project evidence may be stale.
+2. Run \`contextbook memory context --json\` for the one-shot AI context bundle before summarizing.
+3. Run lower-level \`contextbook project --json\`, \`contextbook learner --json\`, or suggestion commands only when debugging a specific layer.
+4. If a profile update candidate matters, preview it with \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` and wait for explicit user approval before applying.
+5. If the user explicitly states a safe preference, preview \`contextbook memory apply-preference-signals --prompt "$ARGUMENTS" --source claude-code --mode auto-safe --dry-run\`; generated setup hooks may apply only low-risk auto-safe preferences.
+6. Run \`contextbook learn\`.
+7. Preserve the evidence level and evidence files from the output.
+`;
+}
+
+function legacyClaudeWhyCommandContent(): string {
+  return `---
+description: Answer a concept question with Contextbook project evidence.
+---
+
+Answer this question using Contextbook:
+
+$ARGUMENTS
+
+Run:
+
+\`\`\`bash
+contextbook why "$ARGUMENTS"
+\`\`\`
+
+Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
+`;
+}
+
 function claudeWhyCommandContent(): string {
   return `---
 description: Answer a concept question with Contextbook project evidence.
 ---
 
+${CONTEXTBOOK_WHY_ALIAS_MARKER}
 Answer this question using Contextbook:
 
 $ARGUMENTS

@@ -106,9 +106,17 @@ function statusLabel(action: InstallAction): string {
       return 'updated with backup';
     case 'skip-identical':
       return 'skipped identical';
+    case 'skip-unmanaged-existing':
+      return 'skipped existing unmanaged file';
+    case 'remove-deprecated':
+      return 'removed deprecated Contextbook alias';
+    case 'skip-deprecated-unmanaged':
+      return 'kept unmanaged deprecated alias';
     case 'dry-run-create':
       return 'would create';
     case 'dry-run-update-with-backup':
       return 'would update with backup';
+    case 'dry-run-remove-deprecated':
+      return 'would remove deprecated Contextbook alias';
   }
 }

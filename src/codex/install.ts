@@ -2,32 +2,87 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { installFiles } from '../install/file-writer.js';
 import { escapeJsonString, promptCaptureHookScript } from '../install/prompt-hook.js';
-import type { CodexSkillPathMode, InstallFile, InstallOptions, InstallResult } from '../install/types.js';
+import type { CodexSkillPathMode, DeprecatedInstallFile, InstallFile, InstallOptions, InstallResult } from '../install/types.js';
+
+const CONTEXTBOOK_LEARN_ALIAS_MARKER = '<!-- Contextbook managed alias: learn -->';
+const CONTEXTBOOK_WHY_ALIAS_MARKER = '<!-- Contextbook managed alias: why -->';
 
 export async function installCodex(options: InstallOptions = {}): Promise<InstallResult> {
-  return installFiles('codex', codexFiles(options.homeDir ?? homedir(), options.codexSkillPathMode, options.includeHooks, options.autoSafePreferences), options);
+  const homeDir = options.homeDir ?? homedir();
+  return installFiles('codex', codexFiles(homeDir, options.codexSkillPathMode, options.includeHooks, options.autoSafePreferences), options, deprecatedCodexFiles(homeDir, options.codexSkillPathMode));
 }
 
 export function codexFiles(homeDir = homedir(), mode: CodexSkillPathMode = 'auto', includeHooks = false, autoSafePreferences = false): InstallFile[] {
-  const files = resolveCodexSkillPaths(homeDir, mode).map((target) => ({
-    path: target.path,
-    description: target.description,
-    content: codexSkillContent()
-  }));
+  const files = resolveCodexSkillRootDirs(homeDir, mode).flatMap((root) => codexSkillFilesForRoot(root));
 
   if (includeHooks) files.push(...codexHookFiles(homeDir, autoSafePreferences));
   return files;
 }
 
-function resolveCodexSkillPaths(homeDir: string, mode: CodexSkillPathMode): { path: string; description: string }[] {
-  const agentsPath = join(homeDir, '.agents', 'skills', 'contextbook', 'SKILL.md');
-  const codexPath = join(homeDir, '.codex', 'skills', 'contextbook', 'SKILL.md');
+function resolveCodexSkillRootDirs(homeDir: string, mode: CodexSkillPathMode): string[] {
+  const agentsRoot = join(homeDir, '.agents', 'skills');
+  const codexRoot = join(homeDir, '.codex', 'skills');
 
-  if (mode === 'agents') return [legacyAgentsTarget(agentsPath)];
-  if (mode === 'codex') return [canonicalCodexTarget(codexPath)];
-  if (mode === 'both') return [canonicalCodexTarget(codexPath), legacyAgentsTarget(agentsPath)];
+  if (mode === 'agents') return [agentsRoot];
+  if (mode === 'codex') return [codexRoot];
+  if (mode === 'both') return [codexRoot, agentsRoot];
 
-  return [canonicalCodexTarget(codexPath)];
+  return [codexRoot];
+}
+
+function resolveCodexDeprecatedRootDirs(homeDir: string, mode: CodexSkillPathMode): string[] {
+  const agentsRoot = join(homeDir, '.agents', 'skills');
+  const codexRoot = join(homeDir, '.codex', 'skills');
+
+  if (mode === 'agents') return [agentsRoot];
+  if (mode === 'codex') return [codexRoot];
+
+  return [codexRoot, agentsRoot];
+}
+
+function codexSkillFilesForRoot(root: string): InstallFile[] {
+  return [
+    {
+      path: join(root, 'contextbook', 'SKILL.md'),
+      description: codexSkillDescription(root),
+      content: codexSkillContent()
+    },
+    {
+      path: join(root, 'learn', 'SKILL.md'),
+      description: 'Codex short skill alias for $learn',
+      content: codexLearnSkillContent(),
+      managedMarkers: [CONTEXTBOOK_LEARN_ALIAS_MARKER]
+    },
+    {
+      path: join(root, 'why', 'SKILL.md'),
+      description: 'Codex short skill alias for $why',
+      content: codexWhySkillContent(),
+      managedMarkers: [CONTEXTBOOK_WHY_ALIAS_MARKER]
+    }
+  ];
+}
+
+
+function deprecatedCodexFiles(homeDir: string, mode: CodexSkillPathMode = 'auto'): DeprecatedInstallFile[] {
+  return resolveCodexDeprecatedRootDirs(homeDir, mode).flatMap((root) => [
+    {
+      path: join(root, 'contextbook-learn', 'SKILL.md'),
+      description: 'Deprecated Contextbook namespaced skill alias for learning moments',
+      removeIfContentMatches: [legacyCodexLearnSkillContent('contextbook-learn')]
+    },
+    {
+      path: join(root, 'contextbook-why', 'SKILL.md'),
+      description: 'Deprecated Contextbook namespaced skill alias for why answers',
+      removeIfContentMatches: [legacyCodexWhySkillContent('contextbook-why')]
+    }
+  ]);
+}
+
+function codexSkillDescription(root: string): string {
+  const parts = root.split(/[\\/]+/);
+  return parts.includes('.agents')
+    ? 'Codex user skill for Contextbook learning workflows (historical ~/.agents compatibility path)'
+    : 'Codex user skill for Contextbook learning workflows (canonical Codex/OMX path)';
 }
 
 function codexHookFiles(homeDir: string, autoSafePreferences: boolean): InstallFile[] {
@@ -45,20 +100,6 @@ function codexHookFiles(homeDir: string, autoSafePreferences: boolean): InstallF
       content: codexHookGuide(scriptPath, autoSafePreferences)
     }
   ];
-}
-
-function canonicalCodexTarget(path: string): { path: string; description: string } {
-  return {
-    path,
-    description: 'Codex user skill for Contextbook learning workflows (canonical Codex/OMX path)'
-  };
-}
-
-function legacyAgentsTarget(path: string): { path: string; description: string } {
-  return {
-    path,
-    description: 'Codex user skill for Contextbook learning workflows (historical ~/.agents compatibility path)'
-  };
 }
 
 function codexHookGuide(scriptPath: string, autoSafePreferences: boolean): string {
@@ -102,6 +143,114 @@ Codex hook context injection can vary by installed Codex runtime. Treat this hel
 - The hook exits successfully even if capture fails, so it should not block Codex.
 `;
 }
+
+function codexLearnSkillContent(): string {
+  return `---
+name: learn
+description: Generate Contextbook learning moments from the current repository using local project evidence.
+---
+
+${CONTEXTBOOK_LEARN_ALIAS_MARKER}
+# Learn
+
+Use this skill when the user asks what they can learn from the code they just touched.
+
+## Workflow
+
+1. Prefer deterministic local evidence over generic explanation.
+2. If project memory may be stale, run:
+   \`\`\`bash
+   contextbook scan
+   \`\`\`
+3. Load the one-shot AI context bundle:
+   \`\`\`bash
+   contextbook memory context --json
+   \`\`\`
+4. Generate learning moments:
+   \`\`\`bash
+   contextbook learn
+   \`\`\`
+5. Preserve Contextbook's evidence level and evidence files. Do not invent project evidence.
+`;
+}
+
+function legacyCodexLearnSkillContent(name: string): string {
+  return `---
+name: ${name}
+description: Generate Contextbook learning moments from the current repository using local project evidence.
+---
+
+# Contextbook Learn
+
+Use this skill when the user asks what they can learn from the code they just touched.
+
+## Workflow
+
+1. Prefer deterministic local evidence over generic explanation.
+2. If project memory may be stale, run:
+   \`\`\`bash
+   contextbook scan
+   \`\`\`
+3. Load the one-shot AI context bundle:
+   \`\`\`bash
+   contextbook memory context --json
+   \`\`\`
+4. Generate learning moments:
+   \`\`\`bash
+   contextbook learn
+   \`\`\`
+5. Preserve Contextbook's evidence level and evidence files. Do not invent project evidence.
+`;
+}
+
+function legacyCodexWhySkillContent(name: string): string {
+  return `---
+name: ${name}
+description: Answer why a development or CS concept matters in this repository using Contextbook project evidence.
+---
+
+# Contextbook Why
+
+Use this skill when the user asks why a concept, pattern, or code behavior matters in this project.
+
+## Workflow
+
+1. Treat text after the skill name as the question. For example, in \`$why "cleanup 왜 해야 돼?"\`, \`cleanup 왜 해야 돼?\` is the question text, not a cleanup command.
+2. Prefer deterministic local evidence over generic explanation.
+3. Run:
+   \`\`\`bash
+   contextbook why "<question>"
+   \`\`\`
+4. Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files.
+5. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
+`;
+}
+
+
+function codexWhySkillContent(): string {
+  return `---
+name: why
+description: Answer why a development or CS concept matters in this repository using Contextbook project evidence.
+---
+
+${CONTEXTBOOK_WHY_ALIAS_MARKER}
+# Why
+
+Use this skill when the user asks why a concept, pattern, or code behavior matters in this project.
+
+## Workflow
+
+1. Treat text after the skill name as the question. For example, in \`$why "cleanup 왜 해야 돼?"\`, \`cleanup 왜 해야 돼?\` is the question text, not a cleanup command.
+2. Prefer deterministic local evidence over generic explanation.
+3. Run:
+   \`\`\`bash
+   contextbook why "<question>"
+   \`\`\`
+4. Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files.
+5. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
+`;
+}
+
 
 function codexSkillContent(): string {
   return `---
