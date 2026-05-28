@@ -329,6 +329,33 @@ export interface ApplyProfileUpdateResult {
   safety: ApplyProfileUpdateSafety;
 }
 
+export type PreferencePolicyMode = 'manual' | 'suggest' | 'auto-safe';
+export type PreferencePolicyDecisionResult = 'auto_apply' | 'suggest' | 'reject';
+export type PreferencePolicyDecisionCode =
+  | 'LOW_RISK_EXPLICIT_PREFERENCE'
+  | 'MANUAL_MODE'
+  | 'SUGGEST_MODE'
+  | 'TURN_LOCAL_OR_OBSERVE_ONLY'
+  | 'AMBIGUOUS_SCOPE'
+  | 'NOT_APPLY_ELIGIBLE'
+  | 'NOT_IN_AUTO_APPLY_ALLOWLIST'
+  | 'RISK_NOT_LOW'
+  | 'UNSAFE_USER_JUDGMENT';
+
+export interface PreferencePolicyDecision {
+  decision: PreferencePolicyDecisionResult;
+  reasonCode: PreferencePolicyDecisionCode;
+  message: string;
+  mode: PreferencePolicyMode;
+  dimension: string;
+  value: string;
+  risk: PreferenceRisk;
+  policy: PreferencePolicy;
+  scope: PreferenceScope;
+  reversible: boolean;
+  evidence: PreferenceScopeEvidenceCode[];
+}
+
 export type ApplyPreferenceSignalOperation =
   | 'set-language'
   | 'set-output-length'
@@ -369,8 +396,10 @@ export interface ApplyPreferenceSignalsResult {
   learner: string;
   source: PromptCaptureSource;
   dryRun: boolean;
+  mode: PreferencePolicyMode;
   applied: boolean;
   preferenceSignals: PreferenceSignalCandidate[];
+  policyDecisions: PreferencePolicyDecision[];
   changes: ApplyPreferenceSignalChange[];
   auditEvent?: ConversationMemoryEvent;
   backupCreated?: string;
@@ -592,6 +621,7 @@ export interface PromptCaptureResult {
   capturedSignals: ConversationMemoryEvent[];
   preferenceSignals: PreferenceSignalCandidate[];
   preferenceSignalCounts: PreferenceSignalCounts;
+  preferencePolicyDecisions: PreferencePolicyDecision[];
   skippedReasons: string[];
   safety: PromptCaptureSafety;
 }
@@ -637,6 +667,7 @@ export interface HookSuggestResult {
   actionable: boolean;
   capturedSignalsCount: number;
   preferenceSignals: PreferenceSignalCandidate[];
+  preferencePolicyDecisions: PreferencePolicyDecision[];
   memoryContext: HookSuggestMemoryContext;
   recommendedActions: HookSuggestRecommendedAction[];
   additionalContext: string;

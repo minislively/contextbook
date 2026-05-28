@@ -196,16 +196,6 @@ function classifyIntentPolicy(normalized: string, rule: PreferenceRule, context:
     };
   }
 
-  if (context.explicitApplyCommand && rule.route === 'auto-apply-safe') {
-    return {
-      intent: explicitPreference || styleContinuity || negativeConstraint ? 'preference-statement' : 'session-style-request',
-      scope: 'persistent-explicit',
-      risk: 'low',
-      policy: 'apply-eligible',
-      scopeEvidence: uniqueEvidence(evidence)
-    };
-  }
-
   if (taskLocal) {
     return {
       intent: 'turn-format-request',
@@ -222,6 +212,16 @@ function classifyIntentPolicy(normalized: string, rule: PreferenceRule, context:
       scope: 'turn-local',
       risk: 'medium',
       policy: 'observe-only',
+      scopeEvidence: uniqueEvidence(evidence)
+    };
+  }
+
+  if (context.explicitApplyCommand && rule.route === 'auto-apply-safe') {
+    return {
+      intent: explicitPreference || styleContinuity || negativeConstraint ? 'preference-statement' : 'session-style-request',
+      scope: 'persistent-explicit',
+      risk: 'low',
+      policy: 'apply-eligible',
       scopeEvidence: uniqueEvidence(evidence)
     };
   }

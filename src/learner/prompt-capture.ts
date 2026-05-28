@@ -1,4 +1,5 @@
 import { addExplicitMemorySignal } from './conversation-memory.js';
+import { evaluatePreferencePolicies } from './preference-policy.js';
 import { classifyPreferenceSignals, preferenceSignalCounts } from './preference-signals.js';
 import { buildMemoryContext } from '../core/memory-context.js';
 import type {
@@ -113,6 +114,7 @@ export async function capturePromptSignals(options: CapturePromptOptions): Promi
   const learner = options.learner ?? 'default';
   const candidates = classifyPromptSignals(options.prompt, source);
   const preferenceSignals = classifyPreferenceSignals(options.prompt, source);
+  const preferencePolicyDecisions = evaluatePreferencePolicies(preferenceSignals, { mode: 'suggest' });
   const capturedSignals: ConversationMemoryEvent[] = [];
   if (options.captureSignals !== false) {
     for (const candidate of candidates) {
@@ -138,6 +140,7 @@ export async function capturePromptSignals(options: CapturePromptOptions): Promi
     capturedSignals,
     preferenceSignals,
     preferenceSignalCounts: preferenceSignalCounts(preferenceSignals),
+    preferencePolicyDecisions,
     skippedReasons: capturedSignals.length || preferenceSignals.length ? [] : candidates.length > 0 && options.captureSignals === false ? ['capture-disabled'] : ['no-explicit-learning-signal'],
     safety: promptCaptureSafety()
   };
@@ -156,6 +159,7 @@ export async function hookSuggest(options: CapturePromptOptions): Promise<HookSu
     actionable,
     capturedSignalsCount: capture.capturedSignals.length,
     preferenceSignals: capture.preferenceSignals,
+    preferencePolicyDecisions: capture.preferencePolicyDecisions,
     memoryContext,
     recommendedActions,
     additionalContext: actionable ? formatHookAdditionalContext(capture, recommendedActions, memoryContext) : '',
@@ -183,6 +187,7 @@ export function formatHookSuggestSummary(result: HookSuggestResult): string {
 export function formatPromptCaptureSummary(result: PromptCaptureResult): string {
   const captured = result.capturedSignals.map((signal) => `- ${signal.signalType}${signal.metadata?.format ? ` (${signal.metadata.format})` : ''}`).join('\n') || '- none';
   const preferenceSignals = result.preferenceSignals.map((signal) => `- ${signal.dimension}=${signal.value} (${signal.route}, ${signal.scope}, ${signal.policy})`).join('\n') || '- none';
+  const policyDecisions = result.preferencePolicyDecisions.map((decision) => `- ${decision.dimension}=${decision.value}: ${decision.decision} (${decision.reasonCode})`).join('\n') || '- none';
   const skipped = result.skippedReasons.map((reason) => `- ${reason}`).join('\n') || '- none';
   return [
     '# Prompt Signal Capture',
@@ -196,6 +201,9 @@ export function formatPromptCaptureSummary(result: PromptCaptureResult): string 
     '',
     '## Preference Signals',
     preferenceSignals,
+    '',
+    '## Preference Policy Decisions',
+    policyDecisions,
     '',
     '## Skipped Reasons',
     skipped,
@@ -219,9 +227,12 @@ function hookRecommendedActions(result: PromptCaptureResult): HookSuggestRecomme
     });
   }
   if (result.preferenceSignals.length > 0) {
+    const autoSafe = result.preferencePolicyDecisions.some((decision) => decision.decision === 'auto_apply' || decision.reasonCode === 'SUGGEST_MODE');
     actions.push({
-      command: `contextbook memory apply-preference-signals --prompt "<current user prompt>" --source ${result.source} --dry-run`,
-      reason: 'Preference signals were detected; preview exact preference changes before asking for approval.',
+      command: `contextbook memory apply-preference-signals --prompt "<current user prompt>" --source ${result.source} --mode auto-safe --dry-run`,
+      reason: autoSafe
+        ? 'Preference signals were detected; preview low-risk auto-safe changes before applying.'
+        : 'Preference signals were detected, but policy keeps them suggestion-only unless explicitly approved.',
       approvalRequired: true
     });
   }
@@ -276,6 +287,10 @@ function formatHookAdditionalContext(result: PromptCaptureResult, actions: HookS
     .slice(0, 5)
     .map((signal) => `- ${signal.dimension}=${signal.value} (${signal.intent}, ${signal.scope}, ${signal.policy})`)
     .join('\n') || '- none';
+  const policyDecisions = result.preferencePolicyDecisions
+    .slice(0, 5)
+    .map((decision) => `- ${decision.dimension}=${decision.value}: ${decision.decision} (${decision.reasonCode})`)
+    .join('\n') || '- none';
   const captured = result.capturedSignals
     .slice(0, 3)
     .map((signal) => `- ${signal.signalType}${signal.metadata?.format ? ` (${signal.metadata.format})` : ''}`)
@@ -302,6 +317,9 @@ function formatHookAdditionalContext(result: PromptCaptureResult, actions: HookS
     '',
     '## Detected Preference Signals',
     preferenceSignals,
+    '',
+    '## Preference Policy',
+    policyDecisions,
     '',
     '## Captured Learning Signals',
     captured,
