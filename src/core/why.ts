@@ -1,5 +1,6 @@
 import { findConceptForQuestion, inferGeneralConcept } from '../concepts/mapper.js';
 import { formatWhyAnswer } from '../format/explanation.js';
+import { buildWhyResponsePlan, readEligibleWhyResponseSignals } from '../format/response-plan.js';
 import { recordConversationAnswer } from '../learner/conversation-memory.js';
 import { markAsked } from '../learner/weak-terms.js';
 import { readConcepts } from '../storage/project-store.js';
@@ -19,7 +20,9 @@ export async function answerWhy(question: string, options: ContextbookRuntimeOpt
   const label = concept?.label ?? fallback?.label ?? trimmedQuestion;
   const evidenceLevel = concept?.evidenceLevel ?? 'general';
   const preferences = await readPreferences(learner);
-  const markdown = formatWhyAnswer(trimmedQuestion, concept, fallback, preferences);
+  const eligibleSignals = await readEligibleWhyResponseSignals(learner);
+  const responsePlan = buildWhyResponsePlan(preferences, eligibleSignals);
+  const markdown = formatWhyAnswer(trimmedQuestion, concept, fallback, preferences, responsePlan);
 
   await markAsked(label, learner);
   await recordConversationAnswer({ question: trimmedQuestion, concept: concept ?? fallback ?? { label, evidenceLevel }, learner });

@@ -101,6 +101,18 @@ export const conceptRules: ConceptRule[] = [
     match: includesRule(/\b(fetch|axios)\b/, 'fetch/axios')
   },
   {
+    id: 'debounce',
+    label: 'Debounce / event rate control',
+    aliases: ['debounce', '디바운스'],
+    connectedConcepts: ['event rate control', 'input handling', 'performance'],
+    interviewQuestion: 'debounce는 어떤 상황에서 필요하고 throttle과 어떻게 다른가요?',
+    evidenceLevel: 'general',
+    reason: 'Debounce is explained only when the user asks about it; no project scan rule is attached in v0.1.',
+    match() {
+      return [];
+    }
+  },
+  {
     id: 'timer-event-loop',
     label: 'Timer / event loop',
     aliases: ['settimeout', 'timer', 'event loop', '이벤트 루프', '타이머'],

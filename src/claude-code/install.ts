@@ -138,7 +138,7 @@ Use the local \`contextbook\` CLI for project-grounded learning moments and why-
 
 ## Output rule
 
-When summarizing Contextbook output, preserve project files, evidence level, and the interview sentence. Do not invent project evidence that is not present in the CLI output.
+When summarizing Contextbook output, preserve project files, evidence level, and natural project-grounded prose. Do not invent project evidence that is not present in the CLI output.
 `;
 }
 
@@ -192,7 +192,7 @@ Run:
 contextbook why "$ARGUMENTS"
 \`\`\`
 
-Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
+Preserve the evidence level, natural project-grounded explanation, and evidence files; do not force old visible atom headings. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
 `;
 }
 
@@ -212,6 +212,6 @@ Run:
 contextbook why "$ARGUMENTS"
 \`\`\`
 
-Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
+Preserve the evidence level, natural project-grounded explanation, and evidence files; do not force old visible atom headings. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
 `;
 }

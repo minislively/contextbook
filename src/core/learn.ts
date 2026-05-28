@@ -11,7 +11,7 @@ export async function buildLearningMoments(options: ContextbookRuntimeOptions = 
   const changed = await changedFiles(root);
   const moments = rankLearningMoments(concepts, changed).slice(0, 3);
   const preferredConcepts = moments.map((moment) => moment.concept);
-  const markdown = formatLearningMoments(moments);
+  const markdown = formatLearningMoments(moments, { changedFiles: changed });
   await recordConversationSignal({
     signalType: 'learn.generated',
     command: 'learn',

@@ -99,7 +99,7 @@ Run:
 contextbook why "$ARGUMENTS"
 \`\`\`
 
-Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
+Preserve the evidence level, natural project-grounded explanation, and evidence files; do not force old visible atom headings. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
 `;
 }
 
@@ -150,7 +150,7 @@ Use this skill when the user asks why a concept, pattern, or code behavior matte
    \`\`\`bash
    contextbook why "<question>"
    \`\`\`
-4. Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files.
+4. Preserve the evidence level, natural project-grounded explanation, and evidence files; do not force old visible atom headings.
 5. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
 `;
 }
@@ -360,6 +360,8 @@ try {
   assert(healthySafeRecover.safety.projectMemoryMutated === false && healthySafeRecover.safety.learnerMemoryMutated === false && healthySafeRecover.safety.backupCreated === false, 'memory recover safe healthy no-op safety invalid');
   assert(healthySafeRecover.diagnosis.safety.readOnly === true, 'memory recover safe healthy diagnosis should be read-only');
   const core = await import('../dist/core/index.js');
+  const explanationFormat = await import('../dist/format/explanation.js');
+  const responsePlanFormat = await import('../dist/format/response-plan.js');
   const rankedFixtures = core.rankLearningMoments([
     {
       id: 'five-one-source',
@@ -527,6 +529,11 @@ try {
   assert(learn.includes('추천 이유:'), 'learn did not include ranking reasons');
   assert(learn.includes('변경 파일 근거: yes'), 'learn did not include changed-file marker');
   assert(learn.includes('useEffect cleanup') || learn.includes('SSE'), 'learn did not include expected concepts');
+  assert(!learn.includes('docs/private/'), 'learn output included private docs evidence');
+  for (const line of learn.split('\n').filter((item) => item.startsWith('근거 파일:'))) {
+    const listed = line.replace('근거 파일:', '').split(',').map((item) => item.trim()).filter(Boolean);
+    assert(listed.length <= 3, 'learn output showed more than 3 evidence files for one concept');
+  }
   assert(!learn.includes(root) && !learn.includes(home), 'learn output included absolute local path');
   assert(!learn.includes('SECRET_TOKEN') && !learn.includes('should-not-leak'), 'learn output included hidden file content');
   assert(!existsSync(join(root, '.contextbook', 'project', 'ranking-reasons.json')), 'learn created a ranking-reasons project memory artifact');
@@ -536,14 +543,54 @@ try {
     explanationOrder: ['interview-sentence', 'project', 'plain', 'developer-term', 'cs-link'],
     avoid: []
   }, null, 2), 'utf8');
+  const planSignals = responsePlanFormat.eligibleWhyResponseSignals([
+    { signalType: 'why.answered', recordedAt: '2026-01-03T00:00:00.000Z', metadata: { format: 'project-first' } },
+    { signalType: 'feedback.confused', recordedAt: '2026-01-02T00:00:00.000Z' },
+    { signalType: 'format.requested', recordedAt: '2026-01-01T00:00:00.000Z', metadata: { format: 'plain' } }
+  ]);
+  assert(planSignals.length === 2 && planSignals.every((item) => item.signalType !== 'why.answered'), 'why response plan should filter out why.answered');
+  const responsePlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['interview-sentence', 'project', 'plain', 'developer-term', 'cs-link'], avoid: [] }, planSignals);
+  assert(responsePlan.density === 'compact' && responsePlan.lead === 'plain' && responsePlan.includeInterviewLine === true, 'why response plan should expose semantic renderer-backed controls');
+  assert(responsePlan.density === 'compact' && responsePlan.reasons.includes('recent-confusion-feedback') && responsePlan.reasons.includes('format-requested:plain'), 'why response plan missing signal-driven reasons');
+  const defaultPlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, []);
+  const interviewPlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, [
+    { signalType: 'format.requested', recordedAt: '2026-01-04T00:00:00.000Z', metadata: { format: 'interview' } }
+  ]);
+  const plainPlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, [
+    { signalType: 'format.requested', recordedAt: '2026-01-05T00:00:00.000Z', metadata: { format: 'plain' } }
+  ]);
+  const defaultRendered = explanationFormat.formatWhyAnswer('cleanup 왜 해야 돼?', undefined, { id: 'use-effect-cleanup', label: 'useEffect cleanup / lifecycle' }, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, defaultPlan);
+  const shortRendered = explanationFormat.formatWhyAnswer('cleanup 왜 해야 돼?', undefined, { id: 'use-effect-cleanup', label: 'useEffect cleanup / lifecycle' }, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, responsePlan);
+  const interviewFirstRendered = explanationFormat.formatWhyAnswer('cleanup 왜 해야 돼?', undefined, { id: 'use-effect-cleanup', label: 'useEffect cleanup / lifecycle' }, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, interviewPlan);
+  const plainFirstRendered = explanationFormat.formatWhyAnswer('cleanup 왜 해야 돼?', undefined, { id: 'use-effect-cleanup', label: 'useEffect cleanup / lifecycle' }, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, plainPlan);
+  assert(shortRendered !== defaultRendered && shortRendered.includes('개발자/CS 관점으로는') && !shortRendered.includes('개발자 관점에서는'), 'short response plan should change rendered output');
+  assert(interviewPlan.reasons.includes('format-requested:interview') && interviewFirstRendered !== defaultRendered && interviewFirstRendered.indexOf('컴포넌트 생명주기') < interviewFirstRendered.indexOf('이 프로젝트'), 'captured interview format signal should affect narrative output');
+  assert(plainPlan.reasons.includes('format-requested:plain') && plainFirstRendered !== defaultRendered && plainFirstRendered.indexOf('열어둔 연결') < plainFirstRendered.indexOf('이 프로젝트'), 'captured plain format signal should affect narrative output');
+  const conflictingFormatPlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, [
+    { signalType: 'format.requested', recordedAt: '2026-01-06T00:00:00.000Z', metadata: { format: 'plain' } },
+    { signalType: 'format.requested', recordedAt: '2026-01-01T00:00:00.000Z', metadata: { format: 'project-first' } }
+  ]);
+  assert(conflictingFormatPlan.lead === 'plain', 'newest format signal should win over older conflicting format signals');
   const why = run(['why', 'cleanup 왜 해야 돼?']);
   const coreWhy = await core.answerWhy('cleanup 왜 해야 돼?', { root, learner: 'default' });
-  assert(coreWhy.markdown.includes('## 근거 수준'), 'core why contract did not return markdown');
+  assert(coreWhy.markdown.includes('근거 수준:'), 'core why contract did not return evidence marker');
   assert(coreWhy.evidenceLevel === 'direct' || coreWhy.evidenceLevel === 'related', 'core why contract did not return project evidence level');
-  for (const heading of ['## 근거 수준', '## 프로젝트 말로 설명', '## 쉬운 말', '## 개발자 용어', '## CS 연결', '## 면접 문장', '## 근거 파일']) {
-    assert(why.includes(heading), `why missing ${heading}`);
+  for (const marker of ['근거 수준:', '근거 파일:', 'useEffect cleanup', 'resource lifecycle', '컴포넌트 생명주기']) {
+    assert(why.includes(marker), `why missing ${marker}`);
   }
-  assert(why.indexOf('## 면접 문장') < why.indexOf('## 프로젝트 말로 설명'), 'why did not apply learner preference ordering');
+  for (const oldHeading of ['## 프로젝트 말로 설명', '## 쉬운 말', '## 개발자 용어', '## CS 연결', '## 면접 문장']) {
+    assert(!why.includes(oldHeading), `why should not use old section dump heading ${oldHeading}`);
+  }
+  assert(why.includes('- src/hooks/useWorkflowSSE.ts'), 'why missing direct evidence file bullet');
+  const generalWhy = runIn(await mkdtemp(join(tmpdir(), 'contextbook-general-')), home, ['why', 'debounce 왜 필요해?']);
+  assert(generalWhy.includes('근거 수준: general') && generalWhy.includes('근거 파일:') && generalWhy.includes('프로젝트 근거 없음'), 'general why missing evidence fallback markers');
+
+  const wordingFiles = ['templates/prompts/why.md', 'src/storage/project-store.ts', 'src/codex/install.ts', 'src/claude-code/install.ts', 'scripts/release-smoke.mjs'];
+  for (const file of wordingFiles) {
+    const content = await readFile(join(repoRoot, file), 'utf8');
+    assert(content.includes('natural project-grounded') || content.includes('natural evidence-shell') || content.includes('evidence level and evidence files'), `${file} missing natural evidence-shell wording`);
+    assert(!content.includes('project-language explanation, CS connection, interview sentence'), `${file} still requires old visible atom contract`);
+  }
 
   const learnerOutput = run(['learner']);
   assert(learnerOutput.includes('# Learner Memory'), 'learner markdown missing heading');
