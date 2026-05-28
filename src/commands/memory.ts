@@ -1,6 +1,7 @@
 import { executeMemoryBackup, formatMemoryBackupSummary, planMemoryBackup } from '../core/memory-backup.js';
 import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
 import { executeMemoryRebuild, formatMemoryRebuildSummary, planMemoryRebuild } from '../core/memory-rebuild.js';
+import { formatMemoryRecoverSummary, recoverMemory } from '../core/memory-recover.js';
 import { executeMemoryRestore, formatMemoryRestoreSummary, planMemoryRestore } from '../core/memory-restore.js';
 import { executeMemoryRepair, formatMemoryRepairSummary, planMemoryRepair } from '../core/memory-repair.js';
 import { formatMemoryValidateSummary, validateMemory } from '../core/memory-validate.js';
@@ -120,6 +121,16 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
         return;
       }
       console.log(formatMemoryContextSummary(result));
+      return;
+    }
+    case 'recover': {
+      const json = parseJsonFlag(rest, 'contextbook memory recover [--json]');
+      const result = await recoverMemory({ learner: 'default' });
+      if (json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(formatMemoryRecoverSummary(result));
       return;
     }
     case 'validate': {
@@ -526,6 +537,7 @@ function memoryUsage(): string {
     '  contextbook memory preference-history [--json]',
     '  contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]',
     '  contextbook memory context [--json]',
+    '  contextbook memory recover [--json]',
     '  contextbook memory validate [--json]',
     '  contextbook memory repair (--dry-run|--yes) [--json]',
     '  contextbook memory rebuild (--dry-run|--yes) [--json]',
