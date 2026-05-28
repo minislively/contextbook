@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, mkdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -112,7 +112,21 @@ try {
 
   record('npm-install-global-from-tarball', run('npm', ['install', '-g', tarballPath, '--prefix', npmPrefix], { timeout: 180_000 }));
   record('contextbook-help', contextbook(['--help']));
-  record('contextbook-setup', contextbook(['setup']));
+  record('contextbook-setup-auto', contextbook(['setup', '--auto']));
+  for (const [label, file, expected] of [
+    ['codex-contextbook-skill', join(home, '.codex', 'skills', 'contextbook', 'SKILL.md'), 'contextbook learn'],
+    ['codex-learn-alias', join(home, '.codex', 'skills', 'learn', 'SKILL.md'), 'Contextbook managed alias'],
+    ['codex-why-alias', join(home, '.codex', 'skills', 'why', 'SKILL.md'), 'contextbook why'],
+    ['codex-contextbook-learn-fallback', join(home, '.codex', 'skills', 'contextbook-learn', 'SKILL.md'), 'contextbook learn'],
+    ['codex-contextbook-why-fallback', join(home, '.codex', 'skills', 'contextbook-why', 'SKILL.md'), 'contextbook why'],
+    ['claude-learn-alias', join(home, '.claude', 'commands', 'learn.md'), 'Contextbook managed alias'],
+    ['claude-why-alias', join(home, '.claude', 'commands', 'why.md'), '$ARGUMENTS'],
+    ['claude-contextbook-learn-fallback', join(home, '.claude', 'commands', 'contextbook-learn.md'), 'contextbook learn'],
+    ['claude-contextbook-why-fallback', join(home, '.claude', 'commands', 'contextbook-why.md'), 'contextbook why']
+  ]) {
+    assert(existsSync(file), `${label} missing after packaged setup: ${file}`);
+    assert((await readFile(file, 'utf8')).includes(expected), `${label} missing expected content: ${expected}`);
+  }
 
   const statusStdout = record('hooks-status-json', contextbook(['hooks', 'status', '--json']));
   const status = parseJsonCheck('hooks status', statusStdout);

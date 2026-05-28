@@ -4,6 +4,9 @@ import { installFiles } from '../install/file-writer.js';
 import { escapeJsonString, promptCaptureHookScript } from '../install/prompt-hook.js';
 import type { InstallFile, InstallOptions, InstallResult } from '../install/types.js';
 
+const CONTEXTBOOK_LEARN_ALIAS_MARKER = '<!-- Contextbook managed alias: learn -->';
+const CONTEXTBOOK_WHY_ALIAS_MARKER = '<!-- Contextbook managed alias: why -->';
+
 export async function installClaudeCode(options: InstallOptions = {}): Promise<InstallResult> {
   return installFiles('claude-code', claudeCodeFiles(options.homeDir ?? homedir(), options.includeHooks, options.autoSafePreferences), options);
 }
@@ -24,6 +27,18 @@ export function claudeCodeFiles(homeDir = homedir(), includeHooks = false, autoS
       path: join(homeDir, '.claude', 'commands', 'contextbook-why.md'),
       description: 'Claude Code slash command compatibility file for /contextbook-why',
       content: claudeWhyCommandContent()
+    },
+    {
+      path: join(homeDir, '.claude', 'commands', 'learn.md'),
+      description: 'Claude Code short slash alias for /learn',
+      content: claudeLearnCommandContent({ shortAlias: true }),
+      managedMarkers: [CONTEXTBOOK_LEARN_ALIAS_MARKER]
+    },
+    {
+      path: join(homeDir, '.claude', 'commands', 'why.md'),
+      description: 'Claude Code short slash alias for /why',
+      content: claudeWhyCommandContent({ shortAlias: true }),
+      managedMarkers: [CONTEXTBOOK_WHY_ALIAS_MARKER]
     }
   ];
 
@@ -120,11 +135,11 @@ When summarizing Contextbook output, preserve project files, evidence level, and
 `;
 }
 
-function claudeLearnCommandContent(): string {
+function claudeLearnCommandContent(options: { shortAlias?: boolean } = {}): string {
   return `---
 description: Generate Contextbook learning moments from the current repository.
 ---
-
+${options.shortAlias ? `\n${CONTEXTBOOK_LEARN_ALIAS_MARKER}\n` : ''}
 Run Contextbook locally and report the result without inventing extra evidence:
 
 1. Run \`contextbook scan\` if project evidence may be stale.
@@ -137,11 +152,11 @@ Run Contextbook locally and report the result without inventing extra evidence:
 `;
 }
 
-function claudeWhyCommandContent(): string {
+function claudeWhyCommandContent(options: { shortAlias?: boolean } = {}): string {
   return `---
 description: Answer a concept question with Contextbook project evidence.
 ---
-
+${options.shortAlias ? `\n${CONTEXTBOOK_WHY_ALIAS_MARKER}\n` : ''}
 Answer this question using Contextbook:
 
 $ARGUMENTS

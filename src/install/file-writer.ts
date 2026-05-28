@@ -34,6 +34,10 @@ async function planOrWrite(file: InstallFile, options: { dryRun: boolean; stamp:
     return { path: file.path, description: file.description, status: 'skip-identical' };
   }
 
+  if (file.managedMarkers && !file.managedMarkers.some((marker) => current.includes(marker))) {
+    return { path: file.path, description: file.description, status: 'skip-unmanaged-existing' };
+  }
+
   const backupPath = `${file.path}.bak-${options.stamp}`;
   if (!options.dryRun) {
     await copyFile(file.path, backupPath);

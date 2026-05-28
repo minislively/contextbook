@@ -106,6 +106,8 @@ function statusLabel(action: InstallAction): string {
       return 'updated with backup';
     case 'skip-identical':
       return 'skipped identical';
+    case 'skip-unmanaged-existing':
+      return 'skipped existing unmanaged file';
     case 'dry-run-create':
       return 'would create';
     case 'dry-run-update-with-backup':
