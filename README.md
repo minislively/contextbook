@@ -147,6 +147,22 @@ Claude Code officially supports `UserPromptSubmit` additional context via hook s
 
 Use `contextbook doctor --json` to inspect Project Memory, Learner Memory, hook setup, and whether project memory may be stale in one read-only report. Use `contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json` after `contextbook setup` to inspect generated helper output locally. A healthy smoke result reports `status: "live-smoke-ok"`, `outputShapeValid: true`, `helperCurrent: true`, and `rawPromptDetected: false` without mutating learner/project memory.
 
+### Release smoke test
+
+Before publishing, run the packaged CLI in a temporary HOME/project instead of trusting only the source checkout:
+
+```bash
+npm run release:smoke
+```
+
+The release smoke test runs `npm test`, `git diff --check`, `npm pack --dry-run`, creates a real `npm pack` tarball, installs that tarball with `npm install -g --prefix <temp>`, then verifies:
+
+- `contextbook --help` from the packed global binary
+- `contextbook setup` installs Codex and Claude Code helpers in the temp HOME
+- `contextbook hooks status --json` reports `installed-not-configured` after setup
+- `contextbook hooks smoke --json` reports `live-smoke-ok`, valid output shape, current helpers, and no raw prompt leak
+- `contextbook doctor --json` remains read-only and reports hook health
+
 Requires Node.js 20 or newer.
 
 ### Step 2. Initialize a project
@@ -456,6 +472,7 @@ contextbook install all --auto --dry-run          # advanced auto-safe hook inst
 contextbook setup                  # install Codex + Claude Code helper files, hooks, and safe preference automation
 contextbook setup --dry-run        # preview setup writes
 contextbook setup --auto           # non-interactive/bootstrap setup with safe defaults
+npm run release:smoke              # package/install smoke test before npm publish
 contextbook hooks status           # read-only hook helper/config diagnostic with health states
 contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json  # verify helper output shape/read-only safety
 contextbook doctor                 # read-only project/learner/hooks setup report
