@@ -34,13 +34,15 @@ export async function scanProject(options: ContextbookRuntimeOptions = {}): Prom
     evidenceDetected: evidence.length,
     warnings
   }, root);
-  await recordConversationSignal({
-    signalType: 'scan.completed',
-    command: 'scan',
-    learner,
-    conceptCount: concepts.length,
-    metadata: { evidence: evidence.length, changedFiles: changed.size, filesScanned: files.length }
-  });
+  if (options.recordConversationSignal !== false) {
+    await recordConversationSignal({
+      signalType: 'scan.completed',
+      command: 'scan',
+      learner,
+      conceptCount: concepts.length,
+      metadata: { evidence: evidence.length, changedFiles: changed.size, filesScanned: files.length }
+    });
+  }
 
   return {
     filesScanned: files.length,

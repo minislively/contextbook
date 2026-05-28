@@ -751,6 +751,7 @@ export interface ConversationMemoryEvent {
 export interface ContextbookRuntimeOptions {
   root?: string;
   learner?: string;
+  recordConversationSignal?: boolean;
 }
 
 export interface ScanResult {

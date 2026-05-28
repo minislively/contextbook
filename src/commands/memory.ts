@@ -1,6 +1,6 @@
 import { executeMemoryBackup, formatMemoryBackupSummary, planMemoryBackup } from '../core/memory-backup.js';
 import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
-import { formatMemoryRebuildSummary, planMemoryRebuild } from '../core/memory-rebuild.js';
+import { executeMemoryRebuild, formatMemoryRebuildSummary, planMemoryRebuild } from '../core/memory-rebuild.js';
 import { executeMemoryRestore, formatMemoryRestoreSummary, planMemoryRestore } from '../core/memory-restore.js';
 import { executeMemoryRepair, formatMemoryRepairSummary, planMemoryRepair } from '../core/memory-repair.js';
 import { formatMemoryValidateSummary, validateMemory } from '../core/memory-validate.js';
@@ -143,8 +143,8 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
       return;
     }
     case 'rebuild': {
-      const input = parseRebuildDryRun(rest);
-      const result = await planMemoryRebuild({ learner: 'default' });
+      const input = parseRebuild(rest);
+      const result = input.yes ? await executeMemoryRebuild({ learner: 'default' }) : await planMemoryRebuild({ learner: 'default' });
       if (input.json) {
         console.log(JSON.stringify(result, null, 2));
         return;
@@ -372,8 +372,8 @@ function parseBackup(args: string[]): { json: boolean; yes: boolean } {
   return { json, yes };
 }
 
-function parseRebuildDryRun(args: string[]): { json: boolean } {
-  return parseRequiredDryRun(args, 'Usage: contextbook memory rebuild --dry-run [--json]');
+function parseRebuild(args: string[]): { json: boolean; yes: boolean } {
+  return parseDryRunOrYes(args, 'Usage: contextbook memory rebuild (--dry-run|--yes) [--json]');
 }
 
 function parseRepair(args: string[]): { json: boolean; yes: boolean } {
@@ -528,7 +528,7 @@ function memoryUsage(): string {
     '  contextbook memory context [--json]',
     '  contextbook memory validate [--json]',
     '  contextbook memory repair (--dry-run|--yes) [--json]',
-    '  contextbook memory rebuild --dry-run [--json]',
+    '  contextbook memory rebuild (--dry-run|--yes) [--json]',
     '  contextbook memory backup (--dry-run|--yes) [--json]',
     '  contextbook memory restore --backup-id <id> (--dry-run|--yes) [--json]',
     '',
