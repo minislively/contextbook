@@ -1,7 +1,7 @@
 import { executeMemoryBackup, formatMemoryBackupSummary, planMemoryBackup } from '../core/memory-backup.js';
 import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
 import { executeMemoryRebuild, formatMemoryRebuildSummary, planMemoryRebuild } from '../core/memory-rebuild.js';
-import { formatMemoryRecoverSummary, recoverMemory } from '../core/memory-recover.js';
+import { formatMemoryRecoverSafeSummary, formatMemoryRecoverSummary, recoverMemory, recoverMemorySafe } from '../core/memory-recover.js';
 import { executeMemoryRestore, formatMemoryRestoreSummary, planMemoryRestore } from '../core/memory-restore.js';
 import { executeMemoryRepair, formatMemoryRepairSummary, planMemoryRepair } from '../core/memory-repair.js';
 import { formatMemoryValidateSummary, validateMemory } from '../core/memory-validate.js';
@@ -125,13 +125,14 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
       return;
     }
     case 'recover': {
-      const json = parseJsonFlag(rest, 'contextbook memory recover [--json]');
-      const result = await recoverMemory({ learner: 'default' });
-      if (json) {
-        console.log(JSON.stringify(result, null, 2));
+      const input = parseRecover(rest);
+      if (input.safe) {
+        const result = await recoverMemorySafe({ learner: 'default' });
+        console.log(input.json ? JSON.stringify(result, null, 2) : formatMemoryRecoverSafeSummary(result));
         return;
       }
-      console.log(formatMemoryRecoverSummary(result));
+      const result = await recoverMemory({ learner: 'default' });
+      console.log(input.json ? JSON.stringify(result, null, 2) : formatMemoryRecoverSummary(result));
       return;
     }
     case 'validate': {
@@ -328,6 +329,25 @@ function parseApplyPreferenceSignals(args: string[]): { prompt: string; source: 
 
 function isPreferencePolicyMode(value: string): value is PreferencePolicyMode {
   return value === 'manual' || value === 'suggest' || value === 'auto-safe';
+}
+
+
+function parseRecover(args: string[]): { json: boolean; safe: boolean } {
+  let json = false;
+  let safe = false;
+  const usage = 'Usage: contextbook memory recover [--safe] [--json]';
+  for (const arg of args) {
+    if (arg === '--json') {
+      json = true;
+      continue;
+    }
+    if (arg === '--safe') {
+      safe = true;
+      continue;
+    }
+    throw new Error(usage);
+  }
+  return { json, safe };
 }
 
 function parseJsonFlag(args: string[], usage: string): boolean {
@@ -556,7 +576,7 @@ function memoryUsage(): string {
     '  contextbook memory preference-history [--json]',
     '  contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]',
     '  contextbook memory context [--json]',
-    '  contextbook memory recover [--json]',
+    '  contextbook memory recover [--safe] [--json]',
     '  contextbook memory validate [--json]',
     '  contextbook memory repair (--dry-run|--yes) [--json]',
     '  contextbook memory rebuild (--dry-run|--yes) [--json]',

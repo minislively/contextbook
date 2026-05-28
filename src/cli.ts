@@ -13,9 +13,45 @@ import { hooksCommand } from './commands/hooks.js';
 import { doctorCommand } from './commands/doctor.js';
 
 function help(): string {
-  return `Contextbook — Learn the concepts behind the code you just touched.\n\nUsage:\n  contextbook init\n  contextbook scan\n  contextbook doctor [--json]\n  contextbook project [--json]\n  contextbook learner [--json]\n  contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]\n  contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]\n  contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]\n  contextbook memory signals [--json]\n  contextbook memory suggest-weak-terms [--json]\n  contextbook memory suggest-profile-updates [--json]\n  contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]\n  contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--mode manual|suggest|auto-safe] [--dry-run] [--json]\n  contextbook memory preference-history [--json]\n  contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]\n  contextbook memory context [--json]\n  contextbook memory recover [--json]\n  contextbook memory validate [--json]\n  contextbook memory repair (--dry-run|--yes) [--json]\n  contextbook memory rebuild (--dry-run|--yes) [--json]\n  contextbook memory backup (--dry-run|--yes) [--json]\n  contextbook memory restore --backup-id <id> (--dry-run|--yes) [--json]\n  contextbook learn\n  contextbook why "<question>"\n  contextbook profile\n  contextbook profile diff\n  contextbook profile edit\n  contextbook profile reset\n  contextbook setup [--dry-run] [--hooks]\n  contextbook hooks status [--json]\n  contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]\n  contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]\n  contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]\n  contextbook install claude-code [--dry-run] [--hooks]\n`;
-}
+  return `Contextbook — Learn the concepts behind the code you just touched.
 
+Usage:
+  contextbook init
+  contextbook scan
+  contextbook doctor [--json]
+  contextbook project [--json]
+  contextbook learner [--json]
+  contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]
+  contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]
+  contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]
+  contextbook memory signals [--json]
+  contextbook memory suggest-weak-terms [--json]
+  contextbook memory suggest-profile-updates [--json]
+  contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]
+  contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--mode manual|suggest|auto-safe] [--dry-run] [--json]
+  contextbook memory preference-history [--json]
+  contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]
+  contextbook memory context [--json]
+  contextbook memory recover [--safe] [--json]
+  contextbook memory validate [--json]
+  contextbook memory repair (--dry-run|--yes) [--json]
+  contextbook memory rebuild (--dry-run|--yes) [--json]
+  contextbook memory backup (--dry-run|--yes) [--json]
+  contextbook memory restore --backup-id <id> (--dry-run|--yes) [--json]
+  contextbook learn
+  contextbook why "<question>"
+  contextbook profile
+  contextbook profile diff
+  contextbook profile edit
+  contextbook profile reset
+  contextbook setup [--dry-run] [--hooks]
+  contextbook hooks status [--json]
+  contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]
+  contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]
+  contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]
+  contextbook install claude-code [--dry-run] [--hooks]
+`;
+}
 async function main(argv: string[]): Promise<void> {
   const [command, ...args] = argv;
   switch (command) {

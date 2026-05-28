@@ -4,6 +4,7 @@ import { gitWorkingTreeState } from '../scan/git-diff.js';
 import { projectPaths, readScanRuns } from '../storage/project-store.js';
 import { learnerBackupPaths, learnerPaths } from '../storage/user-store.js';
 import { validateMemory, type MemoryValidateIssue, type MemoryValidateResult } from './memory-validate.js';
+import { executeMemoryRebuild, type MemoryRebuildResult } from './memory-rebuild.js';
 
 export type MemoryRecoverStatus = 'ok' | 'warning' | 'blocked';
 export type MemoryRecoverPrimaryCase = 'healthy' | 'missing-files' | 'malformed-memory' | 'stale-project-memory' | 'restore-candidate' | 'preference-undo-candidate' | 'mixed';
@@ -41,6 +42,53 @@ export interface MemoryRecoverSafety {
   rawContentIncluded: false;
   absolutePathsIncluded: false;
   unsafeJudgmentIncluded: false;
+}
+
+
+export type MemoryRecoverMode = 'diagnose' | 'safe';
+export type MemoryRecoverSafeActionKind = 'rebuild';
+export type MemoryRecoverBlockedActionKind = 'restore' | 'preference-undo' | 'manual-review' | 'repair' | 'rebuild';
+
+export interface MemoryRecoverSafeAction {
+  kind: MemoryRecoverSafeActionKind;
+  reason: string;
+  command: string;
+  status: MemoryRecoverStatus;
+  backupId?: string;
+  postValidationStatus?: MemoryValidateResult['status'];
+  projectMemoryMutated?: boolean;
+  learnerMemoryMutated?: boolean;
+}
+
+export interface MemoryRecoverBlockedAction {
+  kind: MemoryRecoverBlockedActionKind;
+  reason: string;
+  recommendedCommand: string;
+  blockedBy?: string[];
+}
+
+export interface MemoryRecoverSafeSafety {
+  readOnly: false;
+  safeMode: true;
+  projectMemoryMutated: boolean;
+  learnerMemoryMutated: boolean;
+  conversationMemoryMutated: false;
+  backupCreated: boolean;
+  rawContentIncluded: false;
+  absolutePathsIncluded: false;
+  unsafeJudgmentIncluded: false;
+}
+
+export interface MemoryRecoverSafeResult {
+  schemaVersion: 1;
+  mode: 'safe';
+  generatedAt: string;
+  status: MemoryRecoverStatus;
+  diagnosis: MemoryRecoverResult;
+  appliedActions: MemoryRecoverSafeAction[];
+  blockedActions: MemoryRecoverBlockedAction[];
+  postValidationStatus: MemoryValidateResult['status'];
+  safety: MemoryRecoverSafeSafety;
 }
 
 export interface MemoryRecoverResult {
@@ -92,6 +140,173 @@ export async function recoverMemory(options: RecoverOptions = {}): Promise<Memor
     backupCandidates,
     safety: recoverSafety()
   };
+}
+
+export async function recoverMemorySafe(options: RecoverOptions = {}): Promise<MemoryRecoverSafeResult> {
+  const root = options.root ?? process.cwd();
+  const learner = options.learner ?? 'default';
+  const diagnosis = await recoverMemory({ root, learner });
+  const appliedActions: MemoryRecoverSafeAction[] = [];
+  const blockedActions: MemoryRecoverBlockedAction[] = blockedActionsFromDiagnosis(diagnosis);
+  const initialValidation = await validateMemory({ root, learner });
+  const missingIssues = initialValidation.issues.filter((issue) => issue.code === 'missing-file');
+  const blockingIssues = initialValidation.issues.filter((issue) => issue.severity === 'error' && issue.code !== 'missing-file');
+  const missingProjectIssues = missingIssues.filter((issue) => issue.scope === 'project');
+  const missingLearnerIssues = missingIssues.filter((issue) => issue.scope === 'learner');
+
+  if (missingLearnerIssues.length > 0) {
+    blockedActions.push({
+      kind: 'repair',
+      reason: 'Learner and Conversation Memory files are personal memory, so safe recovery does not recreate them automatically.',
+      recommendedCommand: 'contextbook memory repair --dry-run --json',
+      blockedBy: safeIssueEvidence(missingLearnerIssues)
+    });
+  }
+
+  if (blockingIssues.length > 0) {
+    blockedActions.push({
+      kind: 'manual-review',
+      reason: 'Safe recovery stopped because validation reports malformed or unsafe memory.',
+      recommendedCommand: 'contextbook memory validate --json',
+      blockedBy: safeIssueEvidence(blockingIssues)
+    });
+    return safeResult({ diagnosis, appliedActions, blockedActions, postValidation: initialValidation });
+  }
+
+  const postDiagnosis = await recoverMemory({ root, learner });
+  const shouldRebuild = missingProjectIssues.length > 0 || hasFinding(postDiagnosis, 'stale-project-memory') || await scanArtifactsNeedRebuild(root);
+  if (shouldRebuild) {
+    try {
+      const rebuild = await executeMemoryRebuild({ root, learner });
+      const reason = missingProjectIssues.length > 0
+        ? 'Project Memory files were missing/default, so Project Memory was regenerated without touching personal memory.'
+        : 'Project Memory was stale or unscanned, so it was regenerated without touching personal memory.';
+      appliedActions.push(rebuildAction(rebuild, reason));
+    } catch (error) {
+      blockedActions.push({
+        kind: 'rebuild',
+        reason: 'Safe rebuild failed or was blocked by validation; Contextbook did not guess a destructive recovery path.',
+        recommendedCommand: 'contextbook memory rebuild --dry-run --json',
+        blockedBy: [`error:${safeErrorCode(error)}`]
+      });
+    }
+  }
+
+  const postValidation = await validateMemory({ root, learner });
+  return safeResult({ diagnosis, appliedActions, blockedActions, postValidation });
+}
+
+export function formatMemoryRecoverSafeSummary(result: MemoryRecoverSafeResult): string {
+  const applied = result.appliedActions.map((action) => {
+    const backup = action.backupId ? `, backup: ${action.backupId}` : '';
+    const post = action.postValidationStatus ? `, post-validation: ${action.postValidationStatus}` : '';
+    return `- ${action.kind}: ${action.reason} (status: ${action.status}${backup}${post})`;
+  }).join('\n') || '- none';
+  const blocked = result.blockedActions.map((action) => {
+    const evidence = action.blockedBy?.length ? ` [${action.blockedBy.join(', ')}]` : '';
+    return `- ${action.kind}: ${action.reason}${evidence} — explicit: \`${action.recommendedCommand}\``;
+  }).join('\n') || '- none';
+
+  return [
+    '# Contextbook Memory Safe Recovery',
+    '',
+    `status: ${result.status}`,
+    `post-validation status: ${result.postValidationStatus}`,
+    '',
+    '## Auto-applied',
+    applied,
+    '',
+    '## Still Explicit',
+    blocked,
+    '',
+    '## Safety',
+    `- safe mode: ${result.safety.safeMode ? 'yes' : 'no'}`,
+    `- read-only: ${result.safety.readOnly ? 'yes' : 'no'}`,
+    `- project memory mutated: ${result.safety.projectMemoryMutated ? 'yes' : 'no'}`,
+    `- learner memory mutated: ${result.safety.learnerMemoryMutated ? 'yes' : 'no'}`,
+    '- conversation memory mutated: no',
+    `- backup created: ${result.safety.backupCreated ? 'yes' : 'no'}`,
+    '- raw memory included: no',
+    '- absolute paths included: no',
+    '- unsafe learner judgment included: no'
+  ].join('\n');
+}
+
+function rebuildAction(result: MemoryRebuildResult, reason: string): MemoryRecoverSafeAction {
+  return {
+    kind: 'rebuild',
+    reason,
+    command: 'contextbook memory rebuild --yes',
+    status: result.status,
+    backupId: result.preRebuildBackupId,
+    postValidationStatus: result.postValidationStatus,
+    projectMemoryMutated: result.safety.projectMemoryMutated,
+    learnerMemoryMutated: result.safety.learnerMemoryMutated
+  };
+}
+
+function safeResult(input: { diagnosis: MemoryRecoverResult; appliedActions: MemoryRecoverSafeAction[]; blockedActions: MemoryRecoverBlockedAction[]; postValidation: MemoryValidateResult }): MemoryRecoverSafeResult {
+  const projectMemoryMutated = input.appliedActions.some((action) => action.projectMemoryMutated === true);
+  const learnerMemoryMutated = input.appliedActions.some((action) => action.learnerMemoryMutated === true);
+  return {
+    schemaVersion: 1,
+    mode: 'safe',
+    generatedAt: new Date().toISOString(),
+    status: input.postValidation.status === 'error' || input.blockedActions.some((action) => action.kind === 'manual-review' || action.kind === 'restore' || action.kind === 'repair' || action.kind === 'rebuild') ? 'blocked' : input.appliedActions.length > 0 || input.blockedActions.length > 0 ? 'warning' : 'ok',
+    diagnosis: input.diagnosis,
+    appliedActions: input.appliedActions,
+    blockedActions: input.blockedActions,
+    postValidationStatus: input.postValidation.status,
+    safety: {
+      readOnly: false,
+      safeMode: true,
+      projectMemoryMutated,
+      learnerMemoryMutated,
+      conversationMemoryMutated: false,
+      backupCreated: input.appliedActions.some((action) => Boolean(action.backupId)),
+      rawContentIncluded: false,
+      absolutePathsIncluded: false,
+      unsafeJudgmentIncluded: false
+    }
+  };
+}
+
+function blockedActionsFromDiagnosis(diagnosis: MemoryRecoverResult): MemoryRecoverBlockedAction[] {
+  const actions: MemoryRecoverBlockedAction[] = [];
+  const malformed = diagnosis.findings.find((finding) => finding.code === 'malformed-memory-files');
+  if (malformed) {
+    const backup = diagnosis.backupCandidates[0];
+    actions.push({
+      kind: backup ? 'restore' : 'manual-review',
+      reason: backup ? 'Malformed memory requires an explicit backup restore decision.' : 'Malformed memory requires manual review because no safe backup candidate was found.',
+      recommendedCommand: backup ? `contextbook memory restore --backup-id ${backup.backupId} --dry-run` : 'contextbook memory validate --json',
+      blockedBy: malformed.evidence
+    });
+  }
+  const preference = diagnosis.findings.find((finding) => finding.code === 'preference-undo-candidates-found');
+  const hasPreferenceFlow = diagnosis.recommendedFlow.some((step) => step.command === 'contextbook memory preference-history' || step.command.includes('undo-preference-update'));
+  if (preference || hasPreferenceFlow) {
+    actions.push({
+      kind: 'preference-undo',
+      reason: 'Preference history can affect personal explanation style, so safe recovery only recommends an explicit undo.',
+      recommendedCommand: 'contextbook memory preference-history',
+      blockedBy: preference?.evidence
+    });
+  }
+  return actions;
+}
+
+function hasFinding(diagnosis: MemoryRecoverResult, code: string): boolean {
+  return diagnosis.findings.some((finding) => finding.code === code);
+}
+
+async function scanArtifactsNeedRebuild(root: string): Promise<boolean> {
+  try {
+    const runs = await readScanRuns(root);
+    return runs.length === 0;
+  } catch {
+    return true;
+  }
 }
 
 export function formatMemoryRecoverSummary(result: MemoryRecoverResult): string {
@@ -316,6 +531,14 @@ async function countUndoablePreferenceEntries(learner: string): Promise<number> 
   } catch {
     return 0;
   }
+}
+
+function safeErrorCode(error: unknown): string {
+  if (error && typeof error === 'object' && 'code' in error && typeof (error as { code?: unknown }).code === 'string') return (error as { code: string }).code;
+  const message = error instanceof Error ? error.message : String(error);
+  const wrapped = /Error code: ([A-Z0-9_-]+)/.exec(message);
+  if (wrapped) return wrapped[1];
+  return message ? 'ERROR' : 'UNKNOWN';
 }
 
 function safeIssueEvidence(issues: MemoryValidateIssue[]): string[] {

@@ -10,6 +10,21 @@ const repoRoot = new URL('..', import.meta.url).pathname;
 const cli = new URL('../dist/cli.js', import.meta.url).pathname;
 const learnerDir = join(home, '.contextbook', 'learners', 'default');
 
+function runIn(cwd, homeDir, args, options = {}) {
+  const result = spawnSync(process.execPath, [cli, ...args], {
+    cwd,
+    env: { ...process.env, HOME: homeDir, USERPROFILE: homeDir, EDITOR: '' },
+    encoding: 'utf8',
+    ...options
+  });
+  if (result.status !== 0) {
+    console.error(result.stdout);
+    console.error(result.stderr);
+    throw new Error(`Command failed: contextbook ${args.join(' ')}`);
+  }
+  return result.stdout;
+}
+
 function run(args, options = {}) {
   const result = spawnSync(process.execPath, [cli, ...args], {
     cwd: root,
@@ -63,12 +78,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook doctor', 'contextbook doctor --json', 'contextbook setup --hooks --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook hooks smoke', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory hook-suggest', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory preference-history', 'contextbook memory undo-preference-update', 'contextbook memory context --json', 'contextbook memory recover', 'contextbook memory recover --json', 'contextbook memory validate', 'contextbook memory validate --json', 'contextbook memory repair --dry-run', 'contextbook memory repair --dry-run --json', 'contextbook memory repair --yes', 'contextbook memory repair --yes --json', 'contextbook memory rebuild --dry-run', 'contextbook memory rebuild --dry-run --json', 'contextbook memory rebuild --yes', 'contextbook memory rebuild --yes --json', 'contextbook memory backup --dry-run', 'contextbook memory backup --dry-run --json', 'contextbook memory backup --yes', 'contextbook memory backup --yes --json', 'contextbook memory restore --backup-id <id> --dry-run', 'contextbook memory restore --backup-id <id> --dry-run --json', 'contextbook memory restore --backup-id <id> --yes', 'contextbook memory restore --backup-id <id> --yes --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook doctor', 'contextbook doctor --json', 'contextbook setup --hooks --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook hooks smoke', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory hook-suggest', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory preference-history', 'contextbook memory undo-preference-update', 'contextbook memory context --json', 'contextbook memory recover', 'contextbook memory recover --json', 'contextbook memory recover --safe', 'contextbook memory recover --safe --json', 'contextbook memory validate', 'contextbook memory validate --json', 'contextbook memory repair --dry-run', 'contextbook memory repair --dry-run --json', 'contextbook memory repair --yes', 'contextbook memory repair --yes --json', 'contextbook memory rebuild --dry-run', 'contextbook memory rebuild --dry-run --json', 'contextbook memory rebuild --yes', 'contextbook memory rebuild --yes --json', 'contextbook memory backup --dry-run', 'contextbook memory backup --dry-run --json', 'contextbook memory backup --yes', 'contextbook memory backup --yes --json', 'contextbook memory restore --backup-id <id> --dry-run', 'contextbook memory restore --backup-id <id> --dry-run --json', 'contextbook memory restore --backup-id <id> --yes', 'contextbook memory restore --backup-id <id> --yes --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook doctor [--json]', 'contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--mode manual|suggest|auto-safe] [--dry-run] [--json]', 'contextbook memory preference-history [--json]', 'contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]', 'contextbook memory context [--json]', 'contextbook memory recover [--json]', 'contextbook memory validate [--json]', 'contextbook memory repair (--dry-run|--yes) [--json]', 'contextbook memory rebuild (--dry-run|--yes) [--json]', 'contextbook memory backup (--dry-run|--yes) [--json]', 'contextbook memory restore --backup-id <id> (--dry-run|--yes) [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook hooks status [--json]', 'contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
+  for (const text of ['contextbook doctor [--json]', 'contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--mode manual|suggest|auto-safe] [--dry-run] [--json]', 'contextbook memory preference-history [--json]', 'contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]', 'contextbook memory context [--json]', 'contextbook memory recover [--safe] [--json]', 'contextbook memory validate [--json]', 'contextbook memory repair (--dry-run|--yes) [--json]', 'contextbook memory rebuild (--dry-run|--yes) [--json]', 'contextbook memory backup (--dry-run|--yes) [--json]', 'contextbook memory restore --backup-id <id> (--dry-run|--yes) [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook hooks status [--json]', 'contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -151,7 +166,32 @@ try {
   assert(memoryRecoverBefore.recommendedFlow.some((step) => step.command === 'contextbook memory repair --yes' && step.requiresYes === true), 'memory recover before init missing repair yes');
   assert(memoryRecoverBefore.safety.readOnly === true && memoryRecoverBefore.safety.projectMemoryMutated === false && memoryRecoverBefore.safety.learnerMemoryMutated === false, 'memory recover before init safety invalid');
   assert(!JSON.stringify(memoryRecoverBefore).includes(root) && !JSON.stringify(memoryRecoverBefore).includes(home), 'memory recover before init leaked absolute path');
-  assert(runExpectFail(['memory', 'recover', '--yes']).includes('Usage: contextbook memory recover [--json]'), 'memory recover --yes should fail');
+  const safeRoot = await mkdtemp(join(tmpdir(), 'contextbook-safe-recover-'));
+  const safeHome = await mkdtemp(join(tmpdir(), 'contextbook-safe-home-'));
+  await writeFile(join(safeRoot, 'package.json'), JSON.stringify({ dependencies: { react: '^19.0.0' } }, null, 2), 'utf8');
+  await mkdir(join(safeRoot, 'src'), { recursive: true });
+  await writeFile(join(safeRoot, 'src', 'safe.ts'), 'export const value = new EventSource("/events");\n', 'utf8');
+  const safeRecoverBeforeInit = JSON.parse(runIn(safeRoot, safeHome, ['memory', 'recover', '--safe', '--json']));
+  assert(safeRecoverBeforeInit.mode === 'safe' && safeRecoverBeforeInit.diagnosis.safety.readOnly === true, 'memory recover safe before init missing safe/diagnosis contract');
+  assert(!safeRecoverBeforeInit.appliedActions.some((action) => action.kind === 'repair'), 'memory recover safe before init should not auto-repair learner/conversation memory');
+  assert(safeRecoverBeforeInit.appliedActions.some((action) => action.kind === 'rebuild'), 'memory recover safe before init did not rebuild scan artifacts');
+  assert(safeRecoverBeforeInit.blockedActions.some((action) => action.kind === 'repair'), 'memory recover safe before init should leave learner repair explicit');
+  assert(safeRecoverBeforeInit.safety.projectMemoryMutated === true && safeRecoverBeforeInit.safety.learnerMemoryMutated === false && safeRecoverBeforeInit.safety.backupCreated === true, 'memory recover safe before init safety mutation flags invalid');
+  assert(existsSync(join(safeRoot, '.contextbook', 'project', 'scan-runs.jsonl')), 'memory recover safe before init did not create scan runs');
+  assert((await readJsonl(join(safeRoot, '.contextbook', 'project', 'scan-runs.jsonl'))).length >= 1, 'memory recover safe before init did not append scan run');
+  assert(!existsSync(join(safeHome, '.contextbook', 'learners', 'default', 'signals.jsonl')), 'memory recover safe before init should not create learner conversation memory');
+  assert(!JSON.stringify(safeRecoverBeforeInit).includes(safeRoot) && !JSON.stringify(safeRecoverBeforeInit).includes(safeHome), 'memory recover safe before init leaked absolute path');
+  const unsafeRoot = await mkdtemp(join(tmpdir(), 'contextbook-safe-unsafe-'));
+  const unsafeHome = await mkdtemp(join(tmpdir(), 'contextbook-safe-unsafe-home-'));
+  await mkdir(join(unsafeRoot, '.contextbook'), { recursive: true });
+  await mkdir(join(unsafeRoot, 'unsafe-target'), { recursive: true });
+  await symlink(join(unsafeRoot, 'unsafe-target'), join(unsafeRoot, '.contextbook', 'project'));
+  const unsafeSafeRecover = JSON.parse(runIn(unsafeRoot, unsafeHome, ['memory', 'recover', '--safe', '--json']));
+  assert(unsafeSafeRecover.status === 'blocked' && unsafeSafeRecover.appliedActions.length === 0, 'memory recover safe should block unsafe project symlink');
+  assert(unsafeSafeRecover.blockedActions.some((action) => action.kind === 'rebuild' && JSON.stringify(action.blockedBy).includes('UNSAFE_REBUILD_PATH')), 'memory recover safe unsafe path missing stable error code');
+  const safeRecoverMarkdown = runIn(safeRoot, safeHome, ['memory', 'recover', '--safe']);
+  assert(safeRecoverMarkdown.includes('# Contextbook Memory Safe Recovery') && safeRecoverMarkdown.includes('## Auto-applied') && safeRecoverMarkdown.includes('## Still Explicit'), 'memory recover safe markdown missing sections');
+  assert(runExpectFail(['memory', 'recover', '--yes']).includes('Usage: contextbook memory recover [--safe] [--json]'), 'memory recover --yes should fail');
   assert(!existsSync(join(root, '.contextbook')), 'memory recover should be read-only before init');
   const memoryValidateBefore = JSON.parse(run(['memory', 'validate', '--json']));
   assert(memoryValidateBefore.schemaVersion === 1 && memoryValidateBefore.status === 'warning', 'memory validate before init should warn');
@@ -212,6 +252,10 @@ try {
   await writeFile(join(root, 'src', 'hooks', 'useWorkflowSSE.ts'), `import { useEffect } from 'react';\nexport function useWorkflowSSE(url: string) {\n  useEffect(() => {\n    const source = new EventSource(url);\n    return () => source.close();\n  }, [url]);\n}\n`, 'utf8');
 
   run(['scan']);
+  const healthySafeRecover = JSON.parse(run(['memory', 'recover', '--safe', '--json']));
+  assert(healthySafeRecover.mode === 'safe' && healthySafeRecover.appliedActions.length === 0, 'memory recover safe healthy path should no-op');
+  assert(healthySafeRecover.safety.projectMemoryMutated === false && healthySafeRecover.safety.learnerMemoryMutated === false && healthySafeRecover.safety.backupCreated === false, 'memory recover safe healthy no-op safety invalid');
+  assert(healthySafeRecover.diagnosis.safety.readOnly === true, 'memory recover safe healthy diagnosis should be read-only');
   const core = await import('../dist/core/index.js');
   const rankedFixtures = core.rankLearningMoments([
     {
@@ -953,6 +997,11 @@ try {
   assert(invalidConceptsRecover.status === 'blocked' && (invalidConceptsRecover.primaryCase === 'restore-candidate' || invalidConceptsRecover.primaryCase === 'malformed-memory' || invalidConceptsRecover.primaryCase === 'mixed'), 'memory recover should block malformed project json');
   assert(invalidConceptsRecover.recommendedFlow.some((step) => step.command.includes('memory restore') || step.reason.includes('malformed')), 'memory recover malformed json missing restore/manual guidance');
   assert(!JSON.stringify(invalidConceptsRecover).includes('{ invalid json'), 'memory recover leaked raw malformed json');
+  const invalidConceptsSafeRecover = JSON.parse(run(['memory', 'recover', '--safe', '--json']));
+  assert(invalidConceptsSafeRecover.mode === 'safe' && invalidConceptsSafeRecover.appliedActions.length === 0, 'memory recover safe should not apply malformed project json');
+  assert(invalidConceptsSafeRecover.blockedActions.some((action) => action.kind === 'restore' || action.kind === 'manual-review'), 'memory recover safe malformed json missing blocked restore/manual action');
+  assert(invalidConceptsSafeRecover.safety.projectMemoryMutated === false && invalidConceptsSafeRecover.safety.learnerMemoryMutated === false, 'memory recover safe malformed json mutated memory');
+  assert(!JSON.stringify(invalidConceptsSafeRecover).includes('{ invalid json'), 'memory recover safe leaked raw malformed json');
   await writeFile(join(root, '.contextbook', 'project', 'concepts.json'), conceptsBeforeCorrupt, 'utf8');
   const scanRunsBeforeCorrupt = await readFile(join(root, '.contextbook', 'project', 'scan-runs.jsonl'), 'utf8');
   await writeFile(join(root, '.contextbook', 'project', 'scan-runs.jsonl'), `${scanRunsBeforeCorrupt}{"schemaVersion":1,"notScannedAt":true}
@@ -992,6 +1041,13 @@ try {
   assert(staleRecover.findings.some((finding) => finding.code === 'stale-project-memory'), 'memory recover should find stale project memory');
   assert(staleRecover.recommendedFlow.some((step) => step.command === 'contextbook memory rebuild --dry-run'), 'memory recover missing rebuild dry-run for stale project');
   assert(staleRecover.recommendedFlow.some((step) => step.command === 'contextbook memory rebuild --yes' && step.requiresYes === true), 'memory recover missing rebuild yes for stale project');
+  const mixedPreferenceApply = JSON.parse(run(['memory', 'apply-preference-signals', '--prompt', '앞으로 영어로 짧게 설명해줘.', '--source', 'manual', '--json']));
+  assert(mixedPreferenceApply.applied === true || mixedPreferenceApply.changes.some((change) => change.operation === 'skip-identical'), 'mixed preference setup did not produce a valid preference apply result');
+  const staleSafeRecover = JSON.parse(run(['memory', 'recover', '--safe', '--json']));
+  assert(staleSafeRecover.appliedActions.some((action) => action.kind === 'rebuild'), 'memory recover safe should apply rebuild for stale project memory');
+  assert(staleSafeRecover.blockedActions.some((action) => action.kind === 'preference-undo'), 'memory recover safe should leave preference undo explicit in mixed case');
+  assert(staleSafeRecover.safety.projectMemoryMutated === true && staleSafeRecover.safety.conversationMemoryMutated === false, 'memory recover safe stale safety flags invalid');
+  assert(staleSafeRecover.postValidationStatus !== 'error', 'memory recover safe stale should not leave validation error');
 
   const profileOutput = run(['profile']);
   assert(profileOutput.includes('## Conversation Memory'), 'profile did not expose conversation memory summary');
