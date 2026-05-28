@@ -23,7 +23,7 @@ export const codexHookStatusProvider: HookStatusProvider = {
 };
 
 function codexRecommendedActions(input: { helperExists: boolean; configs: HookConfigStatus[] }): Array<{ command: string; reason: string }> {
-  if (!input.helperExists) return [{ command: 'contextbook setup --hooks', reason: 'install platform hook helper files first' }];
+  if (!input.helperExists) return [{ command: 'contextbook setup', reason: 'install platform hook helper files first' }];
   if (!hasDetectedConfig(input.configs)) {
     return [{
       command: 'merge ~/.codex/hooks/contextbook-user-prompt-submit.md into ~/.codex/hooks.json',

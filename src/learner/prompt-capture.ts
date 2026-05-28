@@ -11,7 +11,8 @@ import type {
   PromptCaptureResult,
   PromptCaptureSafety,
   PromptCaptureSource,
-  PromptSignalCandidate
+  PromptSignalCandidate,
+  PreferencePolicyMode
 } from '../types.js';
 
 const MAX_CAPTURED_SIGNALS = 3;
@@ -81,6 +82,7 @@ export interface CapturePromptOptions {
   learner?: string;
   includeMemoryContext?: boolean;
   captureSignals?: boolean;
+  preferenceMode?: PreferencePolicyMode;
 }
 
 export function isPromptCaptureSource(value: string): value is PromptCaptureSource {
@@ -113,8 +115,9 @@ export async function capturePromptSignals(options: CapturePromptOptions): Promi
   const source = options.source ?? 'manual';
   const learner = options.learner ?? 'default';
   const candidates = classifyPromptSignals(options.prompt, source);
-  const preferenceSignals = classifyPreferenceSignals(options.prompt, source);
-  const preferencePolicyDecisions = evaluatePreferencePolicies(preferenceSignals, { mode: 'suggest' });
+  const preferenceMode = options.preferenceMode ?? 'suggest';
+  const preferenceSignals = classifyPreferenceSignals(options.prompt, source, { explicitApplyCommand: preferenceMode === 'auto-safe' });
+  const preferencePolicyDecisions = evaluatePreferencePolicies(preferenceSignals, { mode: preferenceMode });
   const capturedSignals: ConversationMemoryEvent[] = [];
   if (options.captureSignals !== false) {
     for (const candidate of candidates) {
@@ -313,7 +316,7 @@ function formatHookAdditionalContext(result: PromptCaptureResult, actions: HookS
   return [
     '# Contextbook Hook Suggestion',
     '',
-    'Contextbook detected learning/preference signals from the current prompt. This is suggestion-only context.',
+    'Contextbook detected learning/preference signals from the current prompt. This is hook-safe context; only generated setup hooks may apply low-risk auto-safe preferences through the reversible preference policy.',
     '',
     '## Detected Preference Signals',
     preferenceSignals,
@@ -329,9 +332,10 @@ function formatHookAdditionalContext(result: PromptCaptureResult, actions: HookS
     '',
     ...memoryContextLines,
     '## Safety Contract',
-    '- Do not auto-apply profile or preference updates from this hook.',
+    '- Do not auto-apply profile or weak-term updates from this hook.',
+    '- Preference updates are allowed only when the generated setup hook reports policy-approved auto-safe changes with backup/audit/undo.',
     '- Do not quote or persist the raw prompt.',
-    '- Use dry-run preview first; apply only after explicit user approval.',
+    '- Use dry-run preview first unless the generated setup hook already applied an auto-safe preference.',
     '- Hook failures must not block the agent.'
   ].join('\n');
 }

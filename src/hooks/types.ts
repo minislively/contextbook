@@ -75,6 +75,8 @@ export type HookSmokePlatformResult = {
   stderrPreview: string;
   outputKind: 'none' | 'plain-context' | 'json-additional-context' | 'other';
   additionalContextDetected: boolean;
+  autoSafePreferenceSectionDetected: boolean;
+  wouldApplyPreferences: boolean;
   rawPromptDetected: boolean;
   message?: string;
 };

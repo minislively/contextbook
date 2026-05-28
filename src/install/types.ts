@@ -9,6 +9,8 @@ export interface InstallOptions {
   now?: Date;
   codexSkillPathMode?: CodexSkillPathMode;
   includeHooks?: boolean;
+  autoSafePreferences?: boolean;
+  nonInteractive?: boolean;
 }
 
 export interface InstallFile {
