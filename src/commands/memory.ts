@@ -2,7 +2,7 @@ import { executeMemoryBackup, formatMemoryBackupSummary, planMemoryBackup } from
 import { buildMemoryContext, formatMemoryContextSummary } from '../core/memory-context.js';
 import { formatMemoryRebuildSummary, planMemoryRebuild } from '../core/memory-rebuild.js';
 import { executeMemoryRestore, formatMemoryRestoreSummary, planMemoryRestore } from '../core/memory-restore.js';
-import { formatMemoryRepairSummary, planMemoryRepair } from '../core/memory-repair.js';
+import { executeMemoryRepair, formatMemoryRepairSummary, planMemoryRepair } from '../core/memory-repair.js';
 import { formatMemoryValidateSummary, validateMemory } from '../core/memory-validate.js';
 import { addExplicitMemorySignal, formatMemorySignalsSummary, memorySignalsJson, memorySignalTypes } from '../learner/conversation-memory.js';
 import { applyPreferenceSignals, formatApplyPreferenceSignalsSummary } from '../learner/preference-signals-apply.js';
@@ -133,8 +133,8 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
       return;
     }
     case 'repair': {
-      const input = parseRepairDryRun(rest);
-      const result = await planMemoryRepair({ learner: 'default' });
+      const input = parseRepair(rest);
+      const result = input.yes ? await executeMemoryRepair({ learner: 'default' }) : await planMemoryRepair({ learner: 'default' });
       if (input.json) {
         console.log(JSON.stringify(result, null, 2));
         return;
@@ -376,8 +376,8 @@ function parseRebuildDryRun(args: string[]): { json: boolean } {
   return parseRequiredDryRun(args, 'Usage: contextbook memory rebuild --dry-run [--json]');
 }
 
-function parseRepairDryRun(args: string[]): { json: boolean } {
-  return parseRequiredDryRun(args, 'Usage: contextbook memory repair --dry-run [--json]');
+function parseRepair(args: string[]): { json: boolean; yes: boolean } {
+  return parseDryRunOrYes(args, 'Usage: contextbook memory repair (--dry-run|--yes) [--json]');
 }
 
 function parseRequiredDryRun(args: string[], usage: string): { json: boolean } {
@@ -396,6 +396,29 @@ function parseRequiredDryRun(args: string[], usage: string): { json: boolean } {
   }
   if (!dryRun) throw new Error(usage);
   return { json };
+}
+
+function parseDryRunOrYes(args: string[], usage: string): { json: boolean; yes: boolean } {
+  let dryRun = false;
+  let yes = false;
+  let json = false;
+  for (const arg of args) {
+    if (arg === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+    if (arg === '--yes') {
+      yes = true;
+      continue;
+    }
+    if (arg === '--json') {
+      json = true;
+      continue;
+    }
+    throw new Error(usage);
+  }
+  if (dryRun === yes) throw new Error(usage);
+  return { json, yes };
 }
 
 function parseApplyProfileUpdate(args: string[]): { candidate: string; dryRun: boolean; json: boolean } {
@@ -504,7 +527,7 @@ function memoryUsage(): string {
     '  contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]',
     '  contextbook memory context [--json]',
     '  contextbook memory validate [--json]',
-    '  contextbook memory repair --dry-run [--json]',
+    '  contextbook memory repair (--dry-run|--yes) [--json]',
     '  contextbook memory rebuild --dry-run [--json]',
     '  contextbook memory backup (--dry-run|--yes) [--json]',
     '  contextbook memory restore --backup-id <id> (--dry-run|--yes) [--json]',

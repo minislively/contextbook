@@ -3,7 +3,7 @@ export { buildLearningMoments } from './learn.js';
 export { executeMemoryBackup, formatMemoryBackupSummary, planMemoryBackup } from './memory-backup.js';
 export { buildMemoryContext, formatMemoryContextSummary } from './memory-context.js';
 export { formatMemoryRebuildSummary, planMemoryRebuild } from './memory-rebuild.js';
-export { formatMemoryRepairSummary, planMemoryRepair } from './memory-repair.js';
+export { executeMemoryRepair, formatMemoryRepairSummary, planMemoryRepair } from './memory-repair.js';
 export { executeMemoryRestore, formatMemoryRestoreSummary, planMemoryRestore } from './memory-restore.js';
 export { formatMemoryValidateSummary, validateMemory } from './memory-validate.js';
 export { buildDoctor, formatDoctorMarkdown } from './doctor.js';
