@@ -67,6 +67,109 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function legacyClaudeLearnCommandContent() {
+  return `---
+description: Generate Contextbook learning moments from the current repository.
+---
+
+Run Contextbook locally and report the result without inventing extra evidence:
+
+1. Run \`contextbook scan\` if project evidence may be stale.
+2. Run \`contextbook memory context --json\` for the one-shot AI context bundle before summarizing.
+3. Run lower-level \`contextbook project --json\`, \`contextbook learner --json\`, or suggestion commands only when debugging a specific layer.
+4. If a profile update candidate matters, preview it with \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` and wait for explicit user approval before applying.
+5. If the user explicitly states a safe preference, preview \`contextbook memory apply-preference-signals --prompt "$ARGUMENTS" --source claude-code --mode auto-safe --dry-run\`; generated setup hooks may apply only low-risk auto-safe preferences.
+6. Run \`contextbook learn\`.
+7. Preserve the evidence level and evidence files from the output.
+`;
+}
+
+function legacyClaudeWhyCommandContent() {
+  return `---
+description: Answer a concept question with Contextbook project evidence.
+---
+
+Answer this question using Contextbook:
+
+$ARGUMENTS
+
+Run:
+
+\`\`\`bash
+contextbook why "$ARGUMENTS"
+\`\`\`
+
+Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
+`;
+}
+
+function legacyCodexLearnSkillContent(name) {
+  return `---
+name: ${name}
+description: Generate Contextbook learning moments from the current repository using local project evidence.
+---
+
+# Contextbook Learn
+
+Use this skill when the user asks what they can learn from the code they just touched.
+
+## Workflow
+
+1. Prefer deterministic local evidence over generic explanation.
+2. If project memory may be stale, run:
+   \`\`\`bash
+   contextbook scan
+   \`\`\`
+3. Load the one-shot AI context bundle:
+   \`\`\`bash
+   contextbook memory context --json
+   \`\`\`
+4. Generate learning moments:
+   \`\`\`bash
+   contextbook learn
+   \`\`\`
+5. Preserve Contextbook's evidence level and evidence files. Do not invent project evidence.
+`;
+}
+
+function legacyCodexWhySkillContent(name) {
+  return `---
+name: ${name}
+description: Answer why a development or CS concept matters in this repository using Contextbook project evidence.
+---
+
+# Contextbook Why
+
+Use this skill when the user asks why a concept, pattern, or code behavior matters in this project.
+
+## Workflow
+
+1. Treat text after the skill name as the question. For example, in \`$why "cleanup 왜 해야 돼?"\`, \`cleanup 왜 해야 돼?\` is the question text, not a cleanup command.
+2. Prefer deterministic local evidence over generic explanation.
+3. Run:
+   \`\`\`bash
+   contextbook why "<question>"
+   \`\`\`
+4. Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files.
+5. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
+`;
+}
+
+async function seedDeprecatedAliases(homeDir, rootDir = '.codex') {
+  const codexLearn = join(homeDir, rootDir, 'skills', 'contextbook-learn', 'SKILL.md');
+  const codexWhy = join(homeDir, rootDir, 'skills', 'contextbook-why', 'SKILL.md');
+  await mkdir(join(homeDir, rootDir, 'skills', 'contextbook-learn'), { recursive: true });
+  await mkdir(join(homeDir, rootDir, 'skills', 'contextbook-why'), { recursive: true });
+  await writeFile(codexLearn, legacyCodexLearnSkillContent('contextbook-learn'), 'utf8');
+  await writeFile(codexWhy, legacyCodexWhySkillContent('contextbook-why'), 'utf8');
+}
+
+async function seedDeprecatedClaudeAliases(homeDir) {
+  await mkdir(join(homeDir, '.claude', 'commands'), { recursive: true });
+  await writeFile(join(homeDir, '.claude', 'commands', 'contextbook-learn.md'), legacyClaudeLearnCommandContent(), 'utf8');
+  await writeFile(join(homeDir, '.claude', 'commands', 'contextbook-why.md'), legacyClaudeWhyCommandContent(), 'utf8');
+}
+
 async function readJsonl(path) {
   const raw = await readFile(path, 'utf8');
   return raw.split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
@@ -1080,16 +1183,10 @@ try {
   const codexSkill = join(home, '.codex', 'skills', 'contextbook', 'SKILL.md');
   const codexLearnSkill = join(home, '.codex', 'skills', 'learn', 'SKILL.md');
   const codexWhySkill = join(home, '.codex', 'skills', 'why', 'SKILL.md');
-  const codexNamespacedLearnSkill = join(home, '.codex', 'skills', 'contextbook-learn', 'SKILL.md');
-  const codexNamespacedWhySkill = join(home, '.codex', 'skills', 'contextbook-why', 'SKILL.md');
   const codexLegacySkill = join(home, '.agents', 'skills', 'contextbook', 'SKILL.md');
   const codexLegacyLearnSkill = join(home, '.agents', 'skills', 'learn', 'SKILL.md');
   const codexLegacyWhySkill = join(home, '.agents', 'skills', 'why', 'SKILL.md');
-  const codexLegacyNamespacedLearnSkill = join(home, '.agents', 'skills', 'contextbook-learn', 'SKILL.md');
-  const codexLegacyNamespacedWhySkill = join(home, '.agents', 'skills', 'contextbook-why', 'SKILL.md');
   const claudeSkill = join(home, '.claude', 'skills', 'contextbook', 'SKILL.md');
-  const claudeLearn = join(home, '.claude', 'commands', 'contextbook-learn.md');
-  const claudeWhy = join(home, '.claude', 'commands', 'contextbook-why.md');
   const claudeShortLearn = join(home, '.claude', 'commands', 'learn.md');
   const claudeShortWhy = join(home, '.claude', 'commands', 'why.md');
   const codexHookScript = join(home, '.codex', 'hooks', 'contextbook-user-prompt-submit.js');
@@ -1131,7 +1228,8 @@ try {
   assert(setupDryRun.includes('.codex/hooks') && setupDryRun.includes('.claude/hooks') && setupDryRun.includes('safe preference automation'), 'setup dry-run did not preview default hook/safe preference setup');
   assert(setupDryRun.includes('.claude/commands/learn.md') && setupDryRun.includes('.claude/commands/why.md'), 'setup dry-run did not preview short Claude aliases');
   assert(setupDryRun.includes('.codex/skills/learn/SKILL.md') && setupDryRun.includes('.codex/skills/why/SKILL.md'), 'setup dry-run did not preview short Codex aliases');
-  assert(setupDryRun.includes('.codex/skills/contextbook-learn/SKILL.md') && setupDryRun.includes('.codex/skills/contextbook-why/SKILL.md'), 'setup dry-run did not preview Codex namespaced fallbacks');
+  assert(!setupDryRun.includes('.codex/skills/contextbook-learn/SKILL.md') && !setupDryRun.includes('.codex/skills/contextbook-why/SKILL.md'), 'setup dry-run should not preview Codex namespaced per-command fallbacks');
+  assert(!setupDryRun.includes('.claude/commands/contextbook-learn.md') && !setupDryRun.includes('.claude/commands/contextbook-why.md'), 'setup dry-run should not preview long Claude per-command aliases');
   const setupAutoDryRun = run(['setup', '--auto', '--dry-run']);
   assert(setupAutoDryRun.includes('auto/bootstrap') && setupAutoDryRun.includes('non-interactive') && setupAutoDryRun.includes('.codex/hooks'), 'setup --auto dry-run did not show bootstrap hook setup');
   assert(!existsSync(codexSkill) && !existsSync(claudeSkill), 'setup dry-run wrote files');
@@ -1168,13 +1266,9 @@ try {
     '.codex/skills/contextbook/SKILL.md',
     '.codex/skills/learn/SKILL.md',
     '.codex/skills/why/SKILL.md',
-    '.codex/skills/contextbook-learn/SKILL.md',
-    '.codex/skills/contextbook-why/SKILL.md',
     '.agents/skills/contextbook/SKILL.md',
     '.agents/skills/learn/SKILL.md',
     '.agents/skills/why/SKILL.md',
-    '.agents/skills/contextbook-learn/SKILL.md',
-    '.agents/skills/contextbook-why/SKILL.md'
   ]) {
     assert(codexBothDryRun.includes(fragment), `codex both dry-run missing ${fragment}`);
   }
@@ -1184,10 +1278,14 @@ try {
   assert(core.codexFiles(legacyAutoHome)[0].path.includes('.codex'), 'codex auto mode did not default to canonical .codex skills path');
   const claudeDryRun = run(['install', 'claude-code', '--dry-run']);
   assert(claudeDryRun.includes('would create'), 'claude dry-run did not preview create');
-  assert(!existsSync(claudeSkill) && !existsSync(claudeLearn) && !existsSync(claudeWhy) && !existsSync(claudeShortLearn) && !existsSync(claudeShortWhy), 'claude dry-run wrote files');
+  assert(!existsSync(claudeSkill) && !existsSync(claudeShortLearn) && !existsSync(claudeShortWhy), 'claude dry-run wrote files');
 
+  await seedDeprecatedAliases(home);
+  await seedDeprecatedAliases(home, '.agents');
+  await seedDeprecatedClaudeAliases(home);
   const setupInstall = run(['setup']);
   assert(setupInstall.includes('# Contextbook setup') && setupInstall.includes('created'), 'setup did not install helper files');
+  assert(setupInstall.includes('removed deprecated Contextbook alias'), 'setup should remove generated deprecated long aliases during upgrade');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook learn'), 'setup codex skill missing learn guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook project --json'), 'setup codex skill missing project json guidance');
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook learner --json'), 'setup codex skill missing learner json guidance');
@@ -1211,11 +1309,11 @@ try {
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'setup claude skill missing profile apply dry-run guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory apply-preference-signals --prompt'), 'setup claude skill missing preference apply dry-run guidance');
   assert(existsSync(codexLearnSkill) && existsSync(codexWhySkill), 'setup missing short Codex aliases');
-  assert(existsSync(codexNamespacedLearnSkill) && existsSync(codexNamespacedWhySkill), 'setup missing namespaced Codex fallback aliases');
   assert((await readFile(codexLearnSkill, 'utf8')).includes('Contextbook managed alias') && (await readFile(codexLearnSkill, 'utf8')).includes('contextbook learn'), 'codex learn alias missing marker or CLI guidance');
   assert((await readFile(codexWhySkill, 'utf8')).includes('Contextbook managed alias') && (await readFile(codexWhySkill, 'utf8')).includes('contextbook why "<question>"'), 'codex why alias missing marker or CLI guidance');
-  assert((await readFile(codexNamespacedLearnSkill, 'utf8')).includes('contextbook learn'), 'codex namespaced learn fallback missing CLI guidance');
-  assert((await readFile(codexNamespacedWhySkill, 'utf8')).includes('contextbook why'), 'codex namespaced why fallback missing CLI guidance');
+  assert(!existsSync(join(home, '.codex', 'skills', 'contextbook-learn', 'SKILL.md')) && !existsSync(join(home, '.codex', 'skills', 'contextbook-why', 'SKILL.md')), 'setup should not install Codex namespaced per-command fallbacks');
+  assert(!existsSync(join(home, '.agents', 'skills', 'contextbook-learn', 'SKILL.md')) && !existsSync(join(home, '.agents', 'skills', 'contextbook-why', 'SKILL.md')), 'setup should remove historical .agents namespaced per-command fallbacks');
+  assert(!existsSync(join(home, '.claude', 'commands', 'contextbook-learn.md')) && !existsSync(join(home, '.claude', 'commands', 'contextbook-why.md')), 'setup should not install long Claude per-command aliases');
   assert(existsSync(claudeShortLearn) && existsSync(claudeShortWhy), 'setup missing short Claude aliases');
   assert((await readFile(claudeShortLearn, 'utf8')).includes('Contextbook managed alias') && (await readFile(claudeShortLearn, 'utf8')).includes('contextbook learn'), 'claude short learn alias missing marker or CLI guidance');
   assert((await readFile(claudeShortWhy, 'utf8')).includes('Contextbook managed alias') && (await readFile(claudeShortWhy, 'utf8')).includes('$ARGUMENTS') && (await readFile(claudeShortWhy, 'utf8')).includes('contextbook why'), 'claude short why alias missing marker/arguments/CLI guidance');
@@ -1371,23 +1469,21 @@ HOME=${JSON.stringify(home)} USERPROFILE=${JSON.stringify(home)} ${JSON.stringif
   assert((await readFile(codexSkill, 'utf8')).includes('contextbook learn'), 'codex skill missing learn guidance');
   const codexInstallAgain = run(['install', 'codex']);
   assert(codexInstallAgain.includes('skipped identical'), 'codex reinstall did not skip identical file');
+  await seedDeprecatedAliases(home, '.agents');
   const codexLegacyInstall = run(['install', 'codex', '--codex-path', 'agents']);
   assert(codexLegacyInstall.includes('created'), 'codex explicit historical agents install did not create compatibility file');
+  assert(codexLegacyInstall.includes('removed deprecated Contextbook alias'), 'codex historical agents install should remove generated deprecated namespaced aliases');
   assert((await readFile(codexLegacySkill, 'utf8')).includes('contextbook learn'), 'codex legacy skill missing learn guidance');
   assert((await readFile(codexLegacyLearnSkill, 'utf8')).includes('contextbook learn'), 'codex legacy learn alias missing guidance');
   assert((await readFile(codexLegacyWhySkill, 'utf8')).includes('contextbook why'), 'codex legacy why alias missing guidance');
-  assert((await readFile(codexLegacyNamespacedLearnSkill, 'utf8')).includes('contextbook learn'), 'codex legacy namespaced learn alias missing guidance');
-  assert((await readFile(codexLegacyNamespacedWhySkill, 'utf8')).includes('contextbook why'), 'codex legacy namespaced why alias missing guidance');
 
   const claudeInstall = run(['install', 'claude-code']);
   assert(claudeInstall.includes('skipped identical'), 'claude install after setup did not skip identical files');
   assert(existsSync(claudeHookScript), 'claude install without --hooks should not remove existing hook file');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook why'), 'claude skill missing why guidance');
-  assert((await readFile(claudeLearn, 'utf8')).includes('contextbook learn'), 'claude learn command missing CLI guidance');
-  assert((await readFile(claudeLearn, 'utf8')).includes('contextbook memory context --json'), 'claude learn command missing memory context guidance');
-  assert((await readFile(claudeLearn, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'claude learn command missing profile apply dry-run guidance');
-  assert((await readFile(claudeWhy, 'utf8')).includes('$ARGUMENTS'), 'claude why command missing argument placeholder');
   assert((await readFile(claudeShortLearn, 'utf8')).includes('contextbook learn'), 'claude short learn command missing CLI guidance');
+  assert((await readFile(claudeShortLearn, 'utf8')).includes('contextbook memory context --json'), 'claude short learn command missing memory context guidance');
+  assert((await readFile(claudeShortLearn, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'claude short learn command missing profile apply dry-run guidance');
   assert((await readFile(claudeShortWhy, 'utf8')).includes('$ARGUMENTS'), 'claude short why command missing argument placeholder');
 
   await writeFile(codexHookGuide, 'custom codex hook guide\n', 'utf8');
@@ -1406,11 +1502,16 @@ HOME=${JSON.stringify(home)} USERPROFILE=${JSON.stringify(home)} ${JSON.stringif
   const claudeMarkerCollision = run(['install', 'claude-code']);
   assert(claudeMarkerCollision.includes('skipped existing unmanaged file') && (await readFile(claudeShortWhy, 'utf8')) === 'custom user why command mentioning Contextbook managed alias as prose\n', 'claude short alias false-positive marker prose should skip without overwrite');
 
-  await writeFile(claudeWhy, 'custom user command\n', 'utf8');
-  const claudeUpdate = run(['install', 'claude-code']);
-  assert(claudeUpdate.includes('updated with backup'), 'claude changed file was not backed up before update');
-  const commandDirEntries = await readdir(join(home, '.claude', 'commands'));
-  assert(commandDirEntries.some((entry) => entry.startsWith('contextbook-why.md.bak-')), 'backup file missing for changed claude command');
+  await mkdir(join(home, '.codex', 'skills', 'contextbook-why'), { recursive: true });
+  await writeFile(join(home, '.codex', 'skills', 'contextbook-why', 'SKILL.md'), 'custom user long alias\n', 'utf8');
+  const unmanagedDeprecatedAlias = run(['install', 'codex']);
+  assert(unmanagedDeprecatedAlias.includes('kept unmanaged deprecated alias') && (await readFile(join(home, '.codex', 'skills', 'contextbook-why', 'SKILL.md'), 'utf8')) === 'custom user long alias\n', 'unmanaged deprecated long alias should be preserved');
+
+  await writeFile(codexWhySkill, '<!-- Contextbook managed alias: why -->\ncustom managed why skill\n', 'utf8');
+  const codexManagedAliasUpdate = run(['install', 'codex']);
+  assert(codexManagedAliasUpdate.includes('updated with backup'), 'managed codex short alias was not backed up before update');
+  const codexWhyAliasEntries = await readdir(join(home, '.codex', 'skills', 'why'));
+  assert(codexWhyAliasEntries.some((entry) => entry.startsWith('SKILL.md.bak-')), 'backup file missing for managed codex short alias');
 
   const pack = spawnSync('npm', ['pack', '--dry-run'], { cwd: repoRoot, encoding: 'utf8' });
   if (pack.status !== 0) {

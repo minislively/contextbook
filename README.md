@@ -101,8 +101,6 @@ Codex/OMX:
 ~/.codex/skills/contextbook/SKILL.md
 ~/.codex/skills/learn/SKILL.md
 ~/.codex/skills/why/SKILL.md
-~/.codex/skills/contextbook-learn/SKILL.md
-~/.codex/skills/contextbook-why/SKILL.md
 ~/.codex/hooks/contextbook-user-prompt-submit.js
 ~/.codex/hooks/contextbook-user-prompt-submit.md
 
@@ -110,22 +108,20 @@ Claude Code:
 ~/.claude/skills/contextbook/SKILL.md
 ~/.claude/commands/learn.md
 ~/.claude/commands/why.md
-~/.claude/commands/contextbook-learn.md
-~/.claude/commands/contextbook-why.md
 ~/.claude/hooks/contextbook-user-prompt-submit.js
 ~/.claude/hooks/contextbook-user-prompt-submit.md
 ```
 
 Agent command shortcuts after setup:
 
-| Environment | Learning moments | Concept question | Fallbacks |
+| Environment | Learning moments | Concept question | General runbook |
 | --- | --- | --- | --- |
-| Claude Code | `/learn` | `/why "cleanup 왜 해야 돼?"` | `/contextbook-learn`, `/contextbook-why` |
-| Codex/OMX | `$learn` | `$why "cleanup 왜 해야 돼?"` | `$contextbook`, `$contextbook-learn`, `$contextbook-why` |
+| Claude Code | `/learn` | `/why "cleanup 왜 해야 돼?"` | Contextbook skill |
+| Codex/OMX | `$learn` | `$why "cleanup 왜 해야 돼?"` | `$contextbook` |
 
 In these examples, `cleanup 왜 해야 돼?` is just the question text. It is not a cleanup command. Replace it with any concept or question, such as `SSE`, `stale closure`, or `Zustand 상태관리 왜 써?`.
 
-Short aliases (`learn`, `why`) are conservative: if Contextbook finds an unrelated existing user command/skill with that name, setup skips the short alias instead of overwriting it and still installs the namespaced fallbacks.
+Short aliases (`learn`, `why`) are conservative: if Contextbook finds an unrelated existing user command/skill with that name, setup skips that short alias instead of overwriting it. Resolve the collision and rerun setup/install, or use the general Contextbook skill/runbook where available. During upgrades, setup removes only exact historical Contextbook-generated `contextbook-learn` / `contextbook-why` aliases; user-modified files are preserved.
 
 If you want to preview the writes first or run a bootstrap/non-interactive setup:
 

@@ -1,5 +1,5 @@
 export type InstallTarget = 'codex' | 'claude-code';
-export type InstallActionStatus = 'create' | 'update-with-backup' | 'skip-identical' | 'skip-unmanaged-existing' | 'dry-run-create' | 'dry-run-update-with-backup';
+export type InstallActionStatus = 'create' | 'update-with-backup' | 'skip-identical' | 'skip-unmanaged-existing' | 'remove-deprecated' | 'skip-deprecated-unmanaged' | 'dry-run-create' | 'dry-run-update-with-backup' | 'dry-run-remove-deprecated';
 
 export type CodexSkillPathMode = 'auto' | 'agents' | 'codex' | 'both';
 
@@ -23,6 +23,16 @@ export interface InstallFile {
    * to avoid replacing unrelated user-owned aliases.
    */
   managedMarkers?: string[];
+}
+
+export interface DeprecatedInstallFile {
+  path: string;
+  description: string;
+  /**
+   * Historical generated file bodies that Contextbook may remove during
+   * migration. Divergent files are preserved as unmanaged user files.
+   */
+  removeIfContentMatches: string[];
 }
 
 export interface InstallAction {
