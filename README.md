@@ -247,8 +247,8 @@ contextbook memory suggest-weak-terms --json
 contextbook memory suggest-profile-updates --json
 contextbook memory apply-profile-update --candidate <id|index> --dry-run
 contextbook memory apply-profile-update --candidate <id|index> --dry-run --json
-contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --dry-run
-contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --dry-run --json
+contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --mode auto-safe --dry-run
+contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --mode auto-safe --dry-run --json
 contextbook memory preference-history --json
 contextbook memory undo-preference-update --entry 1 --dry-run --json
 contextbook memory context --json
@@ -267,7 +267,7 @@ contextbook memory restore --backup-id <id> --yes --json
 
 Memory signals are append-only learning events for explicit feedback such as confusion, positive feedback, format requests, or analogy fit. They do not update your profile or weak terms automatically. `contextbook memory capture-prompt` is the hook-ready deterministic version: it classifies only explicit learning-feedback phrases from a prompt, stores sanitized signal notes, and does not persist the raw prompt. Its JSON output also includes read-only `preferenceSignals` / `preferenceSignalCounts`, so mixed prompts can be split into safe atomic labels such as `explanation.order=project-first`, `language=ko`, or `command.volume=fewer-commands` without mutating `preferences.json`.
 
-Preference signals also expose an intent/scope/risk/policy contract for agents. A detected slot is not automatically treated as durable memory: task-local or uncertain prompts stay `observe-only`, hook capture stays non-mutating, and explicit `apply-preference-signals` is the only path that marks allowlisted preferences as `apply-eligible`. Phrase markers are weak evidence, not the write rule; Contextbook records evidence codes instead of storing the raw prompt.
+Preference signals also expose an intent/scope/risk/policy contract for agents. A detected slot is not automatically treated as durable memory: task-local or uncertain prompts stay `observe-only`, hook capture stays non-mutating, and explicit `apply-preference-signals --mode auto-safe` is the only path that marks allowlisted preferences as `apply-eligible` and policy-approved for durable writes. Phrase markers are weak evidence, not the write rule; Contextbook records evidence codes instead of storing the raw prompt.
 
 For agent integrations, `contextbook setup --hooks` installs platform-specific `UserPromptSubmit` helper scripts that call `capture-prompt` locally. The hook scripts are non-blocking and config activation remains manual/snippet-based so existing user hooks are not overwritten.
 
@@ -275,7 +275,7 @@ For agent integrations, `contextbook setup --hooks` installs platform-specific `
 
 When you explicitly accept a supported profile candidate, preview first with `contextbook memory apply-profile-update --candidate <id|index> --dry-run`. Applying without `--dry-run` is narrow by design: it can update `preferences.json`, creates a timestamped `preferences.json.bak-*`, and appends an audit event to `profile-updates.jsonl`; it does not mutate `profile.md`, `weak-terms.json`, Project Memory, or raw signal logs.
 
-For one-off explicit preferences from a prompt, preview first with `contextbook memory apply-preference-signals --prompt "<text>" --dry-run`. Applying without `--dry-run` only writes allowlisted safe preferences such as language, project-first order, short output, interview sentence, or fewer commands. It creates a `preferences.json.bak-*` backup and appends an audit event without storing the raw prompt. Hook auto-apply is intentionally not enabled by default.
+For one-off explicit preferences from a prompt, preview first with `contextbook memory apply-preference-signals --prompt "<text>" --mode auto-safe --dry-run`. Applying without `--dry-run` only writes allowlisted safe preferences such as language, project-first order, short output, interview sentence, or fewer commands. It creates a `preferences.json.bak-*` backup and appends an audit event without storing the raw prompt. Policy decisions are returned as `auto_apply`, `suggest`, or `reject`; hook auto-apply is intentionally not enabled by default.
 
 Preference updates are recoverable. Use `contextbook memory preference-history` to inspect audited preference snapshots and `contextbook memory undo-preference-update --entry <id|index> --dry-run` before restoring with `--yes`. Undo restores `preferences.json` from a backup snapshot, creates a fresh backup of the current state, and appends an audit event; it does not touch raw prompts, `profile.md`, weak terms, Project Memory, or signal logs.
 
@@ -415,7 +415,7 @@ contextbook memory signals --json
 contextbook memory suggest-weak-terms --json
 contextbook memory suggest-profile-updates --json
 contextbook memory apply-profile-update --candidate <id|index> --dry-run
-contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --dry-run
+contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --mode auto-safe --dry-run
 ```
 
 The helper files only teach the agent how to use Contextbook. They do not call external APIs, launch agent sessions, or require API keys.
@@ -468,8 +468,8 @@ contextbook memory suggest-profile-updates     # inspect profile update candidat
 contextbook memory suggest-profile-updates --json
 contextbook memory apply-profile-update --candidate <id|index> --dry-run
 contextbook memory apply-profile-update --candidate <id|index> --dry-run --json
-contextbook memory apply-preference-signals --prompt <text> --dry-run
-contextbook memory apply-preference-signals --prompt <text> --dry-run --json
+contextbook memory apply-preference-signals --prompt <text> --mode auto-safe --dry-run
+contextbook memory apply-preference-signals --prompt <text> --mode auto-safe --dry-run --json
 contextbook memory preference-history [--json]
 contextbook memory undo-preference-update --entry <id|index> --dry-run [--json]
 contextbook memory undo-preference-update --entry <id|index> --yes [--json]

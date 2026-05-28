@@ -1,6 +1,7 @@
 import { copyFile, writeFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { createConversationEvent } from './conversation-memory.js';
+import { evaluatePreferencePolicies, evaluatePreferencePolicy } from './preference-policy.js';
 import { classifyPreferenceSignals, preferenceSignalCounts } from './preference-signals.js';
 import { ensureLearnerStore, learnerPaths, readPreferences, recordProfileUpdate } from '../storage/user-store.js';
 import type {
@@ -9,6 +10,8 @@ import type {
   ApplyPreferenceSignalsSafety,
   ConversationMemoryEvent,
   LearnerPreferences,
+  PreferencePolicyDecision,
+  PreferencePolicyMode,
   PreferenceSignalCandidate,
   PromptCaptureSource
 } from '../types.js';
@@ -18,11 +21,13 @@ export interface ApplyPreferenceSignalsOptions {
   source?: PromptCaptureSource;
   learner?: string;
   dryRun?: boolean;
+  mode?: PreferencePolicyMode;
 }
 
 interface ApplyPreferenceSignalsPlan {
   nextPreferences: LearnerPreferences;
   changes: ApplyPreferenceSignalChange[];
+  policyDecisions: PreferencePolicyDecision[];
   shouldWrite: boolean;
 }
 
@@ -37,11 +42,12 @@ export async function applyPreferenceSignals(options: ApplyPreferenceSignalsOpti
   const learner = options.learner ?? 'default';
   const source = options.source ?? 'manual';
   const dryRun = options.dryRun ?? false;
+  const mode = options.mode ?? 'auto-safe';
   await ensureLearnerStore(learner);
 
-  const preferenceSignals = classifyPreferenceSignals(options.prompt, source, { explicitApplyCommand: true });
+  const preferenceSignals = classifyPreferenceSignals(options.prompt, source, { explicitApplyCommand: mode === 'auto-safe' });
   const preferences = await readPreferences(learner);
-  const plan = planPreferenceSignals(preferenceSignals, preferences);
+  const plan = planPreferenceSignals(preferenceSignals, preferences, mode);
   const applied = !dryRun && plan.shouldWrite;
   let auditEvent: ConversationMemoryEvent | undefined;
   let backupCreated: string | undefined;
@@ -74,8 +80,10 @@ export async function applyPreferenceSignals(options: ApplyPreferenceSignalsOpti
     learner,
     source,
     dryRun,
+    mode,
     applied,
     preferenceSignals,
+    policyDecisions: plan.policyDecisions,
     changes: plan.changes,
     auditEvent,
     backupCreated: backupCreated ? basename(backupCreated) : undefined,
@@ -92,12 +100,16 @@ export function formatApplyPreferenceSignalsSummary(result: ApplyPreferenceSigna
     `- learner: ${result.learner}`,
     `- source: ${result.source}`,
     `- dry run: ${result.dryRun}`,
+    `- mode: ${result.mode}`,
     `- applied: ${result.applied}`,
     `- audit: ${result.auditEvent?.signalType ?? 'none'}`,
     result.backupCreated ? `- backup: ${result.backupCreated}` : '- backup: none',
     '',
     '## Preference Signals',
     signals,
+    '',
+    '## Policy Decisions',
+    formatPolicyDecisions(result.policyDecisions),
     '',
     '## Changes',
     changes,
@@ -112,16 +124,17 @@ export function formatApplyPreferenceSignalsSummary(result: ApplyPreferenceSigna
   ].join('\n');
 }
 
-export function planPreferenceSignals(signals: PreferenceSignalCandidate[], preferences: LearnerPreferences): ApplyPreferenceSignalsPlan {
+export function planPreferenceSignals(signals: PreferenceSignalCandidate[], preferences: LearnerPreferences, mode: PreferencePolicyMode = 'auto-safe'): ApplyPreferenceSignalsPlan {
   let nextPreferences: LearnerPreferences = {
     ...preferences,
     explanationOrder: sanitizeStringArray(preferences.explanationOrder),
     avoid: sanitizeStringArray(preferences.avoid)
   };
   const changes: ApplyPreferenceSignalChange[] = [];
+  const policyDecisions = evaluatePreferencePolicies(signals, { mode });
 
   for (const signal of signals) {
-    const result = planPreferenceSignal(signal, nextPreferences);
+    const result = planPreferenceSignal(signal, nextPreferences, mode);
     nextPreferences = result.nextPreferences;
     changes.push(result.change);
   }
@@ -129,13 +142,15 @@ export function planPreferenceSignals(signals: PreferenceSignalCandidate[], pref
   return {
     nextPreferences,
     changes,
+    policyDecisions,
     shouldWrite: changes.some((change) => WRITE_OPERATIONS.has(change.operation))
   };
 }
 
-function planPreferenceSignal(signal: PreferenceSignalCandidate, preferences: LearnerPreferences): { nextPreferences: LearnerPreferences; change: ApplyPreferenceSignalChange } {
-  if (signal.route !== 'auto-apply-safe') {
-    return skipped(preferences, signal, 'skip-unsafe-route', `${signal.dimension}=${signal.value} is not auto-apply safe, so it was not written.`);
+function planPreferenceSignal(signal: PreferenceSignalCandidate, preferences: LearnerPreferences, mode: PreferencePolicyMode): { nextPreferences: LearnerPreferences; change: ApplyPreferenceSignalChange } {
+  const policyDecision = evaluatePreferencePolicy(signal, { mode });
+  if (policyDecision.decision !== 'auto_apply') {
+    return skipped(preferences, signal, 'skip-unsafe-route', `${signal.dimension}=${signal.value} was not written: ${policyDecision.reasonCode}.`);
   }
 
   if (signal.dimension === 'language' && (signal.value === 'ko' || signal.value === 'en')) {
@@ -232,6 +247,10 @@ function change(signal: PreferenceSignalCandidate, operation: ApplyPreferenceSig
       route: signal.route
     }
   };
+}
+
+function formatPolicyDecisions(decisions: PreferencePolicyDecision[]): string {
+  return decisions.map((decision) => `- ${decision.dimension}=${decision.value}: ${decision.decision} (${decision.reasonCode}) — ${decision.message}`).join('\n') || '- none';
 }
 
 function sanitizeStringArray(values: string[] = []): string[] {

@@ -12,6 +12,7 @@ import { capturePromptSignals, formatHookSuggestSummary, formatPromptCaptureSumm
 import { formatProfileUpdateCandidatesSummary, profileUpdateCandidatesJson } from '../learner/profile-update-candidates.js';
 import { formatPreferenceHistorySummary, formatUndoPreferenceUpdateSummary, preferenceHistoryJson, undoPreferenceUpdate } from '../learner/preference-history.js';
 import { formatWeakTermSuggestionsSummary, weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
+import type { PreferencePolicyMode } from '../types.js';
 
 export async function memoryCommand(args: string[] = []): Promise<void> {
   const [subcommand, ...rest] = args;
@@ -85,7 +86,7 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
     }
     case 'apply-preference-signals': {
       const input = parseApplyPreferenceSignals(rest);
-      const result = await applyPreferenceSignals({ learner: 'default', prompt: input.prompt, source: input.source, dryRun: input.dryRun });
+      const result = await applyPreferenceSignals({ learner: 'default', prompt: input.prompt, source: input.source, dryRun: input.dryRun, mode: input.mode });
       if (input.json) {
         console.log(JSON.stringify(result, null, 2));
         return;
@@ -265,12 +266,13 @@ function parseHookSuggest(args: string[]): { prompt: string; source: 'manual' | 
   };
 }
 
-function parseApplyPreferenceSignals(args: string[]): { prompt: string; source: 'manual' | 'codex' | 'claude-code'; dryRun: boolean; json: boolean } {
+function parseApplyPreferenceSignals(args: string[]): { prompt: string; source: 'manual' | 'codex' | 'claude-code'; dryRun: boolean; json: boolean; mode: PreferencePolicyMode } {
   let prompt: string | undefined;
   let source: 'manual' | 'codex' | 'claude-code' = 'manual';
   let dryRun = false;
   let json = false;
-  const usage = 'Usage: contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--dry-run] [--json]';
+  let mode: PreferencePolicyMode = 'auto-safe';
+  const usage = 'Usage: contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--mode manual|suggest|auto-safe] [--dry-run] [--json]';
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === '--dry-run') {
@@ -293,6 +295,19 @@ function parseApplyPreferenceSignals(args: string[]): { prompt: string; source: 
       if (!prompt) throw new Error(usage);
       continue;
     }
+    if (arg === '--mode') {
+      const value = args[index + 1];
+      if (!value || !isPreferencePolicyMode(value)) throw new Error(usage);
+      mode = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--mode=')) {
+      const value = arg.slice('--mode='.length);
+      if (!isPreferencePolicyMode(value)) throw new Error(usage);
+      mode = value;
+      continue;
+    }
     if (arg === '--source') {
       const value = args[index + 1];
       if (!value || !isPromptCaptureSource(value)) throw new Error(usage);
@@ -309,7 +324,11 @@ function parseApplyPreferenceSignals(args: string[]): { prompt: string; source: 
     throw new Error(usage);
   }
   if (!prompt) throw new Error(usage);
-  return { prompt, source, dryRun, json };
+  return { prompt, source, dryRun, json, mode };
+}
+
+function isPreferencePolicyMode(value: string): value is PreferencePolicyMode {
+  return value === 'manual' || value === 'suggest' || value === 'auto-safe';
 }
 
 
@@ -553,7 +572,7 @@ function memoryUsage(): string {
     '  contextbook memory suggest-weak-terms [--json]',
     '  contextbook memory suggest-profile-updates [--json]',
     '  contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]',
-    '  contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--dry-run] [--json]',
+    '  contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--mode manual|suggest|auto-safe] [--dry-run] [--json]',
     '  contextbook memory preference-history [--json]',
     '  contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]',
     '  contextbook memory context [--json]',
