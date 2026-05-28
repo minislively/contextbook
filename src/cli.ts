@@ -23,7 +23,7 @@ Usage:
   contextbook learner [--json]
   contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]
   contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]
-  contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]
+  contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--mode suggest|auto-safe] [--include-memory-context] [--json]
   contextbook memory signals [--json]
   contextbook memory suggest-weak-terms [--json]
   contextbook memory suggest-profile-updates [--json]
@@ -44,12 +44,12 @@ Usage:
   contextbook profile diff
   contextbook profile edit
   contextbook profile reset
-  contextbook setup [--dry-run] [--hooks]
+  contextbook setup [--dry-run] [--auto]
   contextbook hooks status [--json]
   contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]
-  contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]
-  contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]
-  contextbook install claude-code [--dry-run] [--hooks]
+  contextbook install all [--dry-run] [--hooks] [--auto] [--codex-path auto|agents|codex|both]
+  contextbook install codex [--dry-run] [--hooks] [--auto] [--codex-path auto|agents|codex|both]
+  contextbook install claude-code [--dry-run] [--hooks] [--auto]
 `;
 }
 async function main(argv: string[]): Promise<void> {

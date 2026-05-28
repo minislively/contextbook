@@ -50,6 +50,8 @@ export function formatHooksSmokeMarkdown(result: HooksSmokeJson): string {
     if (platform.ran) lines.push(`- exit code: ${platform.exitCode ?? 'unknown'}`);
     lines.push(`- output kind: ${platform.outputKind}`);
     lines.push(`- additional context detected: ${platform.additionalContextDetected}`);
+    lines.push(`- auto-safe preference section detected: ${platform.autoSafePreferenceSectionDetected}`);
+    lines.push(`- would apply preferences: ${platform.wouldApplyPreferences}`);
     lines.push(`- raw prompt detected in output: ${platform.rawPromptDetected}`);
     if (platform.message) lines.push(`- message: ${platform.message}`);
     if (platform.stdoutPreview) {
@@ -76,8 +78,10 @@ function smokePlatform(id: PlatformId, prompt: string): HookSmokePlatformResult 
       stderrPreview: '',
       outputKind: 'none',
       additionalContextDetected: false,
+      autoSafePreferenceSectionDetected: false,
+      wouldApplyPreferences: false,
       rawPromptDetected: false,
-      message: 'helper script is missing; run contextbook setup --hooks first'
+      message: 'helper script is missing; run contextbook setup first'
     };
   }
 
@@ -90,6 +94,7 @@ function smokePlatform(id: PlatformId, prompt: string): HookSmokePlatformResult 
   const stdout = result.stdout ?? '';
   const stderr = result.stderr ?? '';
   const outputKind = classifyOutput(stdout);
+  const additionalContext = extractAdditionalContext(stdout);
   return {
     id,
     helper,
@@ -99,9 +104,23 @@ function smokePlatform(id: PlatformId, prompt: string): HookSmokePlatformResult 
     stderrPreview: truncate(stderr.trim()),
     outputKind,
     additionalContextDetected: outputKind === 'plain-context' || outputKind === 'json-additional-context',
+    autoSafePreferenceSectionDetected: additionalContext.includes('## Auto-safe Preference Update'),
+    wouldApplyPreferences: /- would apply: true/.test(additionalContext),
     rawPromptDetected: prompt.trim().length > 0 && (`${stdout}\n${stderr}`).includes(prompt),
     ...(result.error ? { message: result.error.message } : {})
   };
+}
+
+function extractAdditionalContext(stdout: string): string {
+  const trimmed = stdout.trim();
+  if (!trimmed) return '';
+  try {
+    const parsed = JSON.parse(trimmed);
+    const context = parsed?.hookSpecificOutput?.additionalContext;
+    return typeof context === 'string' ? context : '';
+  } catch {
+    return trimmed;
+  }
 }
 
 function classifyOutput(stdout: string): HookSmokePlatformResult['outputKind'] {

@@ -59,7 +59,7 @@ export function smokeHelper(helperPath: string | undefined, source: PromptCaptur
   if (!helperPath) return { helperSmoke: 'missing' };
 
   const helperText = readFileSync(helperPath, 'utf8');
-  if (helperText !== promptCaptureHookScript(source)) {
+  if (helperText !== promptCaptureHookScript(source) && helperText !== promptCaptureHookScript(source, { autoSafePreferences: true })) {
     return { helperSmoke: 'skipped', message: 'helper content differs from the generated Contextbook script' };
   }
 

@@ -78,12 +78,12 @@ async function readJson(path) {
 
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook doctor', 'contextbook doctor --json', 'contextbook setup --hooks --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook hooks smoke', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory hook-suggest', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory preference-history', 'contextbook memory undo-preference-update', 'contextbook memory context --json', 'contextbook memory recover', 'contextbook memory recover --json', 'contextbook memory recover --safe', 'contextbook memory recover --safe --json', 'contextbook memory validate', 'contextbook memory validate --json', 'contextbook memory repair --dry-run', 'contextbook memory repair --dry-run --json', 'contextbook memory repair --yes', 'contextbook memory repair --yes --json', 'contextbook memory rebuild --dry-run', 'contextbook memory rebuild --dry-run --json', 'contextbook memory rebuild --yes', 'contextbook memory rebuild --yes --json', 'contextbook memory backup --dry-run', 'contextbook memory backup --dry-run --json', 'contextbook memory backup --yes', 'contextbook memory backup --yes --json', 'contextbook memory restore --backup-id <id> --dry-run', 'contextbook memory restore --backup-id <id> --dry-run --json', 'contextbook memory restore --backup-id <id> --yes', 'contextbook memory restore --backup-id <id> --yes --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook doctor', 'contextbook doctor --json', 'contextbook setup --auto --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook hooks smoke', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory hook-suggest', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory preference-history', 'contextbook memory undo-preference-update', 'contextbook memory context --json', 'contextbook memory recover', 'contextbook memory recover --json', 'contextbook memory recover --safe', 'contextbook memory recover --safe --json', 'contextbook memory validate', 'contextbook memory validate --json', 'contextbook memory repair --dry-run', 'contextbook memory repair --dry-run --json', 'contextbook memory repair --yes', 'contextbook memory repair --yes --json', 'contextbook memory rebuild --dry-run', 'contextbook memory rebuild --dry-run --json', 'contextbook memory rebuild --yes', 'contextbook memory rebuild --yes --json', 'contextbook memory backup --dry-run', 'contextbook memory backup --dry-run --json', 'contextbook memory backup --yes', 'contextbook memory backup --yes --json', 'contextbook memory restore --backup-id <id> --dry-run', 'contextbook memory restore --backup-id <id> --dry-run --json', 'contextbook memory restore --backup-id <id> --yes', 'contextbook memory restore --backup-id <id> --yes --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run', 'contextbook install codex --hooks --dry-run', 'contextbook install claude-code --hooks --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook doctor [--json]', 'contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--mode manual|suggest|auto-safe] [--dry-run] [--json]', 'contextbook memory preference-history [--json]', 'contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]', 'contextbook memory context [--json]', 'contextbook memory recover [--safe] [--json]', 'contextbook memory validate [--json]', 'contextbook memory repair (--dry-run|--yes) [--json]', 'contextbook memory rebuild (--dry-run|--yes) [--json]', 'contextbook memory backup (--dry-run|--yes) [--json]', 'contextbook memory restore --backup-id <id> (--dry-run|--yes) [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--hooks]', 'contextbook hooks status [--json]', 'contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]', 'contextbook install all [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks]']) {
+  for (const text of ['contextbook doctor [--json]', 'contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--mode suggest|auto-safe] [--include-memory-context] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--mode manual|suggest|auto-safe] [--dry-run] [--json]', 'contextbook memory preference-history [--json]', 'contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]', 'contextbook memory context [--json]', 'contextbook memory recover [--safe] [--json]', 'contextbook memory validate [--json]', 'contextbook memory repair (--dry-run|--yes) [--json]', 'contextbook memory rebuild (--dry-run|--yes) [--json]', 'contextbook memory backup (--dry-run|--yes) [--json]', 'contextbook memory restore --backup-id <id> (--dry-run|--yes) [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--auto]', 'contextbook hooks status [--json]', 'contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]', 'contextbook install all [--dry-run] [--hooks] [--auto] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--auto] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks] [--auto]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -1093,14 +1093,14 @@ try {
   assert(doctorAfterScan.project.status === 'scanned' && doctorAfterScan.project.counts.concepts > 0, 'doctor after scan should report scanned project memory');
   assert(doctorAfterScan.learner.status === 'ready' && doctorAfterScan.learner.files.some((file) => file.name === 'signals'), 'doctor after scan should report learner memory files');
   assert(doctorAfterScan.hooks.status === 'missing', 'doctor before hook setup should report missing hooks');
-  assert(doctorAfterScan.nextActions.some((action) => action.command === 'contextbook setup --hooks'), 'doctor should recommend hook setup before helpers exist');
+  assert(doctorAfterScan.nextActions.some((action) => action.command === 'contextbook setup'), 'doctor should recommend hook setup before helpers exist');
   assert((await readFile(join(learnerDir, 'signals.jsonl'), 'utf8')) === signalsBeforeDoctor, 'doctor should not mutate learner signals');
   assert((await readFile(join(root, '.contextbook', 'project', 'evidence.jsonl'), 'utf8')) === evidenceBeforeDoctor, 'doctor should not mutate project evidence');
 
   const hooksStatusBefore = run(['hooks', 'status']);
   assert(hooksStatusBefore.includes('# Contextbook Hooks Status'), 'hooks status missing heading');
   assert(hooksStatusBefore.includes('helper script: missing'), 'hooks status before setup should show missing helpers');
-  assert(hooksStatusBefore.includes('contextbook setup --hooks'), 'hooks status before setup missing setup action');
+  assert(hooksStatusBefore.includes('contextbook setup'), 'hooks status before setup missing setup action');
   const hooksStatusJsonBefore = JSON.parse(run(['hooks', 'status', '--json']));
   assert(hooksStatusJsonBefore.schemaVersion === 1, 'hooks status json missing schema version');
   assert(hooksStatusJsonBefore.safety.readOnly === true && hooksStatusJsonBefore.safety.configMutated === false, 'hooks status safety flags invalid');
@@ -1115,6 +1115,9 @@ try {
   assert(setupDryRun.includes('# Contextbook setup (dry run)'), 'setup dry-run did not show setup heading');
   assert(setupDryRun.includes('# Contextbook codex install (dry run)') && setupDryRun.includes('# Contextbook claude-code install (dry run)'), 'setup dry-run did not preview both adapters');
   assert(setupDryRun.includes('.codex') && setupDryRun.includes('.claude'), 'setup dry-run did not show codex and claude target paths');
+  assert(setupDryRun.includes('.codex/hooks') && setupDryRun.includes('.claude/hooks') && setupDryRun.includes('safe preference automation'), 'setup dry-run did not preview default hook/safe preference setup');
+  const setupAutoDryRun = run(['setup', '--auto', '--dry-run']);
+  assert(setupAutoDryRun.includes('auto/bootstrap') && setupAutoDryRun.includes('non-interactive') && setupAutoDryRun.includes('.codex/hooks'), 'setup --auto dry-run did not show bootstrap hook setup');
   assert(!existsSync(codexSkill) && !existsSync(claudeSkill), 'setup dry-run wrote files');
   assert(!existsSync(codexHookScript) && !existsSync(claudeHookScript), 'setup dry-run wrote hook files');
 
@@ -1177,10 +1180,10 @@ try {
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory suggest-profile-updates --json'), 'setup claude skill missing profile suggestion guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory apply-profile-update --candidate <id|index> --dry-run'), 'setup claude skill missing profile apply dry-run guidance');
   assert((await readFile(claudeSkill, 'utf8')).includes('contextbook memory apply-preference-signals --prompt'), 'setup claude skill missing preference apply dry-run guidance');
-  assert(!existsSync(codexHookScript) && !existsSync(claudeHookScript), 'default setup installed hook files without --hooks');
+  assert(existsSync(codexHookScript) && existsSync(claudeHookScript), 'default setup should install hook files');
 
   const setupHooksInstall = run(['setup', '--hooks']);
-  assert(setupHooksInstall.includes('created') && setupHooksInstall.includes('Hook helpers are opt-in'), 'setup --hooks did not install hook helpers');
+  assert(setupHooksInstall.includes('skipped identical') && setupHooksInstall.includes('included by default'), 'setup --hooks compatibility path did not reinstall/skip hook helpers');
   const codexHookScriptText = await readFile(codexHookScript, 'utf8');
   const codexHookGuideText = await readFile(codexHookGuide, 'utf8');
   const claudeHookScriptText = await readFile(claudeHookScript, 'utf8');
@@ -1189,6 +1192,7 @@ try {
     assert(text.includes('spawnSync') && text.includes('memory') && text.includes('hook-suggest'), `${label} hook script missing hook-suggest spawn`);
     assert(text.includes(`'${source}'`), `${label} hook script missing source`);
     assert(text.includes('additionalContext'), `${label} hook script missing suggestion bridge output`);
+    assert(text.includes('AUTO_SAFE_PREFERENCES = true') && text.includes('auto-safe') && text.includes('apply-preference-signals'), `${label} setup hook script missing auto-safe preference bridge`);
     assert(text.includes('CONTEXTBOOK_HOOK_SMOKE') && text.includes('--no-capture'), `${label} hook script missing smoke no-capture guard`);
     assert(!text.includes('transcript_path'), `${label} hook script should not parse transcript path`);
   }
@@ -1269,6 +1273,8 @@ HOME=${JSON.stringify(home)} USERPROFILE=${JSON.stringify(home)} ${JSON.stringif
   assert(smokeCodex.rawPromptDetected === false && smokeClaude.rawPromptDetected === false, 'hooks smoke should not expose raw prompt in helper output');
   const hooksSmokeCodexOnly = JSON.parse(run(['hooks', 'smoke', '--prompt', 'cleanup 왜 해야 돼?', '--platform', 'codex', '--json'], { env: { ...hookEnv, EDITOR: '' } }));
   assert(hooksSmokeCodexOnly.platform === 'codex' && hooksSmokeCodexOnly.platforms.length === 1 && hooksSmokeCodexOnly.platforms[0].id === 'codex', 'hooks smoke platform filter failed');
+  const hooksSmokePreference = JSON.parse(run(['hooks', 'smoke', '--prompt', '앞으로 한국어로 짧게 설명해줘', '--json'], { env: { ...hookEnv, EDITOR: '' } }));
+  assert(hooksSmokePreference.safety.preferencesMutated === false && hooksSmokePreference.platforms.every((platform) => platform.autoSafePreferenceSectionDetected === true && platform.wouldApplyPreferences === true), 'hooks smoke should preview auto-safe preference updates without mutating preferences');
   const signalsAfterHooksSmoke = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
   assert(signalsAfterHooksSmoke === signalsBeforeHooksSmoke, 'hooks smoke should not mutate conversation memory even for feedback-like prompts');
   const codexHookNoSignalRun = spawnSync(process.execPath, [codexHookScript], {
@@ -1285,6 +1291,7 @@ HOME=${JSON.stringify(home)} USERPROFILE=${JSON.stringify(home)} ${JSON.stringif
     encoding: 'utf8'
   });
   assert(codexHookSuggestRun.status === 0 && codexHookSuggestRun.stdout.includes('# Contextbook Hook Suggestion'), 'codex hook did not print suggestion context');
+  assert(codexHookSuggestRun.stdout.includes('## Auto-safe Preference Update'), 'codex hook did not append auto-safe preference update context');
   assert(!codexHookSuggestRun.stdout.includes('앞으로 한국어로 짧게 설명해줘'), 'codex hook leaked raw prompt');
   const claudeHookSuggestRun = spawnSync(process.execPath, [claudeHookScript], {
     input: JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: '앞으로 한국어로 짧게 설명해줘' }),
@@ -1295,6 +1302,7 @@ HOME=${JSON.stringify(home)} USERPROFILE=${JSON.stringify(home)} ${JSON.stringif
   assert(claudeHookSuggestRun.status === 0, 'claude hook suggestion run failed');
   const claudeHookOutput = JSON.parse(claudeHookSuggestRun.stdout);
   assert(claudeHookOutput.hookSpecificOutput?.additionalContext?.includes('# Contextbook Hook Suggestion'), 'claude hook did not print additionalContext JSON');
+  assert(claudeHookOutput.hookSpecificOutput.additionalContext.includes('## Auto-safe Preference Update'), 'claude hook did not append auto-safe preference update context');
   assert(!claudeHookOutput.hookSpecificOutput.additionalContext.includes('앞으로 한국어로 짧게 설명해줘'), 'claude hook leaked raw prompt');
   await writeFile(codexHookScript, '#!/usr/bin/env node\nconsole.log(\"custom\");\n', 'utf8');
   const tamperedStatus = JSON.parse(run(['hooks', 'status', '--json']));
@@ -1304,7 +1312,7 @@ HOME=${JSON.stringify(home)} USERPROFILE=${JSON.stringify(home)} ${JSON.stringif
   assert(restoredCodexHook.includes('updated with backup'), 'codex hook script restore should back up modified helper');
 
   const setupHooksAgain = run(['setup', '--hooks']);
-  assert(setupHooksAgain.includes('skipped identical'), 'setup --hooks reinstall did not skip identical files');
+  assert(setupHooksAgain.includes('skipped identical') && setupHooksAgain.includes('included by default'), 'setup --hooks reinstall did not skip identical files');
 
   const codexInstall = run(['install', 'codex']);
   assert(codexInstall.includes('skipped identical'), 'codex install after setup did not skip identical file');

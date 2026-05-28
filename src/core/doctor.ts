@@ -277,7 +277,7 @@ function nextActions(project: DoctorProjectStatus, learner: DoctorLearnerStatus,
   if (!project.scanned) actions.push({ command: 'contextbook scan', reason: 'Collect project evidence and concept mappings.' });
   if (project.scanned && project.freshness.workingTreeChanged) actions.push({ command: 'contextbook scan', reason: 'Refresh project memory because the working tree changed since the latest scan.' });
   if (!learner.initialized) actions.push({ command: 'contextbook learner', reason: 'Create or inspect learner memory in your home directory.' });
-  if (hooks.status === 'missing') actions.push({ command: 'contextbook setup --hooks', reason: 'Install optional Codex and Claude Code hook helpers.' });
+  if (hooks.status === 'missing') actions.push({ command: 'contextbook setup', reason: 'Install Codex and Claude Code helper files, including hook helpers.' });
   if (hooks.status === 'helpers-installed') actions.push({ command: 'contextbook hooks status', reason: 'Review generated hook config snippets and trust settings.' });
   if (hooks.status !== 'missing') actions.push({ command: 'contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json', reason: 'Verify hook helper output locally without writing memory.' });
   if (project.scanned && learner.initialized) actions.push({ command: 'contextbook memory context --json', reason: 'Show compact AI-readable memory context.' });

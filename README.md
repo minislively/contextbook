@@ -94,38 +94,35 @@ contextbook setup
 contextbook doctor
 ```
 
-`contextbook setup` installs both Codex and Claude Code helper files by default:
+`contextbook setup` installs both Codex and Claude Code helper files by default, including hook helper files for agent prompt context:
 
 ```txt
 Codex/OMX:
 ~/.codex/skills/contextbook/SKILL.md
+~/.codex/hooks/contextbook-user-prompt-submit.js
+~/.codex/hooks/contextbook-user-prompt-submit.md
 
 Claude Code:
 ~/.claude/skills/contextbook/SKILL.md
 ~/.claude/commands/contextbook-learn.md
 ~/.claude/commands/contextbook-why.md
+~/.claude/hooks/contextbook-user-prompt-submit.js
+~/.claude/hooks/contextbook-user-prompt-submit.md
 ```
 
-If you want to preview the writes first:
+If you want to preview the writes first or run a bootstrap/non-interactive setup:
 
 ```bash
 contextbook setup --dry-run
-```
-
-Prompt-capture hooks are opt-in because they run on every submitted prompt. To install hook helper files for both Codex and Claude Code:
-
-```bash
-contextbook setup --hooks --dry-run
-contextbook setup --hooks
+contextbook setup --auto --dry-run
+contextbook setup --auto
 contextbook hooks status
 contextbook hooks status --json
 contextbook doctor --json
 contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json
-contextbook install codex --hooks --dry-run
-contextbook install claude-code --hooks --dry-run
 ```
 
-This creates hook scripts and guide snippets, but it does not silently edit your existing Codex/Claude hook settings. The hook helper runs `contextbook memory hook-suggest` so agents can receive suggestion-only context for preference dry-runs and read-only Contextbook memory for learning questions; it never auto-applies profile/preferences or stores the raw prompt:
+This creates hook scripts and guide snippets, but it does not silently edit your existing Codex/Claude hook settings. The setup hook helper runs `contextbook memory hook-suggest --mode auto-safe` and may apply only policy-approved low-risk style preferences through the reversible `apply-preference-signals --mode auto-safe` path. It never auto-applies profile updates, weak-term updates, learner judgments, restore/repair/recover actions, or raw prompt storage:
 
 ```txt
 Codex hook helpers:
@@ -141,7 +138,7 @@ After install, run `contextbook hooks status` to see which helper files and hook
 
 Claude Code officially supports `UserPromptSubmit` additional context via hook stdout/JSON. Codex hook context behavior can vary by installed Codex runtime, so treat Codex hook context as best-effort and verify it with `/hooks` or a live local prompt before relying on it.
 
-Use `contextbook doctor --json` to inspect Project Memory, Learner Memory, hook setup, and whether project memory may be stale in one read-only report. Use `contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json` after `contextbook setup --hooks` to inspect the generated helper output locally before relying on a live agent runtime.
+Use `contextbook doctor --json` to inspect Project Memory, Learner Memory, hook setup, and whether project memory may be stale in one read-only report. Use `contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json` after `contextbook setup` to inspect the generated helper output locally before relying on a live agent runtime.
 
 Requires Node.js 20 or newer.
 
@@ -269,13 +266,13 @@ Memory signals are append-only learning events for explicit feedback such as con
 
 Preference signals also expose an intent/scope/risk/policy contract for agents. A detected slot is not automatically treated as durable memory: task-local or uncertain prompts stay `observe-only`, hook capture stays non-mutating, and explicit `apply-preference-signals --mode auto-safe` is the only path that marks allowlisted preferences as `apply-eligible` and policy-approved for durable writes. Phrase markers are weak evidence, not the write rule; Contextbook records evidence codes instead of storing the raw prompt.
 
-For agent integrations, `contextbook setup --hooks` installs platform-specific `UserPromptSubmit` helper scripts that call `capture-prompt` locally. The hook scripts are non-blocking and config activation remains manual/snippet-based so existing user hooks are not overwritten.
+For agent integrations, `contextbook setup` installs platform-specific `UserPromptSubmit` helper scripts. The hook scripts are non-blocking, config activation remains manual/snippet-based so existing user hooks are not overwritten, and only allowlisted low-risk preferences can be applied automatically through backup/audit/undo.
 
 `contextbook memory suggest-weak-terms` reads those signals and returns review candidates such as “event loop may be worth revisiting”. `contextbook memory suggest-profile-updates` turns repeated explanation-format signals into profile update candidates such as “prefer project context first”. Both suggestion commands are read-only: they do not write `weak-terms.json`, do not edit your profile/preferences, and do not label your ability.
 
 When you explicitly accept a supported profile candidate, preview first with `contextbook memory apply-profile-update --candidate <id|index> --dry-run`. Applying without `--dry-run` is narrow by design: it can update `preferences.json`, creates a timestamped `preferences.json.bak-*`, and appends an audit event to `profile-updates.jsonl`; it does not mutate `profile.md`, `weak-terms.json`, Project Memory, or raw signal logs.
 
-For one-off explicit preferences from a prompt, preview first with `contextbook memory apply-preference-signals --prompt "<text>" --mode auto-safe --dry-run`. Applying without `--dry-run` only writes allowlisted safe preferences such as language, project-first order, short output, interview sentence, or fewer commands. It creates a `preferences.json.bak-*` backup and appends an audit event without storing the raw prompt. Policy decisions are returned as `auto_apply`, `suggest`, or `reject`; hook auto-apply is intentionally not enabled by default.
+For one-off explicit preferences from a prompt, preview first with `contextbook memory apply-preference-signals --prompt "<text>" --mode auto-safe --dry-run`. Applying without `--dry-run` only writes allowlisted safe preferences such as language, project-first order, short output, interview sentence, or fewer commands. It creates a `preferences.json.bak-*` backup and appends an audit event without storing the raw prompt. Policy decisions are returned as `auto_apply`, `suggest`, or `reject`; setup-generated hooks use this same low-risk policy and keep unsafe or uncertain signals suggestion-only.
 
 Preference updates are recoverable. Use `contextbook memory preference-history` to inspect audited preference snapshots and `contextbook memory undo-preference-update --entry <id|index> --dry-run` before restoring with `--yes`. Undo restores `preferences.json` from a backup snapshot, creates a fresh backup of the current state, and appends an audit event; it does not touch raw prompts, `profile.md`, weak terms, Project Memory, or signal logs.
 
@@ -418,7 +415,7 @@ contextbook memory apply-profile-update --candidate <id|index> --dry-run
 contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --mode auto-safe --dry-run
 ```
 
-The helper files only teach the agent how to use Contextbook. They do not call external APIs, launch agent sessions, or require API keys.
+The helper files only teach the agent how to use Contextbook and bridge hook context. They do not call external APIs, launch agent sessions, edit hook config automatically, or require API keys.
 
 ### Advanced install options
 
@@ -434,6 +431,9 @@ contextbook install codex --codex-path codex --dry-run
 contextbook install codex --codex-path both --dry-run
 contextbook install claude-code --dry-run
 contextbook install claude-code
+contextbook install codex --hooks --dry-run       # advanced suggestion-only hook install
+contextbook install claude-code --hooks --dry-run # advanced suggestion-only hook install
+contextbook install all --auto --dry-run          # advanced auto-safe hook install
 ```
 
 `--codex-path` values:
@@ -446,8 +446,9 @@ contextbook install claude-code
 ## Commands
 
 ```bash
-contextbook setup                  # install Codex + Claude Code helper files
-contextbook setup --dry-run        # preview helper file writes
+contextbook setup                  # install Codex + Claude Code helper files, hooks, and safe preference automation
+contextbook setup --dry-run        # preview setup writes
+contextbook setup --auto           # non-interactive/bootstrap setup with safe defaults
 contextbook hooks status           # read-only hook helper/config diagnostic
 contextbook doctor                 # read-only project/learner/hooks setup report
 contextbook doctor --json          # inspect setup as structured agent context

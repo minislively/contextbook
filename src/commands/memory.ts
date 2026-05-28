@@ -35,7 +35,7 @@ export async function memoryCommand(args: string[] = []): Promise<void> {
     }
     case 'hook-suggest': {
       const input = parseHookSuggest(rest);
-      const result = await hookSuggest({ prompt: input.prompt, source: input.source, learner: 'default', includeMemoryContext: input.includeMemoryContext, captureSignals: input.captureSignals });
+      const result = await hookSuggest({ prompt: input.prompt, source: input.source, learner: 'default', includeMemoryContext: input.includeMemoryContext, captureSignals: input.captureSignals, preferenceMode: input.mode });
       if (input.json) {
         console.log(JSON.stringify(result, null, 2));
         return;
@@ -244,11 +244,14 @@ function parseCapturePrompt(args: string[], usage = 'Usage: contextbook memory c
   return { prompt, source, json };
 }
 
-function parseHookSuggest(args: string[]): { prompt: string; source: 'manual' | 'codex' | 'claude-code'; json: boolean; includeMemoryContext: boolean; captureSignals: boolean } {
+function parseHookSuggest(args: string[]): { prompt: string; source: 'manual' | 'codex' | 'claude-code'; json: boolean; includeMemoryContext: boolean; captureSignals: boolean; mode: PreferencePolicyMode } {
+  const usage = 'Usage: contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--mode suggest|auto-safe] [--include-memory-context] [--json]';
   const filtered: string[] = [];
   let includeMemoryContext = false;
   let captureSignals = true;
-  for (const arg of args) {
+  let mode: PreferencePolicyMode = 'suggest';
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
     if (arg === '--include-memory-context') {
       includeMemoryContext = true;
       continue;
@@ -257,12 +260,26 @@ function parseHookSuggest(args: string[]): { prompt: string; source: 'manual' | 
       captureSignals = false;
       continue;
     }
+    if (arg === '--mode') {
+      const value = args[index + 1];
+      if (!value || !isPreferencePolicyMode(value) || value === 'manual') throw new Error(usage);
+      mode = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--mode=')) {
+      const value = arg.slice('--mode='.length);
+      if (!isPreferencePolicyMode(value) || value === 'manual') throw new Error(usage);
+      mode = value;
+      continue;
+    }
     filtered.push(arg);
   }
   return {
-    ...parseCapturePrompt(filtered, 'Usage: contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]'),
+    ...parseCapturePrompt(filtered, usage),
     includeMemoryContext,
-    captureSignals
+    captureSignals,
+    mode
   };
 }
 
@@ -567,7 +584,7 @@ function memoryUsage(): string {
     'Usage:',
     '  contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>] [--format <format>]',
     '  contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]',
-    '  contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--include-memory-context] [--json]',
+    '  contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--mode suggest|auto-safe] [--include-memory-context] [--json]',
     '  contextbook memory signals [--json]',
     '  contextbook memory suggest-weak-terms [--json]',
     '  contextbook memory suggest-profile-updates [--json]',
