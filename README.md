@@ -232,6 +232,7 @@ contextbook memory validate
 contextbook memory repair --dry-run
 contextbook memory repair --yes
 contextbook memory rebuild --dry-run
+contextbook memory rebuild --yes
 contextbook memory backup --dry-run
 contextbook memory backup --yes
 contextbook memory restore --backup-id <id> --dry-run
@@ -253,6 +254,7 @@ contextbook memory validate --json
 contextbook memory repair --dry-run --json
 contextbook memory repair --yes --json
 contextbook memory rebuild --dry-run --json
+contextbook memory rebuild --yes --json
 contextbook memory backup --dry-run --json
 contextbook memory backup --yes --json
 contextbook memory restore --backup-id <id> --dry-run --json
@@ -279,7 +281,7 @@ Preference updates are recoverable. Use `contextbook memory preference-history` 
 
 `contextbook memory repair --dry-run` turns validation issues into a safe repair plan without writing files. Missing known memory files become supported create/rerun-scan plans, while malformed JSON/JSONL stays blocked for manual review so Contextbook does not guess or overwrite user memory. `contextbook memory repair --yes` applies only supported missing-file repairs after creating a pre-repair backup; it never overwrites malformed files or follows symlinked memory paths.
 
-`contextbook memory rebuild --dry-run` previews a full Project Memory regeneration from the current repository scan. It reports projected concepts/evidence/file-index/scan-run operations, preserves Learner and Conversation Memory, and still performs no writes or backups.
+`contextbook memory rebuild --dry-run` previews a full Project Memory regeneration from the current repository scan. `contextbook memory rebuild --yes` applies that regeneration after creating a pre-rebuild backup, preserves Learner and Conversation Memory, and rewrites only Project Memory scan outputs.
 
 `contextbook memory backup --dry-run` previews the metadata-only manifest used before mutating memory. `contextbook memory backup --yes` creates real backup files with split roots: Project Memory under `.contextbook/backups/<backupId>/` and Learner/Conversation Memory under `~/.contextbook/backups/<backupId>/`. `contextbook memory restore --backup-id <id> --dry-run` verifies those manifests and backup checksums, then previews which allowlisted memory files would be restored without writing anything. `contextbook memory restore --backup-id <id> --yes` reruns the same verification, creates a fresh pre-restore backup, and writes only allowlisted restore-file operations. Manifests and restore previews include metadata and checksums only; they do not include raw memory contents or absolute local paths. Its `status` only describes backup/restore availability; run `contextbook memory validate --json` when you need structural memory health before writes.
 
@@ -475,6 +477,8 @@ contextbook memory repair --dry-run --json    # structured repair plan for agent
 contextbook memory repair --yes --json        # structured repair apply result
 contextbook memory rebuild --dry-run          # preview project memory rebuild
 contextbook memory rebuild --dry-run --json   # structured rebuild plan for agents
+contextbook memory rebuild --yes              # apply project memory rebuild after backup
+contextbook memory rebuild --yes --json       # structured rebuild apply result
 contextbook memory backup --dry-run           # preview memory backup manifest
 contextbook memory backup --dry-run --json    # structured backup manifest for agents
 contextbook memory backup --yes               # create split project/learner backups
