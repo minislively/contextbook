@@ -134,11 +134,18 @@ Claude Code hook helpers:
 ~/.claude/hooks/contextbook-user-prompt-submit.md
 ```
 
-After install, run `contextbook hooks status` to see which helper files and hook configs are detected. Then merge the generated snippet into `~/.codex/hooks.json` or `~/.claude/settings.json` and use your agent's hook review/trust flow if required.
+After install, run `contextbook hooks status` to see which helper files and hook configs are detected. The JSON output includes product health states so dogfooding can start from a clear answer instead of low-level file checks:
+
+```txt
+missing -> installed-not-configured -> configured-needs-trust -> live-smoke-ok
+stale-helper / broken require repair before dogfooding
+```
+
+Each platform also reports stable issue codes such as `HOOK_HELPER_MISSING`, `HOOK_CONFIG_NOT_ENABLED`, `HOOK_HELPER_STALE`, `HOOK_OUTPUT_SHAPE_INVALID`, `HOOK_RAW_PROMPT_LEAK`, and `CONTEXTBOOK_BINARY_MISSING`, with next actions. Then merge the generated snippet into `~/.codex/hooks.json` or `~/.claude/settings.json` and use your agent's hook review/trust flow if required.
 
 Claude Code officially supports `UserPromptSubmit` additional context via hook stdout/JSON. Codex hook context behavior can vary by installed Codex runtime, so treat Codex hook context as best-effort and verify it with `/hooks` or a live local prompt before relying on it.
 
-Use `contextbook doctor --json` to inspect Project Memory, Learner Memory, hook setup, and whether project memory may be stale in one read-only report. Use `contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json` after `contextbook setup` to inspect the generated helper output locally before relying on a live agent runtime.
+Use `contextbook doctor --json` to inspect Project Memory, Learner Memory, hook setup, and whether project memory may be stale in one read-only report. Use `contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json` after `contextbook setup` to inspect generated helper output locally. A healthy smoke result reports `status: "live-smoke-ok"`, `outputShapeValid: true`, `helperCurrent: true`, and `rawPromptDetected: false` without mutating learner/project memory.
 
 Requires Node.js 20 or newer.
 
@@ -449,7 +456,8 @@ contextbook install all --auto --dry-run          # advanced auto-safe hook inst
 contextbook setup                  # install Codex + Claude Code helper files, hooks, and safe preference automation
 contextbook setup --dry-run        # preview setup writes
 contextbook setup --auto           # non-interactive/bootstrap setup with safe defaults
-contextbook hooks status           # read-only hook helper/config diagnostic
+contextbook hooks status           # read-only hook helper/config diagnostic with health states
+contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json  # verify helper output shape/read-only safety
 contextbook doctor                 # read-only project/learner/hooks setup report
 contextbook doctor --json          # inspect setup as structured agent context
 contextbook init                   # initialize .contextbook and learner memory

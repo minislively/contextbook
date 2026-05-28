@@ -1103,10 +1103,13 @@ try {
   assert(hooksStatusBefore.includes('contextbook setup'), 'hooks status before setup missing setup action');
   const hooksStatusJsonBefore = JSON.parse(run(['hooks', 'status', '--json']));
   assert(hooksStatusJsonBefore.schemaVersion === 1, 'hooks status json missing schema version');
+  assert(hooksStatusJsonBefore.overallHealth.status === 'missing', 'hooks status before setup should expose missing overall health');
   assert(hooksStatusJsonBefore.safety.readOnly === true && hooksStatusJsonBefore.safety.configMutated === false, 'hooks status safety flags invalid');
   assert(hooksStatusJsonBefore.platforms.length === 2, 'hooks status json should include both platforms');
+  assert(hooksStatusJsonBefore.platforms.every((platform) => platform.health.status === 'missing' && platform.health.issues.some((issue) => issue.code === 'HOOK_HELPER_MISSING')), 'hooks status before setup should expose helper missing issue codes');
   const hooksSmokeMissing = JSON.parse(run(['hooks', 'smoke', '--prompt', 'cleanup 왜 해야 돼?', '--json']));
   assert(hooksSmokeMissing.schemaVersion === 1 && hooksSmokeMissing.platforms.length === 2, 'hooks smoke missing json contract');
+  assert(hooksSmokeMissing.status === 'missing' && hooksSmokeMissing.expectedOutputShape === 'platform-specific-additional-context' && hooksSmokeMissing.outputShapeValid === false, 'hooks smoke missing should expose top-level health contract');
   assert(hooksSmokeMissing.safety.readOnly === true && hooksSmokeMissing.safety.learnerMemoryMutated === false, 'hooks smoke missing read-only safety contract');
   assert(hooksSmokeMissing.platforms.every((platform) => platform.ran === false && platform.helper.exists === false), 'hooks smoke before setup should not run missing helpers');
   assert(runExpectFail(['hooks', 'smoke', '--prompt', 'x', '--platform', 'cursor']).includes('Usage:'), 'hooks smoke invalid platform should fail with usage');
@@ -1199,12 +1202,15 @@ try {
   assert(codexHookGuideText.includes('~/.codex/hooks.json') && codexHookGuideText.includes('UserPromptSubmit') && codexHookGuideText.includes('review and trust'), 'codex hook guide missing config/trust guidance');
   assert(claudeHookGuideText.includes('~/.claude/settings.json') && claudeHookGuideText.includes('UserPromptSubmit'), 'claude hook guide missing config guidance');
   const doctorAfterHooks = JSON.parse(run(['doctor', '--json']));
-  assert(doctorAfterHooks.hooks.status === 'helpers-installed' && doctorAfterHooks.nextActions.some((action) => action.command.includes('hooks smoke')), 'doctor after hook setup should report helpers and recommend smoke');
+  assert(doctorAfterHooks.hooks.status === 'helpers-installed' && doctorAfterHooks.hooks.overallHealth.status === 'installed-not-configured' && doctorAfterHooks.nextActions.some((action) => action.command.includes('hooks smoke')), 'doctor after hook setup should report helpers and recommend smoke');
 
   const hooksStatusAfterSetup = JSON.parse(run(['hooks', 'status', '--json']));
   const codexPlatform = hooksStatusAfterSetup.platforms.find((platform) => platform.id === 'codex');
   const claudePlatform = hooksStatusAfterSetup.platforms.find((platform) => platform.id === 'claude-code');
   assert(codexPlatform?.helper.exists === true && claudePlatform?.helper.exists === true, 'hooks status after setup should find helper scripts');
+  assert(codexPlatform.helperCurrent === true && claudePlatform.helperCurrent === true, 'hooks status after setup should mark generated helpers current');
+  assert(codexPlatform.health.status === 'installed-not-configured' && claudePlatform.health.status === 'installed-not-configured', 'hooks status after setup should expose installed-not-configured health');
+  assert(codexPlatform.health.issues.some((issue) => issue.code === 'HOOK_CONFIG_NOT_ENABLED'), 'codex hooks status missing config issue code');
   assert(codexPlatform.runtime.helperSmoke === 'ok' && claudePlatform.runtime.helperSmoke === 'ok', 'hooks status should smoke test installed helpers with empty prompt');
   assert(codexPlatform.configs.every((config) => config.status !== 'enabled') && claudePlatform.configs.every((config) => config.status !== 'enabled'), 'hooks status should not mark hooks enabled before config snippets are merged');
   assert(codexPlatform.recommendedActions.some((action) => action.command.includes('~/.codex/hooks.json')), 'codex hooks status missing config merge action');
@@ -1230,11 +1236,14 @@ try {
   await writeFile(join(root, '.codex', 'hooks.json'), '{ invalid json', 'utf8');
   const signalsBeforeHookStatus = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
   const doctorHooksEnabled = JSON.parse(run(['doctor', '--json']));
-  assert(doctorHooksEnabled.hooks.status === 'configured', 'doctor should report configured hooks after config snippets exist');
+  assert(doctorHooksEnabled.hooks.status === 'configured' && doctorHooksEnabled.hooks.overallHealth.status === 'configured-needs-trust', 'doctor should report configured hooks after config snippets exist');
 
   const hooksStatusEnabled = JSON.parse(run(['hooks', 'status', '--json']));
   const codexEnabled = hooksStatusEnabled.platforms.find((platform) => platform.id === 'codex');
   const claudeEnabled = hooksStatusEnabled.platforms.find((platform) => platform.id === 'claude-code');
+  assert(hooksStatusEnabled.overallHealth.status === 'configured-needs-trust', 'hooks status enabled should expose configured-needs-trust health');
+  assert(codexEnabled.health.status === 'configured-needs-trust' && claudeEnabled.health.status === 'configured-needs-trust', 'enabled platform health should require trust/smoke review');
+  assert(codexEnabled.health.issues.some((issue) => issue.code === 'HOOK_TRUST_REVIEW_NEEDED'), 'enabled platform health missing trust review issue');
   assert(codexEnabled.configs.some((config) => config.status === 'enabled'), 'codex hooks status should detect enabled hooks.json');
   assert(codexEnabled.configs.some((config) => config.status === 'parse-error'), 'codex hooks status should report invalid project hooks json as parse-error');
   assert(claudeEnabled.configs.some((config) => config.status === 'enabled'), 'claude hooks status should detect enabled settings json');
@@ -1267,14 +1276,16 @@ HOME=${JSON.stringify(home)} USERPROFILE=${JSON.stringify(home)} ${JSON.stringif
   const hooksSmoke = JSON.parse(run(['hooks', 'smoke', '--prompt', '뭔소리야 너무 추상적임', '--json'], { env: { ...hookEnv, EDITOR: '' } }));
   const smokeCodex = hooksSmoke.platforms.find((platform) => platform.id === 'codex');
   const smokeClaude = hooksSmoke.platforms.find((platform) => platform.id === 'claude-code');
+  assert(hooksSmoke.status === 'live-smoke-ok' && hooksSmoke.outputShapeValid === true && hooksSmoke.helperCurrent === true, 'hooks smoke should expose live-smoke-ok top-level health');
   assert(hooksSmoke.safety.learnerMemoryMutated === false && hooksSmoke.safety.rawPromptPersisted === false, 'hooks smoke must declare no learner/raw prompt mutation');
-  assert(smokeCodex?.ran === true && smokeCodex.outputKind === 'plain-context' && smokeCodex.additionalContextDetected === true, 'codex hooks smoke should detect plain additional context');
-  assert(smokeClaude?.ran === true && smokeClaude.outputKind === 'json-additional-context' && smokeClaude.additionalContextDetected === true, 'claude hooks smoke should detect json additional context');
+  assert(smokeCodex?.ran === true && smokeCodex.status === 'live-smoke-ok' && smokeCodex.expectedOutputShape === 'plain-context' && smokeCodex.outputKind === 'plain-context' && smokeCodex.outputShapeValid === true && smokeCodex.additionalContextDetected === true, 'codex hooks smoke should detect plain additional context');
+  assert(smokeClaude?.ran === true && smokeClaude.status === 'live-smoke-ok' && smokeClaude.expectedOutputShape === 'json-additional-context' && smokeClaude.outputKind === 'json-additional-context' && smokeClaude.outputShapeValid === true && smokeClaude.additionalContextDetected === true, 'claude hooks smoke should detect json additional context');
   assert(smokeCodex.rawPromptDetected === false && smokeClaude.rawPromptDetected === false, 'hooks smoke should not expose raw prompt in helper output');
   const hooksSmokeCodexOnly = JSON.parse(run(['hooks', 'smoke', '--prompt', 'cleanup 왜 해야 돼?', '--platform', 'codex', '--json'], { env: { ...hookEnv, EDITOR: '' } }));
   assert(hooksSmokeCodexOnly.platform === 'codex' && hooksSmokeCodexOnly.platforms.length === 1 && hooksSmokeCodexOnly.platforms[0].id === 'codex', 'hooks smoke platform filter failed');
   const hooksSmokePreference = JSON.parse(run(['hooks', 'smoke', '--prompt', '앞으로 한국어로 짧게 설명해줘', '--json'], { env: { ...hookEnv, EDITOR: '' } }));
-  assert(hooksSmokePreference.safety.preferencesMutated === false && hooksSmokePreference.platforms.every((platform) => platform.autoSafePreferenceSectionDetected === true && platform.wouldApplyPreferences === true), 'hooks smoke should preview auto-safe preference updates without mutating preferences');
+  assert(hooksSmokePreference.safePreferencePreview.wouldApply === true, 'hooks smoke should expose top-level safe preference preview');
+  assert(hooksSmokePreference.safety.preferencesMutated === false && hooksSmokePreference.platforms.every((platform) => platform.safePreferencePreview.wouldApply === true && platform.autoSafePreferenceSectionDetected === true && platform.wouldApplyPreferences === true), 'hooks smoke should preview auto-safe preference updates without mutating preferences');
   const signalsAfterHooksSmoke = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
   assert(signalsAfterHooksSmoke === signalsBeforeHooksSmoke, 'hooks smoke should not mutate conversation memory even for feedback-like prompts');
   const codexHookNoSignalRun = spawnSync(process.execPath, [codexHookScript], {
@@ -1307,7 +1318,11 @@ HOME=${JSON.stringify(home)} USERPROFILE=${JSON.stringify(home)} ${JSON.stringif
   await writeFile(codexHookScript, '#!/usr/bin/env node\nconsole.log(\"custom\");\n', 'utf8');
   const tamperedStatus = JSON.parse(run(['hooks', 'status', '--json']));
   const tamperedCodex = tamperedStatus.platforms.find((platform) => platform.id === 'codex');
-  assert(tamperedCodex.runtime.helperSmoke === 'skipped', 'hooks status should not execute modified helper scripts');
+  assert(tamperedStatus.overallHealth.status === 'stale-helper', 'hooks status should surface stale helper overall health');
+  assert(tamperedCodex.runtime.helperSmoke === 'skipped' && tamperedCodex.helperCurrent === false && tamperedCodex.health.status === 'stale-helper', 'hooks status should not execute modified helper scripts');
+  assert(tamperedCodex.health.issues.some((issue) => issue.code === 'HOOK_HELPER_STALE'), 'tampered hook missing stale helper issue code');
+  const tamperedSmoke = JSON.parse(run(['hooks', 'smoke', '--prompt', 'cleanup 왜 해야 돼?', '--platform', 'codex', '--json']));
+  assert(tamperedSmoke.status === 'stale-helper' && tamperedSmoke.platforms[0].ran === false && tamperedSmoke.platforms[0].health.issues.some((issue) => issue.code === 'HOOK_HELPER_STALE'), 'hooks smoke should not execute stale helpers');
   const restoredCodexHook = run(['install', 'codex', '--hooks']);
   assert(restoredCodexHook.includes('updated with backup'), 'codex hook script restore should back up modified helper');
 
