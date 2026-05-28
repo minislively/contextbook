@@ -1,6 +1,6 @@
 import { basename } from 'node:path';
 import { hooksStatus } from '../hooks/status.js';
-import type { HooksStatusJson } from '../hooks/types.js';
+import type { HookHealthStatus, HookIssue, HookNextAction, HooksStatusJson } from '../hooks/types.js';
 import { exists, readJson, readJsonl } from '../storage/fs-utils.js';
 import { gitWorkingTreeState } from '../scan/git-diff.js';
 import { projectPaths } from '../storage/project-store.js';
@@ -58,8 +58,13 @@ export interface DoctorHooksSummary {
     configEnabled: boolean;
     helperSmoke: string;
     contextbookBinary: string;
+    helperCurrent: boolean;
+    healthStatus: HookHealthStatus;
+    issues: HookIssue[];
+    nextActions: HookNextAction[];
   }>;
-  status: 'missing' | 'helpers-installed' | 'configured';
+  status: 'missing' | 'helpers-installed' | 'configured' | 'needs-attention' | 'live-smoke-ok';
+  overallHealth: HooksStatusJson['overallHealth'];
 }
 
 export interface DoctorNextAction {
@@ -107,7 +112,7 @@ export async function buildDoctor(options: ContextbookRuntimeOptions & { learner
 export function formatDoctorMarkdown(result: DoctorJson): string {
   const projectFiles = result.project.files.map((file) => `- ${file.name}: ${file.exists ? 'found' : 'missing'} (${file.path})${typeof file.records === 'number' ? ` — ${file.records} records` : ''}`).join('\n');
   const learnerFiles = result.learner.files.map((file) => `- ${file.name}: ${file.exists ? 'found' : 'missing'} (${file.path})${typeof file.records === 'number' ? ` — ${file.records} records` : ''}`).join('\n');
-  const hookLines = result.hooks.platforms.map((platform) => `- ${platform.id}: helper=${platform.helper ? 'found' : 'missing'}, config=${platform.configEnabled ? 'enabled' : 'not-enabled'}, smoke=${platform.helperSmoke}, binary=${platform.contextbookBinary}`).join('\n');
+  const hookLines = result.hooks.platforms.map((platform) => `- ${platform.id}: health=${platform.healthStatus}, helper=${platform.helper ? 'found' : 'missing'}, current=${platform.helperCurrent}, config=${platform.configEnabled ? 'enabled' : 'not-enabled'}, smoke=${platform.helperSmoke}, binary=${platform.contextbookBinary}`).join('\n');
   const actions = result.nextActions.map((action) => `- \`${action.command}\` — ${action.reason}`).join('\n') || '- none';
   return [
     '# Contextbook Doctor',
@@ -116,6 +121,7 @@ export function formatDoctorMarkdown(result: DoctorJson): string {
     `- project status: ${result.project.status}`,
     `- learner status: ${result.learner.status}`,
     `- hooks status: ${result.hooks.status}`,
+    `- hooks health: ${result.hooks.overallHealth.status}`,
     '',
     '## Project Memory',
     `- root: ${result.project.rootName}`,
@@ -261,13 +267,19 @@ function hooksDoctorSummary(status: HooksStatusJson): DoctorHooksSummary {
     helper: platform.helper.exists,
     configEnabled: platform.configs.some((config) => config.status === 'enabled'),
     helperSmoke: platform.runtime.helperSmoke,
-    contextbookBinary: platform.runtime.contextbookBinary
+    contextbookBinary: platform.runtime.contextbookBinary,
+    helperCurrent: platform.helperCurrent,
+    healthStatus: platform.health.status,
+    issues: platform.health.issues,
+    nextActions: platform.health.nextActions
   }));
   const anyHelper = platforms.some((platform) => platform.helper);
   const anyConfigured = platforms.some((platform) => platform.configEnabled);
+  const needsAttention = status.overallHealth.status === 'broken' || status.overallHealth.status === 'stale-helper';
   return {
     platforms,
-    status: anyConfigured ? 'configured' : anyHelper ? 'helpers-installed' : 'missing'
+    overallHealth: status.overallHealth,
+    status: status.overallHealth.status === 'live-smoke-ok' ? 'live-smoke-ok' : needsAttention ? 'needs-attention' : anyConfigured ? 'configured' : anyHelper ? 'helpers-installed' : 'missing'
   };
 }
 
@@ -278,6 +290,7 @@ function nextActions(project: DoctorProjectStatus, learner: DoctorLearnerStatus,
   if (project.scanned && project.freshness.workingTreeChanged) actions.push({ command: 'contextbook scan', reason: 'Refresh project memory because the working tree changed since the latest scan.' });
   if (!learner.initialized) actions.push({ command: 'contextbook learner', reason: 'Create or inspect learner memory in your home directory.' });
   if (hooks.status === 'missing') actions.push({ command: 'contextbook setup', reason: 'Install Codex and Claude Code helper files, including hook helpers.' });
+  for (const action of hooks.overallHealth.nextActions) actions.push({ command: action.command, reason: `${action.code}: ${action.reason}` });
   if (hooks.status === 'helpers-installed') actions.push({ command: 'contextbook hooks status', reason: 'Review generated hook config snippets and trust settings.' });
   if (hooks.status !== 'missing') actions.push({ command: 'contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json', reason: 'Verify hook helper output locally without writing memory.' });
   if (project.scanned && learner.initialized) actions.push({ command: 'contextbook memory context --json', reason: 'Show compact AI-readable memory context.' });

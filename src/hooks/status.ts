@@ -1,5 +1,6 @@
 import { homedir } from 'node:os';
 import { inspectContextbookBinary } from './checks.js';
+import { aggregateHookHealth } from './health.js';
 import { hookStatusProviders } from './registry.js';
 import type { HookConfigStatus, HooksStatusJson } from './types.js';
 export type { HookPlatformStatus, HooksStatusJson } from './types.js';
@@ -11,6 +12,7 @@ export function hooksStatus(now = new Date()): HooksStatusJson {
     contextbookBinary: inspectContextbookBinary()
   };
 
+  const platforms = hookStatusProviders.map((provider) => provider.status(context));
   return {
     schemaVersion: 1,
     generatedAt: now.toISOString(),
@@ -20,25 +22,32 @@ export function hooksStatus(now = new Date()): HooksStatusJson {
       learnerMemoryMutated: false,
       rawPromptPersisted: false
     },
-    platforms: hookStatusProviders.map((provider) => provider.status(context))
+    overallHealth: aggregateHookHealth(platforms.map((platform) => platform.health)),
+    platforms
   };
 }
 
 export function formatHooksStatusMarkdown(status: HooksStatusJson): string {
-  const lines = ['# Contextbook Hooks Status', '', `generatedAt: ${status.generatedAt}`, ''];
+  const lines = ['# Contextbook Hooks Status', '', `generatedAt: ${status.generatedAt}`, `overall: ${status.overallHealth.status}`, ''];
 
   for (const platform of status.platforms) {
     lines.push(`## ${platform.id === 'codex' ? 'Codex' : 'Claude Code'}`);
+    lines.push(`- health: ${platform.health.status}`);
     lines.push(`- helper script: ${platform.helper.exists ? 'found' : 'missing'} (${platform.helper.displayPath})`);
     lines.push(`- guide: ${platform.guide.exists ? 'found' : 'missing'} (${platform.guide.displayPath})`);
     lines.push(`- config: ${overallConfigStatus(platform.configs)}`);
     lines.push(`- checked: ${platform.configs.map((config) => config.displayPath).join(', ')}`);
     lines.push(`- node: ${platform.runtime.nodeAvailable ? 'ok' : 'missing'}`);
     lines.push(`- contextbook binary: ${platform.runtime.contextbookBinary}`);
+    lines.push(`- helper current: ${platform.helperCurrent}`);
     lines.push(`- helper smoke: ${platform.runtime.helperSmoke}${platform.runtime.message ? ` (${platform.runtime.message})` : ''}`);
-    if (platform.recommendedActions.length > 0) {
+    if (platform.health.issues.length > 0) {
+      lines.push('- issues:');
+      for (const issue of platform.health.issues) lines.push(`  - ${issue.code} (${issue.severity}) — ${issue.message}`);
+    }
+    if (platform.health.nextActions.length > 0) {
       lines.push('- next action:');
-      for (const action of platform.recommendedActions) lines.push(`  - \`${action.command}\` — ${action.reason}`);
+      for (const action of platform.health.nextActions) lines.push(`  - ${action.code}: \`${action.command}\` — ${action.reason}`);
     }
     lines.push('');
   }

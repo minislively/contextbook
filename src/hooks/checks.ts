@@ -55,11 +55,16 @@ export function inspectContextbookBinary(): ContextbookBinaryStatus {
   return result.status === 0 ? 'available' : 'unknown';
 }
 
+export function isGeneratedHookHelper(helperPath: string | undefined, source: PromptCaptureHookSource): boolean {
+  if (!helperPath || !existsSync(helperPath)) return false;
+  const helperText = readFileSync(helperPath, 'utf8');
+  return helperText === promptCaptureHookScript(source) || helperText === promptCaptureHookScript(source, { autoSafePreferences: true });
+}
+
 export function smokeHelper(helperPath: string | undefined, source: PromptCaptureHookSource): { helperSmoke: HelperSmokeStatus; message?: string } {
   if (!helperPath) return { helperSmoke: 'missing' };
 
-  const helperText = readFileSync(helperPath, 'utf8');
-  if (helperText !== promptCaptureHookScript(source) && helperText !== promptCaptureHookScript(source, { autoSafePreferences: true })) {
+  if (!isGeneratedHookHelper(helperPath, source)) {
     return { helperSmoke: 'skipped', message: 'helper content differs from the generated Contextbook script' };
   }
 
