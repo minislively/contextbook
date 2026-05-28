@@ -229,6 +229,7 @@ contextbook memory suggest-weak-terms
 contextbook memory suggest-profile-updates
 contextbook memory context
 contextbook memory recover
+contextbook memory recover --safe
 contextbook memory validate
 contextbook memory repair --dry-run
 contextbook memory repair --yes
@@ -252,6 +253,7 @@ contextbook memory preference-history --json
 contextbook memory undo-preference-update --entry 1 --dry-run --json
 contextbook memory context --json
 contextbook memory recover --json
+contextbook memory recover --safe --json
 contextbook memory validate --json
 contextbook memory repair --dry-run --json
 contextbook memory repair --yes --json
@@ -281,7 +283,7 @@ Preference updates are recoverable. Use `contextbook memory preference-history` 
 
 `contextbook memory validate` is the read-only structural health check for the three memory layers before any future repair/rebuild flow. It validates Project Memory JSON/JSONL plus Learner Memory files, reports missing files as warnings, reports malformed JSON/JSONL as errors with line numbers, and never includes raw file contents or absolute local paths in output.
 
-`contextbook memory recover [--json]` is a read-only recovery router. It inspects validation, stale Project Memory hints, backup candidates, and undoable preference history, then recommends the safest existing dry-run/apply commands without mutating any memory.
+`contextbook memory recover [--json]` is a read-only recovery router. It inspects validation, stale Project Memory hints, backup candidates, and undoable preference history, then recommends the safest existing dry-run/apply commands without mutating any memory. `contextbook memory recover --safe [--json]` applies only deterministic, backup-gated recovery actions: it may rebuild missing/stale Project Memory scan artifacts, but it still leaves backup restore and preference undo as explicit user-approved commands.
 
 `contextbook memory repair --dry-run` turns validation issues into a safe repair plan without writing files. Missing known memory files become supported create/rerun-scan plans, while malformed JSON/JSONL stays blocked for manual review so Contextbook does not guess or overwrite user memory. `contextbook memory repair --yes` applies only supported missing-file repairs after creating a pre-repair backup; it never overwrites malformed files or follows symlinked memory paths.
 
@@ -475,6 +477,8 @@ contextbook memory context                    # inspect bundled memory context
 contextbook memory context --json             # one-shot agent context bundle
 contextbook memory recover                    # route recovery to repair/rebuild/restore/undo
 contextbook memory recover --json             # structured recovery router for agents
+contextbook memory recover --safe             # apply only safe backup-gated repair/rebuild actions
+contextbook memory recover --safe --json      # structured safe recovery for agents
 contextbook memory validate                   # read-only memory file health check
 contextbook memory validate --json            # structured validator output for agents
 contextbook memory repair --dry-run           # preview memory repair operations
