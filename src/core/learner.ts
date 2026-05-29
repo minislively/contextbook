@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { defaultPreferences, ensureLearnerStore, learnerPaths, readPreferences, readWeakTerms } from '../storage/user-store.js';
 import { exists, readJsonl } from '../storage/fs-utils.js';
+import { filterEvidenceFilesForDisplay, DEFAULT_VISIBLE_EVIDENCE_LIMIT } from '../format/evidence.js';
 import { formatLearnerSummary } from '../format/learner.js';
 import { buildProfileUpdateCandidates } from '../learner/profile-update-candidates.js';
 import { buildWeakTermSuggestions } from '../learner/weak-term-suggestions.js';
@@ -127,7 +128,7 @@ function toRecentSignal(event: Record<string, unknown>): ConversationMemoryEvent
     conceptLabel: typeof event.conceptLabel === 'string' ? event.conceptLabel : typeof event.concept === 'string' ? event.concept : undefined,
     concept: typeof event.concept === 'string' ? event.concept : undefined,
     evidenceLevel: isEvidenceLevel(event.evidenceLevel) ? event.evidenceLevel : undefined,
-    evidenceFiles: Array.isArray(event.evidenceFiles) ? event.evidenceFiles.filter((file): file is string => typeof file === 'string').slice(0, 5) : undefined,
+    evidenceFiles: Array.isArray(event.evidenceFiles) ? filterEvidenceFilesForDisplay(event.evidenceFiles.filter((file): file is string => typeof file === 'string')) : undefined,
     conceptCount: typeof event.conceptCount === 'number' ? event.conceptCount : undefined,
     recordedAt: typeof event.recordedAt === 'string' ? event.recordedAt : typeof event.answeredAt === 'string' ? event.answeredAt : undefined
   });
@@ -167,6 +168,8 @@ function learnerSafety(): LearnerSummarySafety {
   return {
     rawTranscriptIncluded: false,
     absolutePathsIncluded: false,
+    hiddenEvidencePathsFiltered: true,
+    maxVisibleEvidenceFiles: DEFAULT_VISIBLE_EVIDENCE_LIMIT,
     profileMutated: false,
     preferencesMutated: false,
     weakTermsMutated: false,
