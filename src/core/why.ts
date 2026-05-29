@@ -2,9 +2,9 @@ import { findConceptForQuestion, inferGeneralConcept } from '../concepts/mapper.
 import { formatWhyAnswer } from '../format/explanation.js';
 import { buildWhyResponsePlan, readEligibleWhyResponseSignals } from '../format/response-plan.js';
 import { recordConversationAnswer } from '../learner/conversation-memory.js';
-import { markAsked } from '../learner/weak-terms.js';
+import { markAsked, weakTermForLabel } from '../learner/weak-terms.js';
 import { readConcepts } from '../storage/project-store.js';
-import { ensureLearnerStore, readPreferences } from '../storage/user-store.js';
+import { ensureLearnerStore, readPreferences, readWeakTerms } from '../storage/user-store.js';
 import type { ContextbookRuntimeOptions, WhyResult } from '../types.js';
 
 export async function answerWhy(question: string, options: ContextbookRuntimeOptions = {}): Promise<WhyResult> {
@@ -20,8 +20,14 @@ export async function answerWhy(question: string, options: ContextbookRuntimeOpt
   const label = concept?.label ?? fallback?.label ?? trimmedQuestion;
   const evidenceLevel = concept?.evidenceLevel ?? 'general';
   const preferences = await readPreferences(learner);
+  const weakTerms = await readWeakTerms(learner);
+  const weakTerm = weakTermForLabel(weakTerms, label);
   const eligibleSignals = await readEligibleWhyResponseSignals(learner);
-  const responsePlan = buildWhyResponsePlan(preferences, eligibleSignals);
+  const responsePlan = buildWhyResponsePlan(preferences, eligibleSignals, {
+    question: trimmedQuestion,
+    evidenceLevel,
+    weakTerm
+  });
   const markdown = formatWhyAnswer(trimmedQuestion, concept, fallback, preferences, responsePlan);
 
   await markAsked(label, learner);

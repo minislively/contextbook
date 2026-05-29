@@ -624,8 +624,10 @@ try {
   ]);
   assert(planSignals.length === 2 && planSignals.every((item) => item.signalType !== 'why.answered'), 'why response plan should filter out why.answered');
   const responsePlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['interview-sentence', 'project', 'plain', 'developer-term', 'cs-link'], avoid: [] }, planSignals);
-  assert(responsePlan.density === 'compact' && responsePlan.lead === 'plain' && responsePlan.includeInterviewLine === true, 'why response plan should expose semantic renderer-backed controls');
+  assert(responsePlan.density === 'compact' && responsePlan.lead === 'plain' && responsePlan.includeInterviewLine === true && responsePlan.followUp === 'self-check', 'why response plan should expose semantic renderer-backed controls');
   assert(responsePlan.density === 'compact' && responsePlan.reasons.includes('recent-confusion-feedback') && responsePlan.reasons.includes('format-requested:plain'), 'why response plan missing signal-driven reasons');
+  const weakTermPlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, [], { evidenceLevel: 'direct', weakTerm: { state: 'learning', askedCount: 2, updatedAt: '2026-01-01T00:00:00.000Z' } });
+  assert(weakTermPlan.examples === 'project-worked-example' && weakTermPlan.followUp === 'self-check' && weakTermPlan.reasons.includes('weak-term:learning'), 'weak-term state should adapt why response plan');
   const defaultPlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, []);
   const interviewPlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, [
     { signalType: 'format.requested', recordedAt: '2026-01-04T00:00:00.000Z', metadata: { format: 'interview' } }
@@ -633,31 +635,49 @@ try {
   const plainPlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, [
     { signalType: 'format.requested', recordedAt: '2026-01-05T00:00:00.000Z', metadata: { format: 'plain' } }
   ]);
+  const interviewBeatsWeakPlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, [
+    { signalType: 'feedback.confused', recordedAt: '2026-01-06T00:00:00.000Z' }
+  ], { question: '면접 답변으로 cleanup 설명해줘', evidenceLevel: 'direct', weakTerm: { state: 'drill', askedCount: 3, updatedAt: '2026-01-01T00:00:00.000Z' } });
+  assert(interviewBeatsWeakPlan.lead === 'interview' && interviewBeatsWeakPlan.followUp === 'interview-drill' && interviewBeatsWeakPlan.density === 'compact' && interviewBeatsWeakPlan.reasons.includes('weak-term:drill'), 'current interview intent should win lead/followUp over weak/confusion while preserving compact memory effects');
+  const generalInterviewPlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, [], { question: '면접 답변으로 debounce 설명해줘', evidenceLevel: 'general' });
+  assert(generalInterviewPlan.lead === 'uncertainty' && generalInterviewPlan.followUp === 'interview-drill' && generalInterviewPlan.reasons.includes('general-evidence-uncertainty'), 'general evidence plus interview should stay uncertainty-first while allowing interview drill');
   const defaultRendered = explanationFormat.formatWhyAnswer('cleanup 왜 해야 돼?', undefined, { id: 'use-effect-cleanup', label: 'useEffect cleanup / lifecycle' }, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, defaultPlan);
   const shortRendered = explanationFormat.formatWhyAnswer('cleanup 왜 해야 돼?', undefined, { id: 'use-effect-cleanup', label: 'useEffect cleanup / lifecycle' }, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, responsePlan);
   const interviewFirstRendered = explanationFormat.formatWhyAnswer('cleanup 왜 해야 돼?', undefined, { id: 'use-effect-cleanup', label: 'useEffect cleanup / lifecycle' }, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, interviewPlan);
   const plainFirstRendered = explanationFormat.formatWhyAnswer('cleanup 왜 해야 돼?', undefined, { id: 'use-effect-cleanup', label: 'useEffect cleanup / lifecycle' }, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, plainPlan);
-  assert(shortRendered !== defaultRendered && shortRendered.includes('개발자/CS 관점으로는') && !shortRendered.includes('개발자 관점에서는'), 'short response plan should change rendered output');
-  assert(interviewPlan.reasons.includes('format-requested:interview') && interviewFirstRendered !== defaultRendered && interviewFirstRendered.indexOf('컴포넌트 생명주기') < interviewFirstRendered.indexOf('이 프로젝트'), 'captured interview format signal should affect narrative output');
+  assert(shortRendered !== defaultRendered && shortRendered.includes('확인 질문:') && shortRendered.includes('개발자/CS로 연결하면'), 'short response plan should change rendered output');
+  const graphWeakRendered = explanationFormat.formatWhyAnswer('graph 왜 중요해?', { id: 'graph-dag', label: 'Graph / DAG / dependency structure', evidenceLevel: 'related', signals: [{ conceptId: 'graph-dag', evidenceLevel: 'related', file: 'src/graph.ts', signal: 'nodes + edges', reason: 'nodes and edges naming suggests graph-like data modeling.', detectedAt: '2026-01-01T00:00:00.000Z' }], connectedConcepts: ['nodes and edges'], interviewQuestion: 'nodes와 edges 구조는 어떤 문제를 graph로 모델링한다는 뜻인가요?', updatedAt: '2026-01-01T00:00:00.000Z' }, undefined, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, weakTermPlan);
+  assert(graphWeakRendered.includes('확인 질문:') && graphWeakRendered.includes('nodes + edges') && !graphWeakRendered.includes('열었으면 닫는다') && !graphWeakRendered.includes('연결, 구독, 타이머'), 'non-cleanup adaptive rendering should not leak cleanup-specific coaching');
+  const multiFileConcept = { id: 'graph-dag', label: 'Graph / DAG / dependency structure', evidenceLevel: 'related', signals: [
+    { conceptId: 'graph-dag', evidenceLevel: 'related', file: 'src/a.ts', signal: 'nodes + edges', reason: 'nodes and edges naming suggests graph-like data modeling.', detectedAt: '2026-01-01T00:00:00.000Z' },
+    { conceptId: 'graph-dag', evidenceLevel: 'related', file: 'src/b.ts', signal: 'nodes + edges', reason: 'nodes and edges naming suggests graph-like data modeling.', detectedAt: '2026-01-01T00:00:00.000Z' }
+  ], connectedConcepts: ['nodes and edges'], interviewQuestion: 'nodes와 edges 구조는 어떤 문제를 graph로 모델링한다는 뜻인가요?', updatedAt: '2026-01-01T00:00:00.000Z' };
+  const compactEvidenceRendered = explanationFormat.formatWhyAnswer('graph 왜 중요해?', multiFileConcept, undefined, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, { ...weakTermPlan, evidenceVisibility: 'compact' });
+  assert(compactEvidenceRendered.includes('- src/a.ts') && !compactEvidenceRendered.includes('- src/b.ts'), 'compact evidence visibility should cap rendered evidence list');
+  const developerEmphasisRendered = explanationFormat.formatWhyAnswer('graph 왜 중요해?', multiFileConcept, undefined, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, { ...defaultPlan, emphasis: ['project', 'developer', 'plain', 'cs', 'interview'] });
+  assert(developerEmphasisRendered.indexOf('개발자 용어로는') < developerEmphasisRendered.indexOf('대상을 점으로'), 'response emphasis order should affect rendered body order');
+  assert(interviewPlan.reasons.includes('format-requested:interview') && interviewFirstRendered !== defaultRendered && interviewFirstRendered.includes('면접용으로 먼저 말하면') && interviewFirstRendered.includes('연습 질문:'), 'captured interview format signal should affect narrative output');
   assert(plainPlan.reasons.includes('format-requested:plain') && plainFirstRendered !== defaultRendered && plainFirstRendered.indexOf('열어둔 연결') < plainFirstRendered.indexOf('이 프로젝트'), 'captured plain format signal should affect narrative output');
   const conflictingFormatPlan = responsePlanFormat.buildWhyResponsePlan({ explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, [
     { signalType: 'format.requested', recordedAt: '2026-01-06T00:00:00.000Z', metadata: { format: 'plain' } },
     { signalType: 'format.requested', recordedAt: '2026-01-01T00:00:00.000Z', metadata: { format: 'project-first' } }
   ]);
   assert(conflictingFormatPlan.lead === 'plain', 'newest format signal should win over older conflicting format signals');
+  await writeFile(join(learnerDir, 'weak-terms.json'), JSON.stringify({ 'useeffect cleanup / lifecycle': { state: 'learning', askedCount: 2, updatedAt: '2026-01-01T00:00:00.000Z' } }, null, 2), 'utf8');
   const why = run(['why', 'cleanup 왜 해야 돼?']);
   const coreWhy = await core.answerWhy('cleanup 왜 해야 돼?', { root, learner: 'default' });
-  assert(coreWhy.markdown.includes('근거 수준:'), 'core why contract did not return evidence marker');
+  assert(coreWhy.markdown.includes('근거:'), 'core why contract did not return evidence marker');
   assert(coreWhy.evidenceLevel === 'direct' || coreWhy.evidenceLevel === 'related', 'core why contract did not return project evidence level');
-  for (const marker of ['근거 수준:', '근거 파일:', 'useEffect cleanup', 'resource lifecycle', '컴포넌트 생명주기']) {
+  for (const marker of ['근거:', '근거 파일:', 'useEffect cleanup', 'resource lifecycle', '컴포넌트 생명주기', '확인 질문:']) {
     assert(why.includes(marker), `why missing ${marker}`);
   }
   for (const oldHeading of ['## 프로젝트 말로 설명', '## 쉬운 말', '## 개발자 용어', '## CS 연결', '## 면접 문장']) {
     assert(!why.includes(oldHeading), `why should not use old section dump heading ${oldHeading}`);
   }
   assert(why.includes('- src/hooks/useWorkflowSSE.ts'), 'why missing direct evidence file bullet');
-  const generalWhy = runIn(await mkdtemp(join(tmpdir(), 'contextbook-general-')), home, ['why', 'debounce 왜 필요해?']);
-  assert(generalWhy.includes('근거 수준: general') && generalWhy.includes('근거 파일:') && generalWhy.includes('프로젝트 근거 없음'), 'general why missing evidence fallback markers');
+  const generalWhyRoot = await mkdtemp(join(tmpdir(), 'contextbook-general-'));
+  const generalWhy = runIn(generalWhyRoot, home, ['why', 'debounce 면접 답변으로 설명해줘']);
+  assert(generalWhy.includes('근거: general') && generalWhy.includes('근거 파일:') && generalWhy.includes('프로젝트에서 이 질문과 직접 맞는 근거는 아직 찾지 못했습니다') && generalWhy.includes('연습 질문:'), 'general interview why missing uncertainty-first fallback markers');
 
   const wordingFiles = ['templates/prompts/why.md', 'src/storage/project-store.ts', 'src/codex/install.ts', 'src/claude-code/install.ts', 'scripts/release-smoke.mjs'];
   for (const file of wordingFiles) {

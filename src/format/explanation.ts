@@ -1,5 +1,5 @@
 import type { ConceptRecord, EvidenceLevel, LearnerPreferences, RankedLearningMoment } from '../types.js';
-import type { WhyResponsePlan } from './response-plan.js';
+import type { WhyLead, WhyResponsePlan } from './response-plan.js';
 import { rankEvidenceForDisplay, type EvidenceDisplayOptions } from './evidence.js';
 import { conceptMetadata } from '../concepts/mapper.js';
 import { defaultPreferences } from '../storage/user-store.js';
@@ -72,6 +72,9 @@ function fallbackResponsePlan(preferences: LearnerPreferences): WhyResponsePlan 
     emphasis: atomOrder,
     includeInterviewLine: lead !== 'interview',
     evidenceVisibility: preferences.outputLength === 'short' ? 'compact' : 'normal',
+    examples: 'none',
+    followUp: 'none',
+    tone: 'neutral',
     reasons: ['legacy-preference-fallback']
   };
 }
@@ -160,49 +163,73 @@ interface NarrativeWhyInput {
 }
 
 function formatNarrativeWhyAnswer(input: NarrativeWhyInput): string {
-  const orderedExplanations = orderedNarrativeExplanations(input.atomOrder, input.explanations);
-  const first = orderedExplanations[0] ?? input.explanations.project;
-  const second = orderedExplanations[1] ?? input.explanations.plain;
-  const developer = input.explanations['developer-term'];
-  const cs = input.explanations['cs-link'];
   const interview = input.explanations['interview-sentence'];
-  const evidenceFiles = input.files.length ? input.files.map((file) => `- ${file}`).join('\n') : '프로젝트 근거 없음';
-  const short = input.responsePlan.density === 'compact';
-  const includeInterviewLine = input.responsePlan.includeInterviewLine;
-  const body = short
-    ? [
-      `${stripTrailingPeriod(first)} ${second}`,
-      `개발자/CS 관점으로는 ${developer} ${cs}`,
-      includeInterviewLine ? `면접에서는: ${interview}` : undefined
-    ].filter((line): line is string => Boolean(line))
-    : [
-      `${stripTrailingPeriod(first)} ${second}`,
-      '',
-      `개발자 관점에서는 ${developer}`,
-      `CS로 넓히면 ${cs}`,
-      includeInterviewLine ? `면접에서는: ${interview}` : undefined
-    ].filter((line): line is string => line !== undefined);
-
-  return [
-    `근거 수준: ${input.evidenceLevel}`,
+  const visibleFiles = input.responsePlan.evidenceVisibility === 'compact' ? input.files.slice(0, 1) : input.files;
+  const evidenceFiles = visibleFiles.length ? visibleFiles.map((file) => `- ${file}`).join('\n') : '프로젝트 근거 없음';
+  const body = orderedBodyLines(input);
+  const lines = [
+    `근거: ${input.evidenceLevel}${visibleFiles[0] ? ` · ${visibleFiles[0]}` : ''}`,
     '',
     ...body,
+    input.responsePlan.examples === 'project-worked-example' ? projectWorkedExample(input.explanations) : undefined,
+    followUpLine(input.responsePlan, interview, input.evidenceLevel),
     '',
     '근거 파일:',
     evidenceFiles,
     ''
-  ].join('\n');
+  ].filter((line): line is string => line !== undefined && line !== '');
+  return `${lines.join('\n\n')}\n`;
 }
 
-function orderedNarrativeExplanations(order: Array<'project' | 'plain' | 'developer' | 'cs' | 'interview'>, explanations: Record<string, string>): string[] {
-  const keys: Record<'project' | 'plain' | 'developer' | 'cs' | 'interview', string> = {
-    project: 'project',
-    plain: 'plain',
-    developer: 'developer-term',
-    cs: 'cs-link',
-    interview: 'interview-sentence'
+function orderedBodyLines(input: NarrativeWhyInput): string[] {
+  const atomText: Record<'project' | 'plain' | 'developer' | 'cs' | 'interview', string> = {
+    project: input.responsePlan.lead === 'interview' ? input.explanations.project : leadAwareText('project', input.responsePlan.lead, input.explanations),
+    plain: leadAwareText('plain', input.responsePlan.lead, input.explanations),
+    developer: `개발자 용어로는 ${input.explanations['developer-term']}`,
+    cs: `CS로 넓히면 ${input.explanations['cs-link']}`,
+    interview: input.responsePlan.lead === 'interview'
+      ? `면접용으로 먼저 말하면, ${lowerFirst(input.explanations['interview-sentence'])}`
+      : `면접에서는 이렇게 말하면 됩니다: ${input.explanations['interview-sentence']}`
   };
-  return order.map((key) => explanations[keys[key]]).filter((value): value is string => Boolean(value));
+  const ordered = input.atomOrder
+    .filter((atom) => input.responsePlan.includeInterviewLine || atom !== 'interview' || input.responsePlan.lead === 'interview')
+    .map((atom) => atomText[atom]);
+  if (input.responsePlan.lead === 'uncertainty') return compactOrNormalLines(input.responsePlan.density, ordered);
+  return compactOrNormalLines(input.responsePlan.density, ordered);
+}
+
+function compactOrNormalLines(density: WhyResponsePlan['density'], ordered: string[]): string[] {
+  if (density !== 'compact') return ordered;
+  const [first, second, ...rest] = ordered;
+  const developer = rest.find((line) => line.startsWith('개발자 용어로는'));
+  const cs = rest.find((line) => line.startsWith('CS로 넓히면'));
+  const interview = rest.find((line) => line.startsWith('면접에서는'));
+  return [
+    first && second ? `${stripTrailingPeriod(first)} ${second}` : first ?? second,
+    developer && cs ? `개발자/CS로 연결하면 ${developer.replace(/^개발자 용어로는\s*/, '')} ${cs.replace(/^CS로 넓히면\s*/, '')}` : developer ?? cs,
+    interview
+  ].filter((line): line is string => Boolean(line));
+}
+
+function leadAwareText(atom: 'project' | 'plain', lead: WhyLead, explanations: Record<string, string>): string {
+  if (lead === 'plain' && atom === 'plain') return explanations.plain;
+  if (lead === 'uncertainty' && atom === 'project') return explanations.project;
+  return explanations[atom];
+}
+
+function projectWorkedExample(explanations: Record<string, string>): string {
+  return `작게 예를 들면, ${lowerFirst(explanations.project)} 즉 이 개념은 지금 코드에서 보인 신호를 기준으로 먼저 잡고, 그다음 개발자/CS 용어로 넓히면 됩니다.`;
+}
+
+function followUpLine(plan: WhyResponsePlan, interview: string, evidenceLevel: EvidenceLevel): string | undefined {
+  if (plan.followUp === 'self-check') return '확인 질문: 이 코드에서 이 개념을 보여주는 신호는 무엇이고, 그 신호가 어떤 문제를 설명하고 있나요?';
+  if (plan.followUp === 'interview-drill' && evidenceLevel === 'general') return `연습 질문: 프로젝트에서 이 개념을 쓰는 지점을 찾으면, 이 문장을 실제 코드 상황으로 어떻게 바꿀 수 있을까요? 예: ${interview}`;
+  if (plan.followUp === 'interview-drill') return `연습 질문: 방금 문장을 본인 코드의 실제 리소스 이름으로 바꿔서 다시 말해보세요. 예: ${interview}`;
+  return undefined;
+}
+
+function lowerFirst(text: string): string {
+  return text.replace(/^([A-Z])/, (match) => match.toLowerCase());
 }
 
 function stripTrailingPeriod(text: string): string {
