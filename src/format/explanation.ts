@@ -48,7 +48,7 @@ export function formatWhyAnswer(
   const signal = evidence?.primarySignal;
   const projectText = concept
     ? `이 프로젝트에서는 ${signal ? `\`${signal.signal}\` 신호가 보여서` : '관련 신호가 보여서'} \`${label}\`을 코드 맥락으로 설명할 수 있습니다${signal?.file ? ` (${signal.file})` : ''}.`
-    : `이 프로젝트에서 이 질문과 직접 맞는 근거는 아직 찾지 못했습니다. 지금은 일반 개념으로 설명하고, 다음 scan에서 적용 지점을 다시 확인하는 편이 안전합니다.`;
+    : `이 프로젝트에서는 \`${label}\` 근거를 찾지 못했습니다. 그래서 아래 설명은 일반 개념 기준입니다.`;
 
   const id = metadata?.id ?? concept?.id ?? 'general';
   const explanations: Record<string, string> = {
@@ -125,23 +125,23 @@ function plainExplanation(id: string): string {
 
 function developerExplanation(id: string, label: string): string {
   switch (id) {
-    case 'use-effect-cleanup': return '이건 `useEffect cleanup`과 component lifecycle 문제입니다.';
-    case 'sse': return '이건 `EventSource` 기반 SSE와 async event handling 문제입니다.';
-    case 'websocket': return '이건 WebSocket connection lifecycle과 realtime bidirectional communication 문제입니다.';
-    case 'debounce': return '이건 debounce, input event handling, rate control 문제입니다.';
-    default: return `개발자 용어로는 \`${label}\` 문제입니다.`;
+    case 'use-effect-cleanup': return '`useEffect cleanup`과 component lifecycle';
+    case 'sse': return '`EventSource` 기반 SSE와 async event handling';
+    case 'websocket': return 'WebSocket connection lifecycle과 realtime bidirectional communication';
+    case 'debounce': return 'debounce, input event handling, rate control';
+    default: return `\`${label}\``;
   }
 }
 
 function csExplanation(id: string): string {
   switch (id) {
-    case 'use-effect-cleanup': return '더 넓게 보면 resource lifecycle 문제입니다. 파일 핸들, 네트워크 소켓, 구독처럼 열었으면 닫아야 하는 자원과 같습니다.';
+    case 'use-effect-cleanup': return 'resource lifecycle 관점입니다. 파일 핸들, 네트워크 소켓, 구독처럼 열었으면 닫아야 하는 자원과 같습니다.';
     case 'sse': return '네트워크 스트림과 이벤트 기반 비동기 처리로 연결됩니다.';
     case 'timer-event-loop': return 'call stack, task queue, event loop의 스케줄링 문제로 연결됩니다.';
     case 'graph-dag': return '그래프 모델링, 의존성, 순서 결정 문제로 연결됩니다.';
     case 'memoization-render': return '캐싱, 참조 동일성, invalidation 문제로 연결됩니다.';
     case 'debounce': return '이벤트가 너무 자주 발생할 때 처리 빈도를 제어하는 scheduling 문제로 볼 수 있습니다.';
-    default: return '더 넓게 보면 소프트웨어가 상태, 자원, 시간, 의존성을 관리하는 방식과 연결됩니다.';
+    default: return '소프트웨어가 상태, 자원, 시간, 의존성을 관리하는 방식과 연결됩니다.';
   }
 }
 
@@ -185,11 +185,11 @@ function orderedBodyLines(input: NarrativeWhyInput): string[] {
   const atomText: Record<'project' | 'plain' | 'developer' | 'cs' | 'interview', string> = {
     project: input.responsePlan.lead === 'interview' ? input.explanations.project : leadAwareText('project', input.responsePlan.lead, input.explanations),
     plain: leadAwareText('plain', input.responsePlan.lead, input.explanations),
-    developer: `개발자 용어로는 ${input.explanations['developer-term']}`,
-    cs: `CS로 넓히면 ${input.explanations['cs-link']}`,
+    developer: `개발자 용어: ${input.explanations['developer-term']}`,
+    cs: `CS 연결: ${input.explanations['cs-link']}`,
     interview: input.responsePlan.lead === 'interview'
-      ? `면접용으로 먼저 말하면, ${lowerFirst(input.explanations['interview-sentence'])}`
-      : `면접에서는 이렇게 말하면 됩니다: ${input.explanations['interview-sentence']}`
+      ? `면접 답변: ${input.explanations['interview-sentence']}`
+      : `면접 문장: ${input.explanations['interview-sentence']}`
   };
   const ordered = input.atomOrder
     .filter((atom) => input.responsePlan.includeInterviewLine || atom !== 'interview' || input.responsePlan.lead === 'interview')
@@ -201,12 +201,12 @@ function orderedBodyLines(input: NarrativeWhyInput): string[] {
 function compactOrNormalLines(density: WhyResponsePlan['density'], ordered: string[]): string[] {
   if (density !== 'compact') return ordered;
   const [first, second, ...rest] = ordered;
-  const developer = rest.find((line) => line.startsWith('개발자 용어로는'));
-  const cs = rest.find((line) => line.startsWith('CS로 넓히면'));
-  const interview = rest.find((line) => line.startsWith('면접에서는'));
+  const developer = rest.find((line) => line.startsWith('개발자 용어:'));
+  const cs = rest.find((line) => line.startsWith('CS 연결:'));
+  const interview = rest.find((line) => line.startsWith('면접 문장:'));
   return [
     first && second ? `${stripTrailingPeriod(first)} ${second}` : first ?? second,
-    developer && cs ? `개발자/CS로 연결하면 ${developer.replace(/^개발자 용어로는\s*/, '')} ${cs.replace(/^CS로 넓히면\s*/, '')}` : developer ?? cs,
+    developer && cs ? `개발자/CS 연결: ${developer.replace(/^개발자 용어:\s*/, '')} · ${cs.replace(/^CS 연결:\s*/, '')}` : developer ?? cs,
     interview
   ].filter((line): line is string => Boolean(line));
 }
@@ -218,19 +218,16 @@ function leadAwareText(atom: 'project' | 'plain', lead: WhyLead, explanations: R
 }
 
 function projectWorkedExample(explanations: Record<string, string>): string {
-  return `작게 예를 들면, ${lowerFirst(explanations.project)} 즉 이 개념은 지금 코드에서 보인 신호를 기준으로 먼저 잡고, 그다음 개발자/CS 용어로 넓히면 됩니다.`;
+  return `핵심 흐름: ${stripTrailingPeriod(explanations.project)} 이 신호를 개발자 용어와 CS 개념으로 넓혀 설명하면 됩니다.`;
 }
 
 function followUpLine(plan: WhyResponsePlan, interview: string, evidenceLevel: EvidenceLevel): string | undefined {
-  if (plan.followUp === 'self-check') return '확인 질문: 이 코드에서 이 개념을 보여주는 신호는 무엇이고, 그 신호가 어떤 문제를 설명하고 있나요?';
-  if (plan.followUp === 'interview-drill' && evidenceLevel === 'general') return `연습 질문: 프로젝트에서 이 개념을 쓰는 지점을 찾으면, 이 문장을 실제 코드 상황으로 어떻게 바꿀 수 있을까요? 예: ${interview}`;
-  if (plan.followUp === 'interview-drill') return `연습 질문: 방금 문장을 본인 코드의 실제 리소스 이름으로 바꿔서 다시 말해보세요. 예: ${interview}`;
+  if (plan.followUp === 'self-check') return '확인 질문: 이 코드의 어떤 신호가 이 개념을 보여주나요?';
+  if (plan.followUp === 'interview-drill' && evidenceLevel === 'general') return '연습: 이 개념을 쓰는 파일을 찾으면 위 문장을 프로젝트 상황으로 바꿔보세요.';
+  if (plan.followUp === 'interview-drill') return '연습: 위 면접 문장에서 리소스/상태 이름을 실제 코드 이름으로 바꿔 말해보세요.';
   return undefined;
 }
 
-function lowerFirst(text: string): string {
-  return text.replace(/^([A-Z])/, (match) => match.toLowerCase());
-}
 
 function stripTrailingPeriod(text: string): string {
   return text.replace(/[.。]\s*$/, '.');
