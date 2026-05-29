@@ -1,5 +1,6 @@
 import { basename } from 'node:path';
 import type { EvidenceRecord } from '../types.js';
+import { evidenceQualityRank } from '../core/evidence-quality.js';
 
 export const DEFAULT_VISIBLE_EVIDENCE_LIMIT = 3;
 
@@ -50,12 +51,14 @@ export function filterEvidenceFilesForDisplay(files: string[], limit = DEFAULT_V
   const visibleFiles: string[] = [];
   const rankedFiles = [...new Set(files.filter(Boolean))]
     .filter((file) => !isHiddenEvidenceFile(file))
-    .map(safeEvidenceFilePath)
-    .filter(Boolean)
-    .sort((left, right) => evidenceFileRank(left) - evidenceFileRank(right) || left.localeCompare(right));
+    .map((file) => ({ original: file, display: safeEvidenceFilePath(file) }))
+    .filter((item) => Boolean(item.display))
+    .sort((left, right) => evidenceQualityRank(left.original) - evidenceQualityRank(right.original)
+      || evidenceFileRank(left.original) - evidenceFileRank(right.original)
+      || left.display.localeCompare(right.display));
   for (const file of rankedFiles) {
     if (visibleFiles.length >= limit) break;
-    visibleFiles.push(file);
+    visibleFiles.push(file.display);
   }
   return visibleFiles;
 }
@@ -85,9 +88,9 @@ export function isHiddenEvidenceFile(file = ''): boolean {
 
 function evidenceSignalRank(signal: EvidenceRecord, changedFiles?: Set<string>): number {
   const file = signal.file ?? '';
-  const liveChanged = changedFiles?.has(file) ? 0 : 100;
-  const persistedChanged = !changedFiles && signal.changed ? 0 : 100;
-  return Math.min(liveChanged, persistedChanged) + evidenceFileRank(file);
+  const liveChanged = changedFiles?.has(file) ? 0 : 10;
+  const persistedChanged = !changedFiles && signal.changed ? 0 : 10;
+  return evidenceQualityRank(file) + Math.min(liveChanged, persistedChanged) + evidenceFileRank(file);
 }
 
 function evidenceFileRank(file = ''): number {
