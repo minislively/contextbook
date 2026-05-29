@@ -141,6 +141,8 @@ export interface ProjectRecommendedAction {
 export interface ProjectSummarySafety {
   absolutePathsIncluded: false;
   hiddenContentIncluded: false;
+  hiddenEvidencePathsFiltered: true;
+  maxVisibleEvidenceFiles: 3;
   profileMutated: false;
   persistedSummaryCreated: false;
 }
@@ -493,6 +495,8 @@ export interface ProfileUpdateCandidatesJson {
 export interface LearnerSummarySafety {
   rawTranscriptIncluded: false;
   absolutePathsIncluded: false;
+  hiddenEvidencePathsFiltered: true;
+  maxVisibleEvidenceFiles: 3;
   profileMutated: false;
   preferencesMutated: false;
   weakTermsMutated: false;
@@ -678,6 +682,8 @@ export interface HookSuggestResult {
 export interface MemorySignalsSafety {
   rawTranscriptIncluded: false;
   absolutePathsIncluded: false;
+  hiddenEvidencePathsFiltered: true;
+  maxVisibleEvidenceFiles: 3;
   profileMutated: false;
   weakTermsMutated: false;
   unsafeJudgmentIncluded: false;
@@ -733,6 +739,8 @@ export interface MemoryContextSafety {
   rawTranscriptIncluded: false;
   absolutePathsIncluded: false;
   hiddenContentIncluded: false;
+  hiddenEvidencePathsFiltered: true;
+  maxVisibleEvidenceFiles: 3;
   profileMutated: false;
   preferencesMutated: false;
   weakTermsMutated: false;

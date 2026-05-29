@@ -1,3 +1,4 @@
+import { basename } from 'node:path';
 import type { EvidenceRecord } from '../types.js';
 
 export const DEFAULT_VISIBLE_EVIDENCE_LIMIT = 3;
@@ -45,13 +46,41 @@ export function rankEvidenceForDisplay(signals: EvidenceRecord[], options: Evide
   };
 }
 
+export function filterEvidenceFilesForDisplay(files: string[], limit = DEFAULT_VISIBLE_EVIDENCE_LIMIT): string[] {
+  const visibleFiles: string[] = [];
+  const rankedFiles = [...new Set(files.filter(Boolean))]
+    .filter((file) => !isHiddenEvidenceFile(file))
+    .map(safeEvidenceFilePath)
+    .filter(Boolean)
+    .sort((left, right) => evidenceFileRank(left) - evidenceFileRank(right) || left.localeCompare(right));
+  for (const file of rankedFiles) {
+    if (visibleFiles.length >= limit) break;
+    visibleFiles.push(file);
+  }
+  return visibleFiles;
+}
+
+export function safeEvidenceFilePath(file = ''): string {
+  const normalized = file.replace(/\\/g, '/');
+  return normalized.startsWith('/') ? basename(normalized) : normalized;
+}
+
 export function isHiddenEvidenceFile(file = ''): boolean {
-  return file.startsWith('docs/private/')
-    || file.startsWith('.contextbook/')
-    || file.startsWith('.omx/')
-    || file.startsWith('dist/')
-    || file.includes('/node_modules/')
-    || file === 'node_modules';
+  const normalized = file.replace(/\\/g, '/');
+  return normalized.startsWith('docs/private/')
+    || normalized.includes('/docs/private/')
+    || normalized.startsWith('.contextbook/')
+    || normalized.includes('/.contextbook/')
+    || normalized === '.contextbook'
+    || normalized.startsWith('.omx/')
+    || normalized.includes('/.omx/')
+    || normalized === '.omx'
+    || normalized.startsWith('dist/')
+    || normalized.includes('/dist/')
+    || normalized === 'dist'
+    || normalized.includes('/node_modules/')
+    || normalized.startsWith('node_modules/')
+    || normalized === 'node_modules';
 }
 
 function evidenceSignalRank(signal: EvidenceRecord, changedFiles?: Set<string>): number {

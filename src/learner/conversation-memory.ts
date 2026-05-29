@@ -1,4 +1,4 @@
-import { basename } from 'node:path';
+import { filterEvidenceFilesForDisplay, isHiddenEvidenceFile, DEFAULT_VISIBLE_EVIDENCE_LIMIT } from '../format/evidence.js';
 import { learnerPaths, recordAnswer, recordProfileUpdate, recordSignal } from '../storage/user-store.js';
 import { readJsonl } from '../storage/fs-utils.js';
 import type { ConceptRecord, ConversationCommand, ConversationMemoryEvent, ConversationSignalType, EvidenceLevel, MemorySignalsJson, MemorySignalsSafety } from '../types.js';
@@ -169,7 +169,7 @@ function toSafeConversationEvent(event: Record<string, unknown>): ConversationMe
     conceptLabel: sanitizeShortText(typeof event.conceptLabel === 'string' ? event.conceptLabel : typeof event.concept === 'string' ? event.concept : undefined, MAX_NOTE_LENGTH),
     concept: sanitizeShortText(typeof event.concept === 'string' ? event.concept : undefined, MAX_NOTE_LENGTH),
     evidenceLevel: isEvidenceLevel(event.evidenceLevel) ? event.evidenceLevel : undefined,
-    evidenceFiles: Array.isArray(event.evidenceFiles) ? event.evidenceFiles.filter((file): file is string => typeof file === 'string').slice(0, MAX_FILES) : undefined,
+    evidenceFiles: Array.isArray(event.evidenceFiles) ? filterEvidenceFilesForDisplay(event.evidenceFiles.filter((file): file is string => typeof file === 'string')) : undefined,
     conceptCount: typeof event.conceptCount === 'number' ? event.conceptCount : undefined,
     metadata: sanitizeMetadata(event.metadata && typeof event.metadata === 'object' && !Array.isArray(event.metadata) ? event.metadata as PrimitiveMetadata : undefined),
     recordedAt: typeof event.recordedAt === 'string' ? event.recordedAt : typeof event.answeredAt === 'string' ? event.answeredAt : undefined
@@ -196,10 +196,9 @@ function sanitizeShortText(text: string | undefined, maxLength: number): string 
 }
 
 function uniqueBaselessFiles(files: string[]): string[] | undefined {
-  const safe = [...new Set(files.filter(Boolean))]
+  const safe = filterEvidenceFilesForDisplay([...new Set(files.filter(Boolean))]
     .filter((file) => !file.includes('..'))
-    .slice(0, MAX_FILES)
-    .map((file) => file.startsWith('/') ? basename(file) : file);
+    .filter((file) => !isHiddenEvidenceFile(file)));
   return safe.length ? safe : undefined;
 }
 
@@ -216,6 +215,8 @@ function memorySignalsSafety(): MemorySignalsSafety {
   return {
     rawTranscriptIncluded: false,
     absolutePathsIncluded: false,
+    hiddenEvidencePathsFiltered: true,
+    maxVisibleEvidenceFiles: DEFAULT_VISIBLE_EVIDENCE_LIMIT,
     profileMutated: false,
     weakTermsMutated: false,
     unsafeJudgmentIncluded: false

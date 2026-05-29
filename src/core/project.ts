@@ -1,4 +1,5 @@
 import { basename } from 'node:path';
+import { filterEvidenceFilesForDisplay, rankEvidenceForDisplay, DEFAULT_VISIBLE_EVIDENCE_LIMIT } from '../format/evidence.js';
 import { formatProjectSummary } from '../format/project.js';
 import { exists } from '../storage/fs-utils.js';
 import { projectPaths, readConcepts, readEvidence, readFileIndex, readScanRuns } from '../storage/project-store.js';
@@ -62,13 +63,15 @@ export function toProjectSummaryJson(summary: ProjectSummary): ProjectSummaryJso
     fileIndexSummary: {
       generatedAt: summary.fileIndex.generatedAt,
       totals: summary.fileIndex.totals,
-      sampleFiles: summary.fileIndex.files.slice(0, 10)
+      sampleFiles: safeSampleFiles(summary.fileIndex.files)
     },
     evidenceCount: summary.evidenceCount,
     recommendedActions: projectRecommendedActions(summary),
     safety: {
       absolutePathsIncluded: false,
       hiddenContentIncluded: false,
+      hiddenEvidencePathsFiltered: true,
+      maxVisibleEvidenceFiles: DEFAULT_VISIBLE_EVIDENCE_LIMIT,
       profileMutated: false,
       persistedSummaryCreated: false
     }
@@ -114,10 +117,16 @@ function toProjectSummaryConcept(concept: ConceptRecord): ProjectSummaryConcept 
     evidenceLevel: concept.evidenceLevel,
     signalCount: concept.signals.length,
     changed: concept.signals.some((signal) => signal.changed),
-    files: [...new Set(concept.signals.map((signal) => signal.file).filter(Boolean))] as string[],
+    files: rankEvidenceForDisplay(concept.signals).visibleFiles,
     connectedConcepts: concept.connectedConcepts,
     interviewQuestion: concept.interviewQuestion
   };
+}
+
+
+function safeSampleFiles(files: ProjectSummary['fileIndex']['files']): ProjectSummary['fileIndex']['files'] {
+  const safePaths = new Set(filterEvidenceFilesForDisplay(files.map((file) => file.path), 10));
+  return files.filter((file) => safePaths.has(file.path)).slice(0, 10);
 }
 
 function projectRecommendedActions(summary: ProjectSummary): ProjectRecommendedAction[] {

@@ -2,6 +2,7 @@ import { memorySignalsJson } from '../learner/conversation-memory.js';
 import { profileUpdateCandidatesJson } from '../learner/profile-update-candidates.js';
 import { weakTermSuggestionsJson } from '../learner/weak-term-suggestions.js';
 import { buildProjectSummary, toProjectSummaryJson } from './project.js';
+import { DEFAULT_VISIBLE_EVIDENCE_LIMIT } from '../format/evidence.js';
 import { gitWorkingTreeState } from '../scan/git-diff.js';
 import { buildLearnerSummary, toLearnerSummaryJson } from './learner.js';
 import type {
@@ -166,6 +167,8 @@ function memoryContextSafety(): MemoryContextSafety {
     rawTranscriptIncluded: false,
     absolutePathsIncluded: false,
     hiddenContentIncluded: false,
+    hiddenEvidencePathsFiltered: true,
+    maxVisibleEvidenceFiles: DEFAULT_VISIBLE_EVIDENCE_LIMIT,
     profileMutated: false,
     preferencesMutated: false,
     weakTermsMutated: false,

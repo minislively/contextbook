@@ -67,6 +67,65 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+
+function hiddenEvidencePath(value) {
+  return typeof value === 'string' && (
+    value.startsWith('docs/private/')
+    || value.includes('/docs/private/')
+    || value.startsWith('.contextbook/')
+    || value.includes('/.contextbook/')
+    || value === '.contextbook'
+    || value.startsWith('.omx/')
+    || value.includes('/.omx/')
+    || value === '.omx'
+    || value.startsWith('dist/')
+    || value.includes('/dist/')
+    || value === 'dist'
+    || value.startsWith('node_modules/')
+    || value.includes('/node_modules/')
+    || value === 'node_modules'
+  );
+}
+
+function assertNoHiddenEvidencePaths(value, message) {
+  const seen = [];
+  collectStrings(value, seen);
+  assert(!seen.some(hiddenEvidencePath), message);
+}
+
+function assertNoRedactionPayload(value, message) {
+  const keys = [];
+  collectKeys(value, keys);
+  assert(!keys.includes('hiddenFiles') && !keys.includes('redactions'), message);
+}
+
+function collectStrings(value, output) {
+  if (typeof value === 'string') {
+    output.push(value);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectStrings(item, output);
+    return;
+  }
+  if (value && typeof value === 'object') {
+    for (const item of Object.values(value)) collectStrings(item, output);
+  }
+}
+
+function collectKeys(value, output) {
+  if (Array.isArray(value)) {
+    for (const item of value) collectKeys(item, output);
+    return;
+  }
+  if (value && typeof value === 'object') {
+    for (const [key, item] of Object.entries(value)) {
+      output.push(key);
+      collectKeys(item, output);
+    }
+  }
+}
+
 function legacyClaudeLearnCommandContent() {
   return `---
 description: Generate Contextbook learning moments from the current repository.
@@ -345,10 +404,16 @@ try {
   await mkdir(join(root, 'src', 'assets'), { recursive: true });
   await mkdir(join(root, 'zz-unsupported'), { recursive: true });
   await mkdir(join(root, 'dist'), { recursive: true });
+  await mkdir(join(root, '.omx', 'state'), { recursive: true });
+  await mkdir(join(root, 'node_modules', 'ignored-package'), { recursive: true });
+  await mkdir(join(root, 'docs', 'private'), { recursive: true });
   await writeFile(join(root, '.env'), 'SECRET_TOKEN=should-not-leak\n', 'utf8');
   await writeFile(join(root, 'src', 'assets', 'logo.png'), 'unsupported image placeholder\n', 'utf8');
   await writeFile(join(root, 'src', 'hooks', 'large-fixture.ts'), 'x'.repeat(300_001), 'utf8');
   await writeFile(join(root, 'dist', 'generated.js'), 'export const hidden = "ignored";\n', 'utf8');
+  await writeFile(join(root, '.omx', 'state', 'private.json'), '{"signal":"EventSource should be ignored"}\n', 'utf8');
+  await writeFile(join(root, 'node_modules', 'ignored-package', 'index.js'), 'new EventSource("ignored");\n', 'utf8');
+  await writeFile(join(root, 'docs', 'private', 'notes.md'), 'EventSource should be ignored from AI context JSON file arrays.\n', 'utf8');
   for (let index = 0; index < 1010; index += 1) {
     await writeFile(join(root, 'zz-unsupported', `unsupported-${index}.bin`), 'unsupported\n', 'utf8');
   }
@@ -360,6 +425,7 @@ try {
   assert(healthySafeRecover.safety.projectMemoryMutated === false && healthySafeRecover.safety.learnerMemoryMutated === false && healthySafeRecover.safety.backupCreated === false, 'memory recover safe healthy no-op safety invalid');
   assert(healthySafeRecover.diagnosis.safety.readOnly === true, 'memory recover safe healthy diagnosis should be read-only');
   const core = await import('../dist/core/index.js');
+  const conversationMemory = await import('../dist/learner/conversation-memory.js');
   const explanationFormat = await import('../dist/format/explanation.js');
   const responsePlanFormat = await import('../dist/format/response-plan.js');
   const rankedFixtures = core.rankLearningMoments([
@@ -450,6 +516,9 @@ try {
   assert(fileIndex.files.some((item) => item.path === 'src/hooks/useWorkflowSSE.ts' && item.status === 'scanned'), 'file index missing hook scanned entry');
   assert(fileIndex.files.some((item) => item.path === '.fooks/' && item.kind === 'directory' && item.status === 'skipped' && item.reason === 'hidden-dir'), 'file index missing hidden directory skip');
   assert(fileIndex.files.some((item) => item.path === 'dist/' && item.kind === 'directory' && item.status === 'skipped' && item.reason === 'ignored-dir'), 'file index missing ignored directory skip');
+  assert(fileIndex.files.some((item) => item.path === '.omx/' && item.kind === 'directory' && item.status === 'skipped' && item.reason === 'hidden-dir'), 'file index missing .omx hidden directory skip');
+  assert(fileIndex.files.some((item) => item.path === '.contextbook/' && item.kind === 'directory' && item.status === 'skipped' && item.reason === 'hidden-dir'), 'file index missing .contextbook hidden directory skip');
+  assert(fileIndex.files.some((item) => item.path === 'node_modules/' && item.kind === 'directory' && item.status === 'skipped' && item.reason === 'ignored-dir'), 'file index missing node_modules ignored directory skip');
   assert(fileIndex.files.some((item) => item.path === 'src/assets/logo.png' && item.status === 'skipped' && item.reason === 'unsupported-extension'), 'file index missing unsupported extension skip');
   assert(fileIndex.files.some((item) => item.path === 'src/hooks/large-fixture.ts' && item.status === 'skipped' && item.reason === 'large-file'), 'file index missing large file skip');
   assert(!fileIndex.files.some((item) => item.path === '.fooks/sessions/hidden-runtime.json'), 'file index enumerated hidden directory contents');
@@ -485,7 +554,7 @@ try {
   assert(coreProjectJson.schemaVersion === 1, 'core project json missing schema version');
   assert(Array.isArray(coreProjectJson.topConcepts) && coreProjectJson.topConcepts.length >= 1, 'core project json missing top concepts');
   assert(coreProjectJson.fileIndexSummary.totals.scanned === fileIndex.totals.scanned, 'core project json file index summary mismatch');
-  assert(coreProjectJson.safety.absolutePathsIncluded === false && coreProjectJson.safety.hiddenContentIncluded === false, 'core project json safety flags invalid');
+  assert(coreProjectJson.safety.absolutePathsIncluded === false && coreProjectJson.safety.hiddenContentIncluded === false && coreProjectJson.safety.hiddenEvidencePathsFiltered === true && coreProjectJson.safety.maxVisibleEvidenceFiles === 3, 'core project json safety flags invalid');
   assert(Array.isArray(coreProject.memoryFiles) && coreProject.memoryFiles.length >= 5, 'core project contract missing memory file statuses');
   assert(coreProject.memoryFiles.every((file) => !file.path.includes(root) && file.path.startsWith('.contextbook/project/')), 'project memory status should use safe relative paths');
   assert(coreProject.concepts.length >= 1, 'core project summary missing concepts');
@@ -505,6 +574,11 @@ try {
     assert(Object.prototype.hasOwnProperty.call(projectJson, key), `project json missing ${key}`);
   }
   assert(projectJson.schemaVersion === 1, 'project json schema version invalid');
+  assert(projectJson.safety.hiddenEvidencePathsFiltered === true && projectJson.safety.maxVisibleEvidenceFiles === 3, 'project json evidence redaction safety metadata invalid');
+  assertNoHiddenEvidencePaths(projectJson.topConcepts.flatMap((concept) => concept.files ?? []), 'project json topConcept files leaked hidden/internal evidence path');
+  assertNoHiddenEvidencePaths(projectJson.fileIndexSummary.sampleFiles.map((file) => file.path), 'project json sampleFiles leaked hidden/internal evidence path');
+  assert(projectJson.topConcepts.every((concept) => (concept.files ?? []).length <= 3), 'project json topConcept files exceeded visible evidence cap');
+  assertNoRedactionPayload(projectJson, 'project json leaked redaction payload');
   assert(Array.isArray(projectJson.topConcepts) && projectJson.topConcepts.some((concept) => concept.label.includes('SSE') || concept.label.includes('useEffect') || concept.label.includes('Zustand')), 'project json missing expected concepts');
   assert(projectJson.recommendedActions.some((action) => action.command === 'contextbook learn'), 'project json missing learn action');
   assert(projectJson.recommendedActions.some((action) => action.command === 'contextbook why "<concept>"'), 'project json missing why action');
@@ -601,7 +675,10 @@ try {
   assert(learnerJson.topWeakTerms.some((item) => item.term.includes('cleanup')), 'learner json missing cleanup weak term');
   assert(learnerJson.recentSignals.some((item) => item.signalType === 'why.answered'), 'learner json missing recent why signal');
   assert(learnerJson.recommendedActions.some((item) => item.command.includes('contextbook why')), 'learner json missing why recommended action');
-  assert(learnerJson.safety.absolutePathsIncluded === false, 'learner json absolute path safety flag invalid');
+  assert(learnerJson.safety.absolutePathsIncluded === false && learnerJson.safety.hiddenEvidencePathsFiltered === true && learnerJson.safety.maxVisibleEvidenceFiles === 3, 'learner json safety flags invalid');
+  assertNoHiddenEvidencePaths(learnerJson.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []), 'learner json recentSignals leaked hidden/internal evidence path');
+  assert(!learnerJson.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []).some((file) => file.startsWith('/')), 'learner json recentSignals leaked absolute evidence path');
+  assertNoRedactionPayload(learnerJson, 'learner json leaked redaction payload');
   assert(!JSON.stringify(learnerJson).includes(root) && !JSON.stringify(learnerJson).includes(home), 'learner json leaked absolute local path');
   assert(!/beginner|low ability|이해력이 낮/.test(JSON.stringify(learnerJson)), 'learner json includes unsafe learner judgment');
 
@@ -792,7 +869,10 @@ try {
   assert(memorySignalsJson.recentSignals.some((item) => item.signalType === 'format.requested' && item.conceptLabel === 'cleanup'), 'memory signals json missing format signal');
   const confused = memorySignalsJson.recentSignals.find((item) => item.signalType === 'feedback.confused');
   assert(confused.metadata.note.length <= 160, 'memory signal note was not truncated');
-  assert(memorySignalsJson.safety.rawTranscriptIncluded === false && memorySignalsJson.safety.unsafeJudgmentIncluded === false, 'memory signals json safety flags invalid');
+  assert(memorySignalsJson.safety.rawTranscriptIncluded === false && memorySignalsJson.safety.unsafeJudgmentIncluded === false && memorySignalsJson.safety.hiddenEvidencePathsFiltered === true && memorySignalsJson.safety.maxVisibleEvidenceFiles === 3, 'memory signals json safety flags invalid');
+  assertNoHiddenEvidencePaths(memorySignalsJson.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []), 'memory signals json recentSignals leaked hidden/internal evidence path');
+  assert(!memorySignalsJson.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []).some((file) => file.startsWith('/')), 'memory signals json recentSignals leaked absolute evidence path');
+  assertNoRedactionPayload(memorySignalsJson, 'memory signals json leaked redaction payload');
   const weakSuggestions = JSON.parse(run(['memory', 'suggest-weak-terms', '--json']));
   assert(weakSuggestions.candidates.some((item) => item.term.toLowerCase() === 'event loop' && item.score >= 6), 'weak suggestions missing event loop candidate');
   const eventLoopSuggestion = weakSuggestions.candidates.find((item) => item.term.toLowerCase() === 'event loop');
@@ -812,6 +892,9 @@ try {
   const profileCandidatesMarkdown = run(['memory', 'suggest-profile-updates']);
   assert(profileCandidatesMarkdown.includes('# Profile Update Candidates') && profileCandidatesMarkdown.includes('project context') && profileCandidatesMarkdown.includes('profile-update:'), 'profile candidates markdown missing project context suggestion/id');
   const learnerAfterSignal = JSON.parse(run(['learner', '--json']));
+  assert(learnerAfterSignal.safety.hiddenEvidencePathsFiltered === true && learnerAfterSignal.safety.maxVisibleEvidenceFiles === 3, 'learner json after signal evidence redaction safety invalid');
+  assertNoHiddenEvidencePaths(learnerAfterSignal.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []), 'learner json after signal leaked hidden/internal evidence path');
+  assert(!learnerAfterSignal.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []).some((file) => file.startsWith('/')), 'learner json after signal leaked absolute evidence path');
   assert(learnerAfterSignal.recentSignals.some((item) => item.signalType === 'feedback.confused'), 'learner json did not reflect added memory signal');
   assert(learnerAfterSignal.weakTermSuggestions.some((item) => item.term.toLowerCase() === 'event loop'), 'learner json missing weak term suggestion');
   assert(learnerAfterSignal.profileUpdateCandidates.some((item) => item.targetSection === 'Preferred Explanation'), 'learner json missing profile update candidate');
@@ -862,6 +945,16 @@ try {
   const applyMarkdown = run(['memory', 'apply-profile-update', '--candidate', projectFirstProfileCandidate.id, '--dry-run']);
   assert(applyMarkdown.includes('# Apply Profile Update') && applyMarkdown.includes('## Safety'), 'profile apply markdown missing sections');
 
+  const hiddenEvidenceEvent = { schemaVersion: 1, kind: 'conversation-memory', signalType: 'why.answered', type: 'why', command: 'why', learner: 'default', conceptLabel: 'hidden fixture', evidenceLevel: 'direct', evidenceFiles: ['docs/private/notes.md', '.omx/state/private.json', '.contextbook/project/concepts.json', 'dist/generated.js', 'node_modules/ignored-package/index.js', '/tmp/contextbook/docs/private/absolute.md', '/tmp/contextbook/src/visible.ts', 'src/a-visible.ts', 'src/b-visible.ts', 'src/hooks/useWorkflowSSE.ts', 'src/z-visible.ts'], recordedAt: new Date().toISOString() };
+  await writeFile(join(learnerDir, 'signals.jsonl'), `${await readFile(join(learnerDir, 'signals.jsonl'), 'utf8')}${JSON.stringify(hiddenEvidenceEvent)}\n`, 'utf8');
+  const redactedMemorySignals = JSON.parse(run(['memory', 'signals', '--json']));
+  const hiddenFixtureSignal = redactedMemorySignals.recentSignals.find((signal) => signal.conceptLabel === 'hidden fixture');
+  assert(hiddenFixtureSignal && hiddenFixtureSignal.evidenceFiles.length === 3 && hiddenFixtureSignal.evidenceFiles.includes('src/a-visible.ts') && hiddenFixtureSignal.evidenceFiles.includes('src/b-visible.ts') && hiddenFixtureSignal.evidenceFiles.includes('src/hooks/useWorkflowSSE.ts'), 'memory signals should redact hidden old-event evidence files, sanitize absolute paths, and cap visible files on read');
+  assertNoHiddenEvidencePaths(redactedMemorySignals.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []), 'memory signals redaction fixture leaked hidden/internal evidence path');
+  assert(!redactedMemorySignals.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []).some((file) => file.startsWith('/')), 'memory signals redaction fixture leaked absolute evidence path');
+  const hiddenFutureEvent = conversationMemory.createConversationEvent({ conceptLabel: 'future hidden fixture', evidenceFiles: ['docs/private/future.md', '/tmp/contextbook/docs/private/absolute-future.md', '/tmp/contextbook/src/future-visible.ts', 'src/a-future.ts', 'src/b-future.ts', 'src/c-future.ts'] });
+  assert(hiddenFutureEvent.evidenceFiles.length === 3 && hiddenFutureEvent.evidenceFiles.includes('src/a-future.ts') && hiddenFutureEvent.evidenceFiles.includes('src/b-future.ts') && hiddenFutureEvent.evidenceFiles.includes('src/c-future.ts'), 'future conversation event should filter hidden evidence before basename sanitization, sanitize absolute paths, and cap visible files');
+
   const memoryContext = JSON.parse(run(['memory', 'context', '--json']));
   for (const key of ['schemaVersion', 'project', 'learnerMemory', 'conversation', 'suggestions', 'freshness', 'recommendedActions', 'safety']) {
     assert(Object.prototype.hasOwnProperty.call(memoryContext, key), `memory context missing ${key}`);
@@ -876,7 +969,17 @@ try {
   assert(memoryContext.recommendedActions.every((action) => action.source), 'memory context recommended actions missing source');
   assert(memoryContext.recommendedActions.some((action) => action.command.includes('memory apply-profile-update') && action.command.includes('--dry-run')), 'memory context missing profile apply dry-run recommendation');
   assert(new Set(memoryContext.recommendedActions.map((action) => action.command)).size === memoryContext.recommendedActions.length, 'memory context recommended actions should be deduped by command');
-  assert(memoryContext.safety.rawTranscriptIncluded === false && memoryContext.safety.hiddenContentIncluded === false && memoryContext.safety.projectMemoryMutated === false && memoryContext.safety.profileUpdatesMutated === false, 'memory context safety flags invalid after signals');
+  assert(memoryContext.safety.rawTranscriptIncluded === false && memoryContext.safety.hiddenContentIncluded === false && memoryContext.safety.projectMemoryMutated === false && memoryContext.safety.profileUpdatesMutated === false && memoryContext.safety.hiddenEvidencePathsFiltered === true && memoryContext.safety.maxVisibleEvidenceFiles === 3, 'memory context safety flags invalid after signals');
+  assert(memoryContext.project.safety.hiddenEvidencePathsFiltered === true && memoryContext.project.safety.maxVisibleEvidenceFiles === 3, 'memory context project safety metadata invalid');
+  assert(memoryContext.learnerMemory.safety.hiddenEvidencePathsFiltered === true && memoryContext.learnerMemory.safety.maxVisibleEvidenceFiles === 3, 'memory context learner safety metadata invalid');
+  assert(memoryContext.conversation.safety.hiddenEvidencePathsFiltered === true && memoryContext.conversation.safety.maxVisibleEvidenceFiles === 3, 'memory context conversation safety metadata invalid');
+  assertNoHiddenEvidencePaths(memoryContext.project.topConcepts.flatMap((concept) => concept.files ?? []), 'memory context project topConcept files leaked hidden/internal evidence path');
+  assertNoHiddenEvidencePaths(memoryContext.project.fileIndexSummary.sampleFiles.map((file) => file.path), 'memory context project sampleFiles leaked hidden/internal evidence path');
+  assertNoHiddenEvidencePaths(memoryContext.learnerMemory.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []), 'memory context learnerMemory recentSignals leaked hidden/internal evidence path');
+  assertNoHiddenEvidencePaths(memoryContext.conversation.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []), 'memory context conversation recentSignals leaked hidden/internal evidence path');
+  assert(!memoryContext.learnerMemory.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []).some((file) => file.startsWith('/')), 'memory context learnerMemory recentSignals leaked absolute evidence path');
+  assert(!memoryContext.conversation.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []).some((file) => file.startsWith('/')), 'memory context conversation recentSignals leaked absolute evidence path');
+  assertNoRedactionPayload(memoryContext, 'memory context leaked redaction payload');
   const memoryContextSerialized = JSON.stringify(memoryContext);
   assert(!memoryContextSerialized.includes(root) && !memoryContextSerialized.includes(home), 'memory context leaked absolute local path');
   assert(!memoryContextSerialized.includes('SECRET_TOKEN') && !memoryContextSerialized.includes('should-not-leak'), 'memory context included hidden file content');
