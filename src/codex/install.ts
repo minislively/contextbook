@@ -221,7 +221,7 @@ Use this skill when the user asks why a concept, pattern, or code behavior matte
    \`\`\`bash
    contextbook why "<question>"
    \`\`\`
-4. Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files.
+4. Preserve the evidence level, natural project-grounded explanation, and evidence files; do not force old visible atom headings.
 5. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
 `;
 }
@@ -246,7 +246,7 @@ Use this skill when the user asks why a concept, pattern, or code behavior matte
    \`\`\`bash
    contextbook why "<question>"
    \`\`\`
-4. Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files.
+4. Preserve the evidence level, natural project-grounded explanation, and evidence files; do not force old visible atom headings.
 5. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
 `;
 }
@@ -318,7 +318,7 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
 - \`contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source codex --json\` — deterministically capture explicit prompt feedback without storing the raw prompt.
 - \`contextbook memory hook-suggest --prompt "앞으로 한국어로 짧게 설명해줘" --source codex --json\` — produce hook-safe suggestion context with setup-managed auto-safe preference policy.
 - \`contextbook learn\` — produce 1-3 learning moments.
-- \`contextbook why "cleanup 왜 해야 돼?"\` — answer with project context, plain language, developer term, CS link, interview sentence, and evidence files.
+- \`contextbook why "cleanup 왜 해야 돼?"\` — answer with natural project-grounded prose, stable evidence markers, and evidence files.
 - \`contextbook profile\` — inspect the learner profile.
 `;
 }

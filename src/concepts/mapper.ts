@@ -140,7 +140,7 @@ export function findConceptForQuestion(question: string, concepts: ConceptRecord
       return concepts.find((concept) => concept.id === rule.id);
     }
   }
-  return concepts[0];
+  return undefined;
 }
 
 export function conceptMetadata(id: string) {

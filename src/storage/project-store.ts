@@ -39,7 +39,7 @@ export async function ensureProjectStore(root = projectRoot()): Promise<void> {
   await writeIfMissing(paths.fileIndex, JSON.stringify(defaultFileIndex(), null, 2) + '\n');
   await writeIfMissing(paths.scanRuns, '');
   await writeIfMissing(paths.learnPrompt, '# Contextbook learn prompt\n\nRecommend 1-3 learning moments from project evidence.\n');
-  await writeIfMissing(paths.whyPrompt, '# Contextbook why prompt\n\nExplain using project context, plain language, developer terms, CS link, and interview sentence.\n');
+  await writeIfMissing(paths.whyPrompt, '# Contextbook why prompt\n\nExplain with natural project-grounded prose while preserving evidence level and evidence files. Do not force old visible atom headings.\n');
 }
 
 export async function readConcepts(root = projectRoot()): Promise<ConceptRecord[]> {

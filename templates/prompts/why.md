@@ -1,3 +1,3 @@
 # Why Prompt
 
-Explain with evidence level, project context, plain language, developer term, CS connection, interview sentence, and evidence files.
+Explain with natural project-grounded prose while preserving the evidence level and evidence files. Do not force old visible atom headings.

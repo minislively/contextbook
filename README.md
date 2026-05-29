@@ -374,19 +374,23 @@ The recommendation reasons are computed locally at learn time. Contextbook does 
 contextbook why "cleanup 왜 해야 돼?"
 ```
 
-`why` always uses a fixed format:
+`why` now renders as a readable, narrative-first answer while keeping stable evidence markers:
 
 ```md
-## 근거 수준
-## 프로젝트 말로 설명
-## 쉬운 말
-## 개발자 용어
-## CS 연결
-## 면접 문장
-## 근거 파일
+근거 수준: direct
+
+짧게 말하면, 이 프로젝트에서 `EventSource` 같은 연결을 열면 화면이 사라질 때 그 연결도 닫아야 합니다.
+열어둔 연결, 타이머, 구독은 다 쓰고 나면 닫아야 합니다.
+
+개발자 말로는 `useEffect cleanup` 문제입니다.
+CS로 연결하면 resource lifecycle 문제입니다.
+면접에서는 이렇게 말하면 됩니다: ...
+
+근거 파일:
+- src/hooks/useWorkflowSSE.ts
 ```
 
-This is the key Contextbook output: project-grounded explanation → plain language → developer term → CS concept → interview sentence.
+This is the key Contextbook output: project-grounded explanation → plain language → developer term → CS concept → interview sentence, without forcing a rigid section dump. Recent low-risk learning signals can tighten the length or shift the opening order, but evidence markers stay stable.
 
 ## Evidence levels
 

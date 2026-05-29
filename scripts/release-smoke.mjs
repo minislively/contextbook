@@ -57,7 +57,7 @@ Run:
 contextbook why "$ARGUMENTS"
 \`\`\`
 
-Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
+Preserve the evidence level, natural project-grounded explanation, and evidence files; do not force old visible atom headings. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
 `;
 }
 
@@ -108,7 +108,7 @@ Use this skill when the user asks why a concept, pattern, or code behavior matte
    \`\`\`bash
    contextbook why "<question>"
    \`\`\`
-4. Preserve the evidence level, project-language explanation, CS connection, interview sentence, and evidence files.
+4. Preserve the evidence level, natural project-grounded explanation, and evidence files; do not force old visible atom headings.
 5. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
 `;
 }
