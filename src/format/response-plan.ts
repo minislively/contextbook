@@ -4,10 +4,11 @@ import type { ConversationMemoryEvent, EvidenceLevel, LearnerPreferences, WeakTe
 
 const RECENT_SIGNAL_WINDOW = 20;
 const ELIGIBLE_SIGNAL_TYPES = new Set(['feedback.confused', 'format.requested']);
-const FORMAT_REQUESTS = ['plain', 'project-first', 'interview'] as const;
+const FORMAT_REQUESTS = ['plain', 'project-first', 'interview', 'structured'] as const;
 const SEMANTIC_KEYS = ['project', 'plain', 'developer', 'cs', 'interview'] as const;
 
 export type WhyLead = 'project' | 'plain' | 'interview' | 'uncertainty';
+export type WhyRenderMode = 'narrative' | 'plain' | 'interview' | 'structured' | 'uncertainty';
 type WhyDensity = 'compact' | 'normal' | 'expanded';
 type WhyEmphasis = typeof SEMANTIC_KEYS[number];
 type WhyFormatRequest = typeof FORMAT_REQUESTS[number];
@@ -16,7 +17,9 @@ type WhyFollowUp = 'none' | 'self-check' | 'interview-drill';
 type WhyTone = 'neutral' | 'encouraging';
 
 export interface WhyResponsePlan {
-  /** Product-intent render control: which semantic atom should lead the answer. */
+  /** Visible-shell control: paragraph, plain-first, interview-first, structured-card, or uncertainty-first. */
+  renderMode: WhyRenderMode;
+  /** Product-intent semantic control: which atom should lead the answer inside that shell. */
   lead: WhyLead;
   /** Product-intent render control: how compressed the answer body should be. */
   density: WhyDensity;
@@ -64,9 +67,10 @@ export function eligibleWhyResponseSignals(events: Array<Record<string, unknown>
 export function classifyWhyQuestionIntent(question = ''): WhyFormatRequest | undefined {
   const normalized = question.replace(/\s+/g, ' ').trim().toLowerCase();
   if (!normalized) return undefined;
-  if (/면접\s*(문장|답변|식|에서|용)?|interview/.test(normalized)) return 'interview';
+  if (/면접\s*(문장|답변|식|에서|용)?|면접용|답변처럼|interview( answer)?/.test(normalized)) return 'interview';
+  if (/정리|요약|불릿|카드|표|체크리스트|한눈에|bullet|structured|summary|checklist/.test(normalized)) return 'structured';
   if (/내\s*프로젝트|프로젝트에\s*빗대|프로젝트\s*기준|project[-\s]?first|project context/.test(normalized)) return 'project-first';
-  if (/쉽게\s*말|쉬운\s*말|쉽게\s*설명|plain language|explain simply/.test(normalized)) return 'plain';
+  if (/쉽게|뭔소리|쉬운\s*말|plain language|explain simply/.test(normalized)) return 'plain';
   return undefined;
 }
 
@@ -82,6 +86,7 @@ export function buildWhyResponsePlan(
   let examples: WhyExampleMode = 'none';
   let followUp: WhyFollowUp = 'none';
   let tone: WhyTone = 'neutral';
+  let plainBias = false;
 
   if (preferences.outputLength === 'short') reasons.add('preference-short-output');
   if (preferences.avoid?.some((item) => /abstract|lecture/i.test(item))) reasons.add('avoid-abstract-lecture');
@@ -97,6 +102,7 @@ export function buildWhyResponsePlan(
       examples = 'project-worked-example';
       followUp = 'self-check';
       tone = 'encouraging';
+      plainBias = true;
       reasons.add('recent-confusion-feedback');
       reasons.add('plain-language');
     }
@@ -114,6 +120,7 @@ export function buildWhyResponsePlan(
     examples = 'project-worked-example';
     followUp = 'self-check';
     tone = 'encouraging';
+    plainBias = true;
     reasons.add(`weak-term:${context.weakTerm.state}`);
   }
 
@@ -129,8 +136,17 @@ export function buildWhyResponsePlan(
     followUp = 'interview-drill';
   }
 
+  let renderMode: WhyRenderMode = requestedFormat === 'interview'
+    ? 'interview'
+    : requestedFormat === 'structured'
+      ? 'structured'
+      : requestedFormat === 'plain' || plainBias
+        ? 'plain'
+        : 'narrative';
+
   if (context.evidenceLevel === 'general') {
     lead = 'uncertainty';
+    renderMode = 'uncertainty';
     examples = 'none';
     reasons.add('general-evidence-uncertainty');
     if (requestedFormat === 'interview') followUp = 'interview-drill';
@@ -139,6 +155,7 @@ export function buildWhyResponsePlan(
 
   const includeInterviewLine = lead !== 'interview';
   return {
+    renderMode,
     lead,
     density,
     emphasis: moveLeadFirst(emphasis, lead),
