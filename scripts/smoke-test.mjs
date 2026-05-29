@@ -499,6 +499,7 @@ try {
     assert(!coreLearn.markdown.includes(rawReason), `core learn markdown leaked raw scanner reason ${rawReason}`);
   }
   assert(coreLearn.markdown.includes('프로젝트 연결:'), 'core learn markdown missing normalized project connection');
+  assert(coreLearn.markdown.includes('왜 지금 볼 만한가:'), 'core learn markdown missing practical value line');
   const serializedMoments = JSON.stringify(coreLearn.moments);
   assert(!serializedMoments.includes(root) && !serializedMoments.includes(home), 'ranking moments stored absolute local path');
   assert(!serializedMoments.includes('SECRET_TOKEN') && !serializedMoments.includes('should-not-leak'), 'ranking moments stored hidden file content');
@@ -618,6 +619,7 @@ try {
     assert(!learn.includes(rawReason), `learn output leaked raw scanner reason ${rawReason}`);
   }
   assert(learn.includes('프로젝트 연결:'), 'learn output missing normalized project connection');
+  assert(learn.includes('왜 지금 볼 만한가:'), 'learn output missing practical value line');
   assert(!existsSync(join(root, '.contextbook', 'project', 'ranking-reasons.json')), 'learn created a ranking-reasons project memory artifact');
 
   const preferencesPath = join(learnerDir, 'preferences.json');
@@ -629,6 +631,7 @@ try {
   }, null, 2), 'utf8');
   const englishLearn = run(['learn']);
   assert(englishLearn.includes('Evidence level:') && englishLearn.includes('Project connection:'), 'english learn output did not use english labels');
+  assert(englishLearn.includes('Why it matters now:'), 'english learn output missing practical value label');
   assert(englishLearn.includes('Changed-file evidence: yes'), 'english learn output missing changed-file evidence label');
   assert(!englishLearn.includes('추천 이유:') && !englishLearn.includes(' 때문에'), 'english learn output mixed Korean frame labels');
   for (const rawReason of ['File or function naming suggests', 'fetch or axios usage indicates', 'useMemo/useCallback usage indicates']) {
@@ -669,6 +672,7 @@ try {
   const interviewFirstRendered = explanationFormat.formatWhyAnswer('cleanup 왜 해야 돼?', undefined, { id: 'use-effect-cleanup', label: 'useEffect cleanup / lifecycle' }, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, interviewPlan);
   const plainFirstRendered = explanationFormat.formatWhyAnswer('cleanup 왜 해야 돼?', undefined, { id: 'use-effect-cleanup', label: 'useEffect cleanup / lifecycle' }, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, plainPlan);
   assert(shortRendered !== defaultRendered && shortRendered.includes('확인 질문:') && shortRendered.includes('개발자/CS 연결:'), 'short response plan should change rendered output');
+  assert(shortRendered.includes('실무에서 터지는 지점:'), 'why renderer missing practical tension line');
   assert(!shortRendered.includes('개발자 용어로는 이건') && !shortRendered.includes('CS로 넓히면 더 넓게 보면') && !shortRendered.includes('작게 예를 들면'), 'polished why prose should avoid awkward duplicate phrases');
   const graphWeakRendered = explanationFormat.formatWhyAnswer('graph 왜 중요해?', { id: 'graph-dag', label: 'Graph / DAG / dependency structure', evidenceLevel: 'related', signals: [{ conceptId: 'graph-dag', evidenceLevel: 'related', file: 'src/graph.ts', signal: 'nodes + edges', reason: 'nodes and edges naming suggests graph-like data modeling.', detectedAt: '2026-01-01T00:00:00.000Z' }], connectedConcepts: ['nodes and edges'], interviewQuestion: 'nodes와 edges 구조는 어떤 문제를 graph로 모델링한다는 뜻인가요?', updatedAt: '2026-01-01T00:00:00.000Z' }, undefined, { explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'], avoid: [] }, weakTermPlan);
   assert(graphWeakRendered.includes('확인 질문:') && graphWeakRendered.includes('nodes + edges') && graphWeakRendered.includes('핵심 흐름:') && graphWeakRendered.includes('Graph / DAG / dependency structure') && !graphWeakRendered.includes('열었으면 닫는다') && !graphWeakRendered.includes('연결, 구독, 타이머'), 'non-cleanup adaptive rendering should stay project-grounded without leaking cleanup-specific coaching');
@@ -692,7 +696,7 @@ try {
   const coreWhy = await core.answerWhy('cleanup 왜 해야 돼?', { root, learner: 'default' });
   assert(coreWhy.markdown.includes('근거:'), 'core why contract did not return evidence marker');
   assert(coreWhy.evidenceLevel === 'direct' || coreWhy.evidenceLevel === 'related', 'core why contract did not return project evidence level');
-  for (const marker of ['근거:', '근거 파일:', 'useEffect cleanup', 'resource lifecycle', '컴포넌트 생명주기', '확인 질문:']) {
+  for (const marker of ['근거:', '근거 파일:', 'useEffect cleanup', 'resource lifecycle', '컴포넌트 생명주기', '실무에서 터지는 지점:', '확인 질문:']) {
     assert(why.includes(marker), `why missing ${marker}`);
   }
   for (const oldHeading of ['## 프로젝트 말로 설명', '## 쉬운 말', '## 개발자 용어', '## CS 연결', '## 면접 문장']) {
@@ -701,7 +705,7 @@ try {
   assert(why.includes('- src/hooks/useWorkflowSSE.ts'), 'why missing direct evidence file bullet');
   const generalWhyRoot = await mkdtemp(join(tmpdir(), 'contextbook-general-'));
   const generalWhy = runIn(generalWhyRoot, home, ['why', 'debounce 면접 답변으로 설명해줘']);
-  assert(generalWhy.includes('근거: general') && generalWhy.includes('근거 파일:') && generalWhy.includes('이 프로젝트에서는 `Debounce / event rate control` 근거를 찾지 못했습니다') && generalWhy.includes('연습:'), 'general interview why missing uncertainty-first fallback markers');
+  assert(generalWhy.includes('근거: general') && generalWhy.includes('근거 파일:') && generalWhy.includes('이 프로젝트에서는 `Debounce / event rate control` 근거를 찾지 못했습니다') && generalWhy.includes('실무에서 터지는 지점: 이 프로젝트에서는 직접 근거가 없지만') && generalWhy.includes('연습:'), 'general interview why missing uncertainty-first fallback markers');
 
   const wordingFiles = ['templates/prompts/why.md', 'src/storage/project-store.ts', 'src/codex/install.ts', 'src/claude-code/install.ts', 'scripts/release-smoke.mjs'];
   for (const file of wordingFiles) {

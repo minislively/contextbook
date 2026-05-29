@@ -30,6 +30,7 @@ interface LearningCardCopy {
   changedEvidence: string;
   whyThisCard: string;
   projectConnection: string;
+  whyItMattersNow: string;
   relatedConcepts: string;
   interviewPrompt: string;
   noEvidence: string;
@@ -48,6 +49,7 @@ function learningCardCopy(preferences: LearnerPreferences): LearningCardCopy {
       changedEvidence: 'Changed-file evidence',
       whyThisCard: 'Why this card',
       projectConnection: 'Project connection',
+      whyItMattersNow: 'Why it matters now',
       relatedConcepts: 'Related concepts',
       interviewPrompt: 'Interview prompt',
       noEvidence: 'none'
@@ -63,6 +65,7 @@ function learningCardCopy(preferences: LearnerPreferences): LearningCardCopy {
     changedEvidence: '변경 파일 근거',
     whyThisCard: '추천 이유',
     projectConnection: '프로젝트 연결',
+    whyItMattersNow: '왜 지금 볼 만한가',
     relatedConcepts: '연결되는 개념',
     interviewPrompt: '면접 질문',
     noEvidence: '없음'
@@ -92,6 +95,37 @@ function renderProjectConnection(concept: ConceptRecord, signal: ConceptRecord['
     return `${source} ${signalText} appears in this codebase, so this is a concrete place to study ${conceptFocus}.`;
   }
   return `${source}: ${signalText}. 이 프로젝트 기준 학습 주제는 ${conceptFocus}입니다.`;
+}
+
+function learningMomentValueLine(concept: ConceptRecord, language: LearningCardLanguage): string {
+  if (language === 'en') {
+    switch (concept.id) {
+      case 'use-effect-cleanup': return 'This helps you explain who owns connection, subscription, or timer cleanup when a component disappears.';
+      case 'sse': return 'This helps you explain realtime updates as a connection lifecycle, not just an API call.';
+      case 'websocket': return 'This helps you discuss bidirectional realtime work in terms of connection ownership and failure handling.';
+      case 'zustand-state': return 'This helps you explain source of truth, subscriptions, and why state changes reach multiple screens.';
+      case 'context-api': return 'This helps you connect shared values to render propagation and component boundaries.';
+      case 'graph-dag': return 'This helps you describe order, dependencies, and why nodes and edges are a modeling choice.';
+      case 'http-async': return 'This helps you explain request success, failure, and delayed responses as one lifecycle.';
+      case 'timer-event-loop': return 'This helps you connect timers in code to scheduling and event-loop behavior.';
+      case 'memoization-render': return 'This helps you explain which render cost is being avoided and what can go stale.';
+      case 'debounce': return 'This helps you explain why repeated events should not always trigger repeated work.';
+      default: return 'This helps you turn a code signal into a concrete design responsibility you can talk about.';
+    }
+  }
+  switch (concept.id) {
+    case 'use-effect-cleanup': return '컴포넌트가 사라질 때 연결·구독·타이머를 누가 정리하는지 설명하는 데 바로 써먹을 수 있습니다.';
+    case 'sse': return '실시간 업데이트를 단순 API 호출이 아니라 연결 생명주기 문제로 설명할 수 있습니다.';
+    case 'websocket': return '양방향 실시간 통신을 연결 소유권과 실패 처리까지 묶어서 말할 수 있습니다.';
+    case 'zustand-state': return '상태의 source of truth와 subscription이 화면 여러 곳에 미치는 영향을 설명할 수 있습니다.';
+    case 'context-api': return '공유 값 변경이 render propagation과 컴포넌트 경계에 어떤 영향을 주는지 연결할 수 있습니다.';
+    case 'graph-dag': return 'nodes와 edges가 순서·의존성 문제를 모델링한다는 식으로 설명할 수 있습니다.';
+    case 'http-async': return '요청 성공뿐 아니라 실패와 늦게 도착한 응답까지 request lifecycle로 말할 수 있습니다.';
+    case 'timer-event-loop': return '코드의 타이머를 event loop scheduling 문제와 연결해서 설명할 수 있습니다.';
+    case 'memoization-render': return '어떤 렌더 비용을 줄이는지, 무엇이 stale해질 수 있는지 같이 말할 수 있습니다.';
+    case 'debounce': return '반복 이벤트를 매번 처리하지 않는 이유를 불필요한 작업 제어 관점으로 설명할 수 있습니다.';
+    default: return '코드 신호를 “내가 맡은 설계 책임”으로 바꿔 말하는 데 도움이 됩니다.';
+  }
 }
 
 function signalSourceLabel(source: ConceptRecord['signals'][number]['source'] | undefined, language: LearningCardLanguage): string {
@@ -172,6 +206,7 @@ function formatMoment(moment: RankedLearningMoment, index: number, evidenceOptio
     `${copy.evidenceLevel}: ${concept.evidenceLevel}\n${copy.evidenceFiles}: ${evidence.visibleFiles.length ? evidence.visibleFiles.join(', ') : copy.noEvidence}${changed}`,
     `${copy.whyThisCard}:\n${bullet(compact ? reasonLines.slice(0, 2) : reasonLines)}`,
     `${copy.projectConnection}:\n${renderProjectConnection(concept, evidence.primarySignal, copy.language)}`,
+    `${copy.whyItMattersNow}:\n${learningMomentValueLine(concept, copy.language)}`,
     compact ? undefined : `${copy.relatedConcepts}:\n${bullet(concept.connectedConcepts)}`,
     `${copy.interviewPrompt}:\n${interviewPromptText(concept, copy.language)}`
   ].filter((section): section is string => Boolean(section));
@@ -205,7 +240,7 @@ export function formatWhyAnswer(
   };
   const plan = responsePlan ?? fallbackResponsePlan(preferences);
   const atomOrder = responsePlanAtomOrder(plan);
-  return formatNarrativeWhyAnswer({ evidenceLevel, files, explanations, atomOrder, responsePlan: plan });
+  return formatNarrativeWhyAnswer({ conceptId: id, evidenceLevel, files, explanations, atomOrder, responsePlan: plan });
 }
 
 function fallbackResponsePlan(preferences: LearnerPreferences): WhyResponsePlan {
@@ -300,6 +335,7 @@ function interviewSentence(id: string, label: string): string {
 }
 
 interface NarrativeWhyInput {
+  conceptId: string;
   evidenceLevel: EvidenceLevel;
   files: string[];
   explanations: Record<string, string>;
@@ -317,6 +353,7 @@ function formatNarrativeWhyAnswer(input: NarrativeWhyInput): string {
     '',
     ...body,
     input.responsePlan.examples === 'project-worked-example' ? projectWorkedExample(input.explanations) : undefined,
+    practicalTensionLine(input.conceptId, input.evidenceLevel),
     followUpLine(input.responsePlan, interview, input.evidenceLevel),
     '',
     '근거 파일:',
@@ -364,6 +401,23 @@ function leadAwareText(atom: 'project' | 'plain', lead: WhyLead, explanations: R
 
 function projectWorkedExample(explanations: Record<string, string>): string {
   return `핵심 흐름: ${stripTrailingPeriod(explanations.project)} 이 신호를 개발자 용어와 CS 개념으로 넓혀 설명하면 됩니다.`;
+}
+
+function practicalTensionLine(id: string, evidenceLevel: EvidenceLevel): string {
+  const prefix = evidenceLevel === 'general' ? '실무에서 터지는 지점: 이 프로젝트에서는 직접 근거가 없지만, ' : '실무에서 터지는 지점: ';
+  switch (id) {
+    case 'use-effect-cleanup': return `${prefix}컴포넌트는 사라졌는데 연결·구독·타이머가 남아 있으면 stale update나 누수가 생깁니다.`;
+    case 'sse': return `${prefix}화면이 바뀐 뒤에도 이벤트 스트림이 살아 있으면 같은 업데이트가 중복되거나 오래된 화면을 건드릴 수 있습니다.`;
+    case 'websocket': return `${prefix}연결을 누가 열고 닫는지 애매하면 재연결, 중복 메시지, stale listener 문제가 생깁니다.`;
+    case 'zustand-state': return `${prefix}source of truth가 흔들리면 여러 컴포넌트가 서로 다른 상태를 보고 있다고 착각하기 쉽습니다.`;
+    case 'context-api': return `${prefix}공유 값이 바뀔 때 어떤 하위 컴포넌트까지 다시 렌더되는지 놓치면 성능 문제를 찾기 어렵습니다.`;
+    case 'graph-dag': return `${prefix}의존성 방향이나 순서를 잘못 잡으면 실행 순서, 순환, 누락 문제를 설명하기 어려워집니다.`;
+    case 'http-async': return `${prefix}요청 실패나 늦은 응답을 같은 lifecycle로 보지 않으면 에러 처리와 stale data가 따로 놀기 쉽습니다.`;
+    case 'timer-event-loop': return `${prefix}예약된 작업이 언제 실행되는지 착각하면 race condition이나 불필요한 반복 실행을 만들 수 있습니다.`;
+    case 'memoization-render': return `${prefix}무엇을 기억하고 언제 버릴지 애매하면 최적화가 stale value나 불필요한 렌더로 바뀔 수 있습니다.`;
+    case 'debounce': return `${prefix}반복 입력을 그대로 처리하면 요청·렌더·계산이 불필요하게 폭증할 수 있습니다.`;
+    default: return `${prefix}이 개념을 놓치면 코드가 관리하는 자원, 상태, 시간, 의존성의 책임 경계가 흐려집니다.`;
+  }
 }
 
 function followUpLine(plan: WhyResponsePlan, interview: string, evidenceLevel: EvidenceLevel): string | undefined {
