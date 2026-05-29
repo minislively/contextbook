@@ -495,6 +495,10 @@ try {
   assert(coreLearn.moments[0].concept.signals.some((signal) => signal.changed === true), 'changed-file-backed concept should rank first');
   assert(coreLearn.moments[0].reasons.some((reason) => reason.code === 'changed-file'), 'first moment missing changed-file ranking reason');
   assert(coreLearn.markdown.includes('추천 이유:'), 'core learn markdown missing ranking reasons');
+  for (const rawReason of ['File or function naming suggests', 'fetch or axios usage indicates', 'useMemo/useCallback usage indicates']) {
+    assert(!coreLearn.markdown.includes(rawReason), `core learn markdown leaked raw scanner reason ${rawReason}`);
+  }
+  assert(coreLearn.markdown.includes('프로젝트 연결:'), 'core learn markdown missing normalized project connection');
   const serializedMoments = JSON.stringify(coreLearn.moments);
   assert(!serializedMoments.includes(root) && !serializedMoments.includes(home), 'ranking moments stored absolute local path');
   assert(!serializedMoments.includes('SECRET_TOKEN') && !serializedMoments.includes('should-not-leak'), 'ranking moments stored hidden file content');
@@ -610,9 +614,28 @@ try {
   }
   assert(!learn.includes(root) && !learn.includes(home), 'learn output included absolute local path');
   assert(!learn.includes('SECRET_TOKEN') && !learn.includes('should-not-leak'), 'learn output included hidden file content');
+  for (const rawReason of ['File or function naming suggests', 'fetch or axios usage indicates', 'useMemo/useCallback usage indicates']) {
+    assert(!learn.includes(rawReason), `learn output leaked raw scanner reason ${rawReason}`);
+  }
+  assert(learn.includes('프로젝트 연결:'), 'learn output missing normalized project connection');
   assert(!existsSync(join(root, '.contextbook', 'project', 'ranking-reasons.json')), 'learn created a ranking-reasons project memory artifact');
 
   const preferencesPath = join(learnerDir, 'preferences.json');
+  await writeFile(preferencesPath, JSON.stringify({
+    explanationOrder: ['project', 'plain', 'developer-term', 'cs-link', 'interview-sentence'],
+    avoid: [],
+    preferredLanguage: 'en',
+    outputLength: 'short'
+  }, null, 2), 'utf8');
+  const englishLearn = run(['learn']);
+  assert(englishLearn.includes('Evidence level:') && englishLearn.includes('Project connection:'), 'english learn output did not use english labels');
+  assert(englishLearn.includes('Changed-file evidence: yes'), 'english learn output missing changed-file evidence label');
+  assert(!englishLearn.includes('추천 이유:') && !englishLearn.includes(' 때문에'), 'english learn output mixed Korean frame labels');
+  for (const rawReason of ['File or function naming suggests', 'fetch or axios usage indicates', 'useMemo/useCallback usage indicates']) {
+    assert(!englishLearn.includes(rawReason), `english learn output leaked raw scanner reason ${rawReason}`);
+  }
+  assert(!englishLearn.includes('Related concepts:'), 'short english learn output should reduce related concept detail');
+
   await writeFile(preferencesPath, JSON.stringify({
     explanationOrder: ['interview-sentence', 'project', 'plain', 'developer-term', 'cs-link'],
     avoid: []
