@@ -1,4 +1,5 @@
 import type { ConceptRecord, EvidenceLevel, LearningMomentReason, RankedLearningMoment } from '../types.js';
+import { bestEvidenceQualityRank, hasChangedPrimaryEvidence, hasPrimaryEvidence } from './evidence-quality.js';
 
 const evidenceWeight: Record<EvidenceLevel, number> = {
   direct: 30,
@@ -10,9 +11,8 @@ export function rankLearningMoments(concepts: ConceptRecord[], changedFiles: Set
   return concepts
     .map((concept) => rankConcept(concept, changedFiles))
     .sort((a, b) => {
-      const aChanged = hasChangedEvidence(a.concept, changedFiles) ? 1 : 0;
-      const bChanged = hasChangedEvidence(b.concept, changedFiles) ? 1 : 0;
-      if (aChanged !== bChanged) return bChanged - aChanged;
+      const qualityDifference = bestEvidenceQualityRank(a.concept.signals) - bestEvidenceQualityRank(b.concept.signals);
+      if (qualityDifference !== 0) return qualityDifference;
 
       const scoreDifference = b.score - a.score;
       if (scoreDifference !== 0) return scoreDifference;
@@ -25,9 +25,11 @@ export function rankLearningMoments(concepts: ConceptRecord[], changedFiles: Set
 
 function rankConcept(concept: ConceptRecord, changedFiles: Set<string>): RankedLearningMoment {
   const changed = hasChangedEvidence(concept, changedFiles);
+  const changedPrimary = hasChangedPrimaryEvidence(concept.signals, changedFiles);
   const signalCount = cappedSignalCount(concept);
   const sources = sourceVariety(concept);
-  const score = (changed ? 100 : 0) + evidenceWeight[concept.evidenceLevel] + signalCount * 2 + sources * 2;
+  const primaryBonus = hasPrimaryEvidence(concept.signals) ? 40 : 0;
+  const score = (changedPrimary ? 25 : changed ? 5 : 0) + primaryBonus + evidenceWeight[concept.evidenceLevel] + signalCount * 2 + sources * 2;
   const reasons = buildReasons(concept, changed, signalCount, sources);
   return { concept, score, reasons };
 }

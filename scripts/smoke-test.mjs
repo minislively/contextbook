@@ -407,9 +407,13 @@ try {
   await mkdir(join(root, '.omx', 'state'), { recursive: true });
   await mkdir(join(root, 'node_modules', 'ignored-package'), { recursive: true });
   await mkdir(join(root, 'docs', 'private'), { recursive: true });
+  await mkdir(join(root, 'scripts'), { recursive: true });
+  await mkdir(join(root, 'src', 'concepts'), { recursive: true });
   await writeFile(join(root, '.env'), 'SECRET_TOKEN=should-not-leak\n', 'utf8');
   await writeFile(join(root, 'src', 'assets', 'logo.png'), 'unsupported image placeholder\n', 'utf8');
   await writeFile(join(root, 'src', 'hooks', 'large-fixture.ts'), 'x'.repeat(300_001), 'utf8');
+  await writeFile(join(root, 'scripts', 'smoke-test.mjs'), 'useEffect(() => { return () => source.close(); }); new EventSource("/support");\n', 'utf8');
+  await writeFile(join(root, 'src', 'concepts', 'rules.ts'), 'export const rule = "EventSource useEffect return cleanup WebSocket zustand";\n', 'utf8');
   await writeFile(join(root, 'dist', 'generated.js'), 'export const hidden = "ignored";\n', 'utf8');
   await writeFile(join(root, '.omx', 'state', 'private.json'), '{"signal":"EventSource should be ignored"}\n', 'utf8');
   await writeFile(join(root, 'node_modules', 'ignored-package', 'index.js'), 'new EventSource("ignored");\n', 'utf8');
@@ -428,6 +432,23 @@ try {
   const conversationMemory = await import('../dist/learner/conversation-memory.js');
   const explanationFormat = await import('../dist/format/explanation.js');
   const responsePlanFormat = await import('../dist/format/response-plan.js');
+  const evidenceQuality = await import('../dist/core/evidence-quality.js');
+  const evidenceFormat = await import('../dist/format/evidence.js');
+  assert(evidenceQuality.evidenceQualityClass('src/hooks/useWorkflowSSE.ts') === 'primary', 'source hook should be primary evidence');
+  assert(evidenceQuality.evidenceQualityClass('scripts/smoke-test.mjs') === 'support', 'scripts should be support evidence');
+  assert(evidenceQuality.evidenceQualityClass('src/concepts/rules.ts') === 'rule-definition', 'concept rules should be rule-definition evidence');
+  const displayFixture = evidenceFormat.rankEvidenceForDisplay([
+    { conceptId: 'use-effect-cleanup', evidenceLevel: 'direct', file: 'scripts/smoke-test.mjs', signal: 'support cleanup', reason: 'fixture', detectedAt: new Date(0).toISOString(), changed: true, source: 'content' },
+    { conceptId: 'use-effect-cleanup', evidenceLevel: 'direct', file: 'src/concepts/rules.ts', signal: 'rule cleanup', reason: 'fixture', detectedAt: new Date(0).toISOString(), changed: true, source: 'content' },
+    { conceptId: 'use-effect-cleanup', evidenceLevel: 'direct', file: 'src/hooks/useWorkflowSSE.ts', signal: 'source cleanup', reason: 'fixture', detectedAt: new Date(0).toISOString(), changed: false, source: 'content' }
+  ]);
+  assert(displayFixture.primarySignal?.file === 'src/hooks/useWorkflowSSE.ts' && displayFixture.visibleFiles[0] === 'src/hooks/useWorkflowSSE.ts', 'primary source evidence should outrank changed support/rule evidence for display');
+  const supportOnlyDisplay = evidenceFormat.rankEvidenceForDisplay([
+    { conceptId: 'use-effect-cleanup', evidenceLevel: 'direct', file: 'scripts/support-smoke.ts', signal: 'support cleanup', reason: 'fixture', detectedAt: new Date(0).toISOString(), changed: true, source: 'content' }
+  ]);
+  assert(supportOnlyDisplay.primarySignal?.file === 'scripts/support-smoke.ts' && supportOnlyDisplay.visibleFiles.includes('scripts/support-smoke.ts'), 'support-only evidence should remain visible');
+  const filteredDisplayFiles = evidenceFormat.filterEvidenceFilesForDisplay(['src/concepts/rules.ts', 'src/hooks/useWorkflowSSE.ts', 'scripts/support-smoke.ts']);
+  assert(filteredDisplayFiles[0] === 'src/hooks/useWorkflowSSE.ts', 'filtered evidence file display should use shared quality ranking');
   const rankedFixtures = core.rankLearningMoments([
     {
       id: 'five-one-source',
@@ -464,6 +485,24 @@ try {
       updatedAt: new Date(0).toISOString()
     },
     {
+      id: 'changed-support-direct',
+      label: 'Changed support concept',
+      evidenceLevel: 'direct',
+      signals: [{
+        conceptId: 'changed-support-direct',
+        evidenceLevel: 'direct',
+        file: 'scripts/support-smoke.ts',
+        signal: 'signal',
+        reason: 'fixture',
+        detectedAt: new Date(0).toISOString(),
+        changed: true,
+        source: 'content'
+      }],
+      connectedConcepts: [],
+      interviewQuestion: 'fixture?',
+      updatedAt: new Date(0).toISOString()
+    },
+    {
       id: 'changed-low-score',
       label: 'Changed concept',
       evidenceLevel: 'general',
@@ -480,10 +519,11 @@ try {
       interviewQuestion: 'fixture?',
       updatedAt: new Date(0).toISOString()
     }
-  ], new Set(['src/changed.ts']));
-  assert(rankedFixtures[0].concept.id === 'changed-low-score', 'changed-file-backed ranking fixture should rank first');
-  assert(rankedFixtures[1].score >= rankedFixtures[2].score, 'ranking fixtures should be ordered by public score after changed precedence');
-  assert(rankedFixtures[1].concept.id === 'four-varied-sources', 'score should be the canonical ranking key after changed precedence');
+  ], new Set(['src/changed.ts', 'scripts/support-smoke.ts']));
+  assert(['five-one-source', 'four-varied-sources'].includes(rankedFixtures[0].concept.id), 'primary direct source ranking fixture should rank first');
+  assert(rankedFixtures.findIndex((item) => item.concept.id === 'changed-low-score') < rankedFixtures.findIndex((item) => item.concept.id === 'changed-support-direct'), 'changed primary source evidence should outrank changed support-only evidence');
+  assert(rankedFixtures.findIndex((item) => item.concept.id === 'four-varied-sources') < rankedFixtures.findIndex((item) => item.concept.id === 'changed-support-direct'), 'unchanged primary source evidence should outrank changed support-only evidence');
+  assert(rankedFixtures.some((item) => item.concept.id === 'changed-support-direct'), 'support-only evidence should remain rankable');
 
   const coreLearn = await core.buildLearningMoments({ root, learner: 'default' });
   assert(coreLearn.markdown.includes('# Daily Learning Card'), 'core learn contract did not return markdown');
