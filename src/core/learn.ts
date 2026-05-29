@@ -2,6 +2,7 @@ import { formatLearningMoments } from '../format/explanation.js';
 import { recordConversationSignal } from '../learner/conversation-memory.js';
 import { changedFiles } from '../scan/git-diff.js';
 import { readConcepts } from '../storage/project-store.js';
+import { readPreferences } from '../storage/user-store.js';
 import { rankLearningMoments } from './ranking.js';
 import type { ContextbookRuntimeOptions, LearnResult } from '../types.js';
 
@@ -11,7 +12,8 @@ export async function buildLearningMoments(options: ContextbookRuntimeOptions = 
   const changed = await changedFiles(root);
   const moments = rankLearningMoments(concepts, changed).slice(0, 3);
   const preferredConcepts = moments.map((moment) => moment.concept);
-  const markdown = formatLearningMoments(moments, { changedFiles: changed });
+  const preferences = await readPreferences(options.learner ?? 'default');
+  const markdown = formatLearningMoments(moments, { changedFiles: changed }, preferences);
   await recordConversationSignal({
     signalType: 'learn.generated',
     command: 'learn',

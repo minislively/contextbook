@@ -1,16 +1,150 @@
-import type { ConceptRecord, EvidenceLevel, LearnerPreferences, RankedLearningMoment } from '../types.js';
+import type { ConceptRecord, EvidenceLevel, LearnerPreferences, LearningMomentReason, RankedLearningMoment } from '../types.js';
 import type { WhyLead, WhyResponsePlan } from './response-plan.js';
 import { rankEvidenceForDisplay, type EvidenceDisplayOptions } from './evidence.js';
 import { conceptMetadata } from '../concepts/mapper.js';
 import { defaultPreferences } from '../storage/user-store.js';
 import { bullet } from './markdown.js';
 
-export function formatLearningMoments(items: ConceptRecord[] | RankedLearningMoment[], evidenceOptions: EvidenceDisplayOptions = {}): string {
+export function formatLearningMoments(
+  items: ConceptRecord[] | RankedLearningMoment[],
+  evidenceOptions: EvidenceDisplayOptions = {},
+  preferences: LearnerPreferences = defaultPreferences
+): string {
+  const copy = learningCardCopy(preferences);
   if (items.length === 0) {
-    return '# Daily Learning Card\n\n아직 프로젝트 근거를 찾지 못했습니다. `contextbook scan` 후 다시 시도하거나, 코드에 개념 신호가 있는지 확인해 주세요.\n';
+    return `${copy.title}\n\n${copy.empty}\n`;
   }
   const selected = items.slice(0, 3);
-  return `# Daily Learning Card\n\n오늘 코드에서 뽑은 Learning Moments입니다.\n\n${selected.map((item, index) => formatMoment(normalizeMoment(item), index + 1, evidenceOptions)).join('\n\n')}`;
+  return `${copy.title}\n\n${copy.intro}\n\n${selected.map((item, index) => formatMoment(normalizeMoment(item), index + 1, evidenceOptions, preferences)).join('\n\n')}`;
+}
+
+type LearningCardLanguage = 'ko' | 'en';
+
+interface LearningCardCopy {
+  language: LearningCardLanguage;
+  title: string;
+  intro: string;
+  empty: string;
+  evidenceLevel: string;
+  evidenceFiles: string;
+  changedEvidence: string;
+  whyThisCard: string;
+  projectConnection: string;
+  relatedConcepts: string;
+  interviewPrompt: string;
+  noEvidence: string;
+}
+
+function learningCardCopy(preferences: LearnerPreferences): LearningCardCopy {
+  const language: LearningCardLanguage = preferences.preferredLanguage === 'en' ? 'en' : 'ko';
+  if (language === 'en') {
+    return {
+      language,
+      title: '# Daily Learning Card',
+      intro: 'Learning moments from the code you just touched.',
+      empty: 'No project evidence found yet. Run `contextbook scan` and try again, or check whether the code contains concept signals.',
+      evidenceLevel: 'Evidence level',
+      evidenceFiles: 'Evidence files',
+      changedEvidence: 'Changed-file evidence',
+      whyThisCard: 'Why this card',
+      projectConnection: 'Project connection',
+      relatedConcepts: 'Related concepts',
+      interviewPrompt: 'Interview prompt',
+      noEvidence: 'none'
+    };
+  }
+  return {
+    language,
+    title: '# Daily Learning Card',
+    intro: '오늘 코드에서 뽑은 Learning Moments입니다.',
+    empty: '아직 프로젝트 근거를 찾지 못했습니다. `contextbook scan` 후 다시 시도하거나, 코드에 개념 신호가 있는지 확인해 주세요.',
+    evidenceLevel: '근거 수준',
+    evidenceFiles: '근거 파일',
+    changedEvidence: '변경 파일 근거',
+    whyThisCard: '추천 이유',
+    projectConnection: '프로젝트 연결',
+    relatedConcepts: '연결되는 개념',
+    interviewPrompt: '면접 질문',
+    noEvidence: '없음'
+  };
+}
+
+function renderLearningReason(reason: LearningMomentReason, language: LearningCardLanguage): string {
+  if (language === 'en') {
+    const copy: Record<LearningMomentReason['code'], string> = {
+      'changed-file': 'Changed-file evidence: This concept appears in a recently changed file.',
+      'direct-evidence': 'Direct evidence: The project contains direct code signals for this concept.',
+      'related-evidence': 'Related evidence: The project has nearby structures or patterns for this concept.',
+      'multiple-signals': 'Repeated signals: Multiple signals point to the same concept.',
+      'source-variety': 'Source variety: Code, package, naming, or file signals reinforce the same concept.',
+      'stable-fallback': 'Stable candidate: This is a safe concept to include from the current project evidence.'
+    };
+    return copy[reason.code] ?? `${reason.label}: ${reason.detail}`;
+  }
+  return `${reason.label}: ${reason.detail}`;
+}
+
+function renderProjectConnection(concept: ConceptRecord, signal: ConceptRecord['signals'][number] | undefined, language: LearningCardLanguage): string {
+  const signalText = signal?.signal ? `\`${signal.signal}\`` : language === 'en' ? 'project signal' : '프로젝트 신호';
+  const source = signalSourceLabel(signal?.source, language);
+  const conceptFocus = conceptFocusText(concept, language);
+  if (language === 'en') {
+    return `${source} ${signalText} appears in this codebase, so this is a concrete place to study ${conceptFocus}.`;
+  }
+  return `${source}: ${signalText}. 이 프로젝트 기준 학습 주제는 ${conceptFocus}입니다.`;
+}
+
+function signalSourceLabel(source: ConceptRecord['signals'][number]['source'] | undefined, language: LearningCardLanguage): string {
+  if (language === 'en') {
+    switch (source) {
+      case 'content': return 'Code usage signal';
+      case 'package': return 'Package/dependency signal';
+      case 'file-name': return 'File naming signal';
+      case 'function-name': return 'Function or hook naming signal';
+      default: return 'Project signal';
+    }
+  }
+  switch (source) {
+    case 'content': return '코드 사용 신호';
+    case 'package': return '패키지 의존성 신호';
+    case 'file-name': return '파일 이름 신호';
+    case 'function-name': return '함수/훅 이름 신호';
+    default: return '프로젝트 신호';
+  }
+}
+
+function conceptFocusText(concept: ConceptRecord, language: LearningCardLanguage): string {
+  switch (concept.id) {
+    case 'use-effect-cleanup': return language === 'en' ? 'resource lifecycle and cleanup responsibility' : 'resource lifecycle과 cleanup 책임';
+    case 'sse': return language === 'en' ? 'SSE and asynchronous event handling' : 'SSE와 비동기 이벤트 처리';
+    case 'websocket': return language === 'en' ? 'realtime bidirectional communication' : '실시간 양방향 통신';
+    case 'zustand-state': return language === 'en' ? 'state management and subscriptions' : '상태 관리와 subscription';
+    case 'context-api': return language === 'en' ? 'Context API and render propagation' : 'Context API와 render propagation';
+    case 'graph-dag': return language === 'en' ? 'graph modeling and dependency structure' : 'graph 모델링과 의존성 구조';
+    case 'http-async': return language === 'en' ? 'HTTP request lifecycle and async error handling' : 'HTTP request lifecycle과 async error handling';
+    case 'timer-event-loop': return language === 'en' ? 'timers and event-loop scheduling' : 'timer와 event loop scheduling';
+    case 'memoization-render': return language === 'en' ? 'memoization and render optimization' : 'memoization과 render optimization';
+    case 'debounce': return language === 'en' ? 'event rate control and debounce' : 'event rate control과 debounce';
+    default: return concept.label;
+  }
+}
+
+
+function interviewPromptText(concept: ConceptRecord, language: LearningCardLanguage): string {
+  if (language !== 'en') return concept.interviewQuestion;
+  switch (concept.id) {
+    case 'use-effect-cleanup': return 'When does a React useEffect need a cleanup function?';
+    case 'sse': return 'Why does an SSE connection need lifecycle management in a UI?';
+    case 'websocket': return 'How would you explain WebSocket connection lifecycle and cleanup?';
+    case 'zustand-state': return 'How does an external state store coordinate subscriptions across components?';
+    case 'context-api': return 'How can Context API value changes affect render propagation?';
+    case 'graph-dag': return 'What problem is modeled as nodes and edges in this codebase?';
+    case 'http-async': return 'How should HTTP request lifecycle and async errors be explained from this code?';
+    case 'timer-event-loop': return 'How do timers relate to event-loop scheduling?';
+    case 'memoization-render': return 'What rendering cost does memoization reduce here?';
+    case 'debounce': return 'How does debounce reduce unnecessary repeated work?';
+    default: return concept.interviewQuestion;
+  }
 }
 
 function normalizeMoment(item: ConceptRecord | RankedLearningMoment): RankedLearningMoment {
@@ -26,11 +160,22 @@ function normalizeMoment(item: ConceptRecord | RankedLearningMoment): RankedLear
   };
 }
 
-function formatMoment(moment: RankedLearningMoment, index: number, evidenceOptions: EvidenceDisplayOptions): string {
+function formatMoment(moment: RankedLearningMoment, index: number, evidenceOptions: EvidenceDisplayOptions, preferences: LearnerPreferences): string {
   const { concept } = moment;
   const evidence = rankEvidenceForDisplay(concept.signals, evidenceOptions);
-  const changed = concept.signals.some((signal) => evidenceOptions.changedFiles?.has(signal.file ?? '') || (!evidenceOptions.changedFiles && signal.changed)) ? '\n변경 파일 근거: yes' : '';
-  return `## ${index}. ${concept.label}\n\n근거 수준: ${concept.evidenceLevel}\n근거 파일: ${evidence.visibleFiles.length ? evidence.visibleFiles.join(', ') : '없음'}${changed}\n\n추천 이유:\n${bullet(moment.reasons.map((reason) => `${reason.label}: ${reason.detail}`))}\n\n이 프로젝트에서는 ${evidence.primarySignal?.reason ?? concept.signals[0]?.reason ?? '관련 신호'} 때문에 이 개념을 학습할 수 있습니다.\n\n연결되는 개념:\n${bullet(concept.connectedConcepts)}\n\n면접 질문:\n${concept.interviewQuestion}`;
+  const copy = learningCardCopy(preferences);
+  const changed = concept.signals.some((signal) => evidenceOptions.changedFiles?.has(signal.file ?? '') || (!evidenceOptions.changedFiles && signal.changed)) ? `\n${copy.changedEvidence}: yes` : '';
+  const reasonLines = moment.reasons.map((reason) => renderLearningReason(reason, copy.language));
+  const compact = preferences.outputLength === 'short';
+  const sections = [
+    `## ${index}. ${concept.label}`,
+    `${copy.evidenceLevel}: ${concept.evidenceLevel}\n${copy.evidenceFiles}: ${evidence.visibleFiles.length ? evidence.visibleFiles.join(', ') : copy.noEvidence}${changed}`,
+    `${copy.whyThisCard}:\n${bullet(compact ? reasonLines.slice(0, 2) : reasonLines)}`,
+    `${copy.projectConnection}:\n${renderProjectConnection(concept, evidence.primarySignal, copy.language)}`,
+    compact ? undefined : `${copy.relatedConcepts}:\n${bullet(concept.connectedConcepts)}`,
+    `${copy.interviewPrompt}:\n${interviewPromptText(concept, copy.language)}`
+  ].filter((section): section is string => Boolean(section));
+  return sections.join('\n\n');
 }
 
 export function formatWhyAnswer(
