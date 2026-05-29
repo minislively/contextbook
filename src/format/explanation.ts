@@ -240,13 +240,21 @@ export function formatWhyAnswer(
   };
   const plan = responsePlan ?? fallbackResponsePlan(preferences);
   const atomOrder = responsePlanAtomOrder(plan);
-  return formatNarrativeWhyAnswer({ conceptId: id, evidenceLevel, files, explanations, atomOrder, responsePlan: plan });
+  const input = { conceptId: id, evidenceLevel, files, explanations, atomOrder, responsePlan: plan };
+  switch (plan.renderMode) {
+    case 'plain': return formatPlainWhyAnswer(input);
+    case 'interview': return formatInterviewWhyAnswer(input);
+    case 'structured': return formatStructuredWhyAnswer(input);
+    case 'uncertainty': return formatUncertaintyWhyAnswer(input);
+    default: return formatNarrativeWhyAnswer(input);
+  }
 }
 
 function fallbackResponsePlan(preferences: LearnerPreferences): WhyResponsePlan {
   const atomOrder = normalizeLegacyOrder(preferences.explanationOrder);
   const lead = atomOrder[0] === 'interview' ? 'interview' : atomOrder[0] === 'plain' ? 'plain' : 'project';
   return {
+    renderMode: lead === 'interview' ? 'interview' : lead === 'plain' ? 'plain' : 'narrative',
     lead,
     density: preferences.outputLength === 'short' ? 'compact' : 'normal',
     emphasis: atomOrder,
@@ -344,59 +352,183 @@ interface NarrativeWhyInput {
 }
 
 function formatNarrativeWhyAnswer(input: NarrativeWhyInput): string {
+  const visibleFiles = visibleEvidenceFiles(input);
   const interview = input.explanations['interview-sentence'];
-  const visibleFiles = input.responsePlan.evidenceVisibility === 'compact' ? input.files.slice(0, 1) : input.files;
-  const evidenceFiles = visibleFiles.length ? visibleFiles.map((file) => `- ${file}`).join('\n') : '프로젝트 근거 없음';
-  const body = orderedBodyLines(input);
   const lines = [
-    `근거: ${input.evidenceLevel}${visibleFiles[0] ? ` · ${visibleFiles[0]}` : ''}`,
-    '',
-    ...body,
-    input.responsePlan.examples === 'project-worked-example' ? projectWorkedExample(input.explanations) : undefined,
+    evidenceLine(input, visibleFiles),
+    ...semanticNarrativeLines(input),
     practicalTensionLine(input.conceptId, input.evidenceLevel),
+    input.responsePlan.examples === 'project-worked-example' ? projectWorkedExample(input.explanations) : undefined,
     followUpLine(input.responsePlan, interview, input.evidenceLevel),
-    '',
     '근거 파일:',
-    evidenceFiles,
-    ''
-  ].filter((line): line is string => line !== undefined && line !== '');
-  return `${lines.join('\n\n')}\n`;
+    evidenceFileLines(visibleFiles)
+  ];
+  return renderLines(lines);
 }
 
-function orderedBodyLines(input: NarrativeWhyInput): string[] {
-  const atomText: Record<'project' | 'plain' | 'developer' | 'cs' | 'interview', string> = {
-    project: input.responsePlan.lead === 'interview' ? input.explanations.project : leadAwareText('project', input.responsePlan.lead, input.explanations),
-    plain: leadAwareText('plain', input.responsePlan.lead, input.explanations),
-    developer: `개발자 용어: ${input.explanations['developer-term']}`,
-    cs: `CS 연결: ${input.explanations['cs-link']}`,
-    interview: input.responsePlan.lead === 'interview'
-      ? `면접 답변: ${input.explanations['interview-sentence']}`
-      : `면접 문장: ${input.explanations['interview-sentence']}`
+function formatPlainWhyAnswer(input: NarrativeWhyInput): string {
+  const visibleFiles = visibleEvidenceFiles(input);
+  const interview = input.explanations['interview-sentence'];
+  const lines = [
+    evidenceLine(input, visibleFiles),
+    ...semanticPlainLines(input),
+    practicalTensionLine(input.conceptId, input.evidenceLevel),
+    input.responsePlan.examples === 'project-worked-example' ? projectWorkedExample(input.explanations) : undefined,
+    followUpLine(input.responsePlan, interview, input.evidenceLevel),
+    '근거 파일:',
+    evidenceFileLines(visibleFiles)
+  ];
+  return renderLines(lines);
+}
+
+function formatInterviewWhyAnswer(input: NarrativeWhyInput): string {
+  const visibleFiles = visibleEvidenceFiles(input);
+  const interview = input.explanations['interview-sentence'];
+  const lines = [
+    evidenceLine(input, visibleFiles),
+    interviewShellLine(interview),
+    ...semanticNarrativeLines({ ...input, atomOrder: input.atomOrder.filter((atom) => atom !== 'interview') }),
+    practicalTensionLine(input.conceptId, input.evidenceLevel),
+    input.responsePlan.examples === 'project-worked-example' ? projectWorkedExample(input.explanations) : undefined,
+    followUpLine(input.responsePlan, interview, input.evidenceLevel),
+    '근거 파일:',
+    evidenceFileLines(visibleFiles)
+  ];
+  return renderLines(lines);
+}
+
+function formatStructuredWhyAnswer(input: NarrativeWhyInput): string {
+  const visibleFiles = visibleEvidenceFiles(input);
+  const interview = input.explanations['interview-sentence'];
+  const lines = [
+    evidenceLine(input, visibleFiles),
+    ...semanticStructuredLines(input),
+    practicalTensionLine(input.conceptId, input.evidenceLevel),
+    input.responsePlan.examples === 'project-worked-example' ? `프로젝트 예시:\n${projectWorkedExample(input.explanations)}` : undefined,
+    followUpLine(input.responsePlan, interview, input.evidenceLevel),
+    '근거 파일:',
+    evidenceFileLines(visibleFiles)
+  ];
+  return renderLines(lines);
+}
+
+function formatUncertaintyWhyAnswer(input: NarrativeWhyInput): string {
+  const visibleFiles = visibleEvidenceFiles(input);
+  const interview = input.explanations['interview-sentence'];
+  const lines = [
+    evidenceLine(input, visibleFiles),
+    ...semanticUncertaintyLines(input),
+    practicalTensionLine(input.conceptId, input.evidenceLevel),
+    input.responsePlan.followUp === 'interview-drill' ? `면접에서는 일반론으로 이렇게 말할 수 있습니다:\n${interview}` : undefined,
+    followUpLine(input.responsePlan, interview, input.evidenceLevel),
+    '근거 파일:',
+    evidenceFileLines(visibleFiles)
+  ];
+  return renderLines(lines);
+}
+
+type WhyAtom = 'project' | 'plain' | 'developer' | 'cs' | 'interview';
+interface SemanticEntry { atom: WhyAtom; text: string; }
+
+function semanticEntries(input: NarrativeWhyInput): SemanticEntry[] {
+  const atomText: Record<WhyAtom, string> = {
+    project: input.explanations.project,
+    plain: input.explanations.plain,
+    developer: input.explanations['developer-term'],
+    cs: input.explanations['cs-link'],
+    interview: input.explanations['interview-sentence']
   };
-  const ordered = input.atomOrder
+  return input.atomOrder
     .filter((atom) => input.responsePlan.includeInterviewLine || atom !== 'interview' || input.responsePlan.lead === 'interview')
-    .map((atom) => atomText[atom]);
-  if (input.responsePlan.lead === 'uncertainty') return compactOrNormalLines(input.responsePlan.density, ordered);
-  return compactOrNormalLines(input.responsePlan.density, ordered);
+    .map((atom) => ({ atom, text: atomText[atom] }));
 }
 
-function compactOrNormalLines(density: WhyResponsePlan['density'], ordered: string[]): string[] {
-  if (density !== 'compact') return ordered;
-  const [first, second, ...rest] = ordered;
-  const developer = rest.find((line) => line.startsWith('개발자 용어:'));
-  const cs = rest.find((line) => line.startsWith('CS 연결:'));
-  const interview = rest.find((line) => line.startsWith('면접 문장:'));
-  return [
-    first && second ? `${stripTrailingPeriod(first)} ${second}` : first ?? second,
-    developer && cs ? `개발자/CS 연결: ${developer.replace(/^개발자 용어:\s*/, '')} · ${cs.replace(/^CS 연결:\s*/, '')}` : developer ?? cs,
-    interview
-  ].filter((line): line is string => Boolean(line));
+function semanticNarrativeLines(input: NarrativeWhyInput): string[] {
+  const lines = semanticEntries(input).map(narrativeEntryLine);
+  return compactSemanticLines(input.responsePlan.density, lines);
 }
 
-function leadAwareText(atom: 'project' | 'plain', lead: WhyLead, explanations: Record<string, string>): string {
-  if (lead === 'plain' && atom === 'plain') return explanations.plain;
-  if (lead === 'uncertainty' && atom === 'project') return explanations.project;
-  return explanations[atom];
+function semanticPlainLines(input: NarrativeWhyInput): string[] {
+  const lines = semanticEntries(input).map((entry) => {
+    if (entry.atom === 'plain') return `쉽게 말하면, ${entry.text}`;
+    if (entry.atom === 'project') return entry.text;
+    if (entry.atom === 'developer') return `개발자 말로는 ${entry.text}`;
+    if (entry.atom === 'cs') return `CS로 연결하면 ${entry.text}`;
+    return `면접에서는 이렇게 말하면 됩니다:\n${entry.text}`;
+  });
+  return compactSemanticLines(input.responsePlan.density, lines);
+}
+
+function semanticStructuredLines(input: NarrativeWhyInput): string[] {
+  const lines = semanticEntries(input).map((entry) => `${structuredLabel(entry.atom)}:\n${entry.text}`);
+  return compactSemanticLines(input.responsePlan.density, lines);
+}
+
+function semanticUncertaintyLines(input: NarrativeWhyInput): string[] {
+  const lines = semanticEntries(input).filter((entry) => entry.atom !== 'interview').map((entry) => {
+    if (entry.atom === 'project') return entry.text;
+    if (entry.atom === 'plain') return `일반 개념으로는 ${entry.text}`;
+    if (entry.atom === 'developer') return `개발자 용어로는 ${entry.text}`;
+    if (entry.atom === 'cs') return `CS로는 ${entry.text}`;
+    return `면접 일반론:\n${entry.text}`;
+  });
+  return compactSemanticLines(input.responsePlan.density, lines);
+}
+
+function narrativeEntryLine(entry: SemanticEntry): string {
+  switch (entry.atom) {
+    case 'plain': return `핵심은 ${quoteCore(entry.text)}는 점입니다.`;
+    case 'project': return entry.text;
+    case 'developer': return `개발자 말로는 ${entry.text}입니다.`;
+    case 'cs': return `CS로 넓히면 ${lowerFirst(entry.text)}`;
+    case 'interview': return interviewShellLine(entry.text);
+  }
+}
+
+function interviewShellLine(interview: string): string {
+  return `면접에서는 이렇게 말하면 됩니다:\n${interview}`;
+}
+
+function structuredLabel(atom: WhyAtom): string {
+  switch (atom) {
+    case 'plain': return '핵심';
+    case 'project': return '프로젝트 연결';
+    case 'developer': return '개발자 용어';
+    case 'cs': return 'CS 연결';
+    case 'interview': return '면접 문장';
+  }
+}
+
+function compactSemanticLines(density: WhyResponsePlan['density'], lines: string[]): string[] {
+  if (density !== 'compact') return lines;
+  const [first, second, ...rest] = lines;
+  const compacted = first && second ? [`${stripTrailingPeriod(first)} ${second}`] : [first ?? second].filter(Boolean) as string[];
+  if (rest.length > 0) compacted.push(rest.join('\n'));
+  return compacted;
+}
+
+function visibleEvidenceFiles(input: NarrativeWhyInput): string[] {
+  return input.responsePlan.evidenceVisibility === 'compact' ? input.files.slice(0, 1) : input.files;
+}
+
+function evidenceLine(input: NarrativeWhyInput, visibleFiles: string[]): string {
+  return `근거: ${input.evidenceLevel}${visibleFiles[0] ? ` · ${visibleFiles[0]}` : ''}`;
+}
+
+function evidenceFileLines(visibleFiles: string[]): string {
+  return visibleFiles.length ? visibleFiles.map((file) => `- ${file}`).join('\n') : '프로젝트 근거 없음';
+}
+
+function renderLines(lines: Array<string | undefined>): string {
+  return `${lines.filter((line): line is string => Boolean(line?.trim())).join('\n\n')}\n`;
+}
+
+function quoteCore(text: string): string {
+  return `“${stripTrailingPeriod(text).replace(/[.]$/, '')}”`;
+}
+
+function lowerFirst(text: string): string {
+  return text.replace(/^더 넓게 보면\s*/, '');
 }
 
 function projectWorkedExample(explanations: Record<string, string>): string {
