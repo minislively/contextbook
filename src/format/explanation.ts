@@ -460,8 +460,10 @@ function semanticPlainLines(input: NarrativeWhyInput): string[] {
 }
 
 function semanticStructuredLines(input: NarrativeWhyInput): string[] {
-  const lines = semanticEntries(input).map((entry) => `${structuredLabel(entry.atom)}:\n${entry.text}`);
-  return compactSemanticLines(input.responsePlan.density, lines);
+  const entries = semanticEntries(input);
+  const lines = entries.map((entry) => `${structuredLabel(entry.atom)}:\n${entry.text}`);
+  if (input.responsePlan.density !== 'compact') return lines;
+  return compactStructuredEntries(entries);
 }
 
 function semanticUncertaintyLines(input: NarrativeWhyInput): string[] {
@@ -498,6 +500,30 @@ function structuredLabel(atom: WhyAtom): string {
     case 'interview': return '면접 문장';
   }
 }
+
+function compactStructuredEntries(entries: SemanticEntry[]): string[] {
+  const lines: string[] = [];
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index];
+    const nextEntry = entries[index + 1];
+    if (isDeveloperCsPair(entry, nextEntry)) {
+      lines.push(`개발자/CS 연결:
+${[entry, nextEntry].map((item) => `${structuredLabel(item.atom)}:
+${item.text}`).join('\n')}`);
+      index += 1;
+      continue;
+    }
+    lines.push(`${structuredLabel(entry.atom)}:
+${entry.text}`);
+  }
+  return lines;
+}
+
+function isDeveloperCsPair(entry: SemanticEntry, nextEntry: SemanticEntry | undefined): nextEntry is SemanticEntry {
+  if (!nextEntry) return false;
+  return (entry.atom === 'developer' && nextEntry.atom === 'cs') || (entry.atom === 'cs' && nextEntry.atom === 'developer');
+}
+
 
 function compactSemanticLines(density: WhyResponsePlan['density'], lines: string[]): string[] {
   if (density !== 'compact') return lines;

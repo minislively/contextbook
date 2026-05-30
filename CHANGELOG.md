@@ -24,7 +24,7 @@ Initial MVP release.
 - `contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]` for explicit, audited, preferences-only profile update application.
 - `contextbook memory context` and `--json` for a read-only AI context bundle across project, learner, signals, suggestions, freshness, and safety.
 - `contextbook learn` daily learning card with 1-3 project-grounded learning moments and deterministic recommendation reasons.
-- `contextbook why "<question>"` fixed-format concept explanation.
+- `contextbook why "<question>"` concept explanation with adaptive narrative/plain/interview/structured/uncertainty rendering while preserving evidence markers.
 - Evidence levels: `direct`, `related`, and `general`.
 - Learner profile commands: `profile`, `profile diff`, `profile edit`, `profile reset`.
 - Structured Conversation Memory events for `scan`, `learn`, `why`, and `profile` flows.
