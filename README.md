@@ -368,29 +368,42 @@ React에서 SSE 연결을 사용할 때 cleanup이 필요한 이유는 무엇인
 
 The recommendation reasons are computed locally at learn time. Contextbook does not create a separate ranking history file or call an external ranking API.
 
-### Step 6. Ask why a concept matters
+### Step 8. Ask why a concept matters
 
 ```bash
 contextbook why "cleanup 왜 해야 돼?"
 ```
 
-`why` now renders as a readable, narrative-first answer while keeping stable evidence markers:
+`why` chooses the visible answer shape from the question while keeping stable evidence markers.
+A casual question reads like a short explanation:
 
 ```md
-근거 수준: direct
+근거: direct · src/hooks/useWorkflowSSE.ts
 
-짧게 말하면, 이 프로젝트에서 `EventSource` 같은 연결을 열면 화면이 사라질 때 그 연결도 닫아야 합니다.
-열어둔 연결, 타이머, 구독은 다 쓰고 나면 닫아야 합니다.
+이 프로젝트에서는 `useEffect + return cleanup` 신호가 보여서 `useEffect cleanup / lifecycle`을 코드 맥락으로 설명할 수 있습니다.
 
-개발자 말로는 `useEffect cleanup` 문제입니다.
-CS로 연결하면 resource lifecycle 문제입니다.
-면접에서는 이렇게 말하면 됩니다: ...
+핵심은 “열어둔 연결, 타이머, 구독은 다 쓰고 나면 닫아야 합니다”는 점입니다.
+
+개발자 말로는 `useEffect cleanup`과 component lifecycle입니다.
+
+CS로 넓히면 resource lifecycle 관점입니다.
+
+면접에서는 이렇게 말하면 됩니다:
+컴포넌트 생명주기와 별개로 유지되는 연결이나 구독은 unmount 시 정리하지 않으면 메모리 누수나 stale update가 발생할 수 있어 cleanup에서 해제합니다.
 
 근거 파일:
 - src/hooks/useWorkflowSSE.ts
 ```
 
-This is the key Contextbook output: project-grounded explanation → plain language → developer term → CS concept → interview sentence, without forcing a rigid section dump. Recent low-risk learning signals can tighten the length or shift the opening order, but evidence markers stay stable.
+If you ask for a shape, Contextbook switches without adding more commands:
+
+```bash
+contextbook why "cleanup 쉽게 설명해줘"      # plain-first
+contextbook why "cleanup 정리해줘"          # structured sections
+contextbook why "cleanup 면접 답변으로"     # interview answer first
+```
+
+This is the key Contextbook output: project-grounded explanation → plain language → developer term → CS concept → interview sentence, without forcing a rigid section dump. Recent low-risk learning signals can tighten the length or shift the opening order, but evidence markers stay stable. If evidence is `general`, Contextbook leads with that uncertainty before giving general guidance.
 
 ## Evidence levels
 
