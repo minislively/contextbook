@@ -99,8 +99,10 @@ function humanFreshnessLines(report: ReportJson): string[] {
     lines.push('- 프로젝트 스캔 기록이 아직 없습니다. 먼저 `contextbook scan`을 실행해보세요.');
   } else if (report.freshness.staleHints.includes('git-unavailable')) {
     lines.push('- 현재 Git 상태를 확인하지 못해 스캔 최신성을 완전히 판단할 수 없습니다. 자세한 내용은 `contextbook report --json`에서 확인하세요.');
-  } else if (report.freshness.workingTreeChanged) {
+  } else if (report.freshness.workingTreeChanged && report.freshness.changedFilesSinceScan > 0) {
     lines.push('- 프로젝트 스캔 이후 코드 상태가 달라졌을 수 있습니다. 필요하면 `contextbook scan`을 다시 실행하세요.');
+  } else if (report.freshness.workingTreeChanged) {
+    lines.push('- 최근 스캔은 현재 Git 상태와 다른 시점에 만들어졌습니다. 현재 미커밋 변경 파일은 없지만, 정확도를 위해 필요하면 `contextbook scan`을 다시 실행하세요.');
   } else {
     lines.push('- 프로젝트 스캔 상태는 현재 코드와 맞습니다.');
   }

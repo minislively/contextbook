@@ -1183,6 +1183,22 @@ try {
   assert(runExpectFail(['report', '--since', '2026-01-01']).includes('Usage: contextbook report'), 'report missing custom bound should show usage');
   const coreReport = await core.buildReport({ root, learner: 'default', args: ['--since', '2026-01-01', '--until', '2026-01-07'], now: new Date('2026-01-07T12:00:00.000Z') });
   assert(coreReport.schemaVersion === 1 && coreReport.markdown.includes('# Contextbook Report') && coreReport.markdown.includes('선택한 기간에는') && coreReport.markdown.includes('## 선택한 기간 핵심 개념'), 'core report contract invalid');
+  const lastScanRunPath = join(root, '.contextbook', 'project', 'scan-runs.jsonl');
+  const originalScanRunsForCleanTree = (await readFile(lastScanRunPath, 'utf8')).trimEnd().split('\n');
+  const scanRunsForCleanTree = [...originalScanRunsForCleanTree];
+  const lastScanRun = JSON.parse(scanRunsForCleanTree.at(-1));
+  lastScanRun.changedFiles = 1029;
+  lastScanRun.workingTreeFingerprint = 'scan-dirty-fingerprint-fixture';
+  scanRunsForCleanTree[scanRunsForCleanTree.length - 1] = JSON.stringify(lastScanRun);
+  await writeFile(lastScanRunPath, `${scanRunsForCleanTree.join('\n')}\n`, 'utf8');
+  const cleanCurrentTreeReportJson = JSON.parse(run(['report', '--json']));
+  assert(cleanCurrentTreeReportJson.freshness.workingTreeChanged === true && cleanCurrentTreeReportJson.freshness.changedFilesSinceScan === 0, 'report freshness should distinguish scan-time dirty state from current changed files');
+  assert(cleanCurrentTreeReportJson.freshness.staleHints.includes('working-tree-changed'), 'report freshness should keep stale hint when scan fingerprint differs from current clean tree');
+  const cleanCurrentTreeReport = run(['report']);
+  assert(cleanCurrentTreeReport.includes('현재 미커밋 변경 파일은 없지만') && cleanCurrentTreeReport.includes('contextbook scan'), 'report freshness markdown should explain clean current tree with stale scan fingerprint');
+  assert(!cleanCurrentTreeReport.includes('working-tree-changed'), 'report clean-current-tree markdown leaked audit freshness wording');
+  await writeFile(lastScanRunPath, `${originalScanRunsForCleanTree.join('\n')}\n`, 'utf8');
+
   const reportStaleFixture = join(root, 'src', 'report-stale-fixture.ts');
   await writeFile(reportStaleFixture, 'export const reportStaleFixture = true;\n', 'utf8');
   const staleReportJson = JSON.parse(run(['report', '--json']));
