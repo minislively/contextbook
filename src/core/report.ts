@@ -283,7 +283,7 @@ async function reportFreshness(root: string, scanRuns: Awaited<ReturnType<typeof
   return {
     projectScannedAt: latestScan?.scannedAt,
     workingTreeChanged,
-    changedFilesSinceScan: workingTreeChanged ? workingTree.changedFileCount : 0,
+    changedFilesSinceScan: workingTreeChanged ? Math.max(0, workingTree.changedFileCount - (latestScan?.changedFiles ?? 0)) : 0,
     warnings,
     staleHints
   };
