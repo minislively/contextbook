@@ -5,6 +5,7 @@ import { learnCommand } from './commands/learn.js';
 import { memoryCommand } from './commands/memory.js';
 import { profileCommand } from './commands/profile.js';
 import { projectCommand } from './commands/project.js';
+import { reportCommand } from './commands/report.js';
 import { scanCommand } from './commands/scan.js';
 import { whyCommand } from './commands/why.js';
 import { installCommand } from './commands/install.js';
@@ -21,6 +22,7 @@ Usage:
   contextbook doctor [--json]
   contextbook project [--json]
   contextbook learner [--json]
+  contextbook report [--day|--week|--since <date> --until <date>] [--json]
   contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]
   contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]
   contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--mode suggest|auto-safe] [--include-memory-context] [--json]
@@ -75,6 +77,9 @@ async function main(argv: string[]): Promise<void> {
       return;
     case 'learner':
       await learnerCommand(args);
+      return;
+    case 'report':
+      await reportCommand(args);
       return;
     case 'memory':
       await memoryCommand(args);

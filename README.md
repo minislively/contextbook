@@ -251,6 +251,28 @@ It shows:
 
 The default output is Markdown for humans. `--json` returns a compact agent-readable contract with safety flags such as `rawTranscriptIncluded: false`, `profileMutated: false`, `weakTermsMutated: false`, and `unsafeJudgmentIncluded: false`.
 
+### Step 5b. Review your learning log
+
+```bash
+contextbook report
+contextbook report --week
+contextbook report --day
+contextbook report --since 2026-01-01 --until 2026-01-07
+contextbook report --json
+```
+
+`contextbook report` is a read-only daily/weekly learning log. It summarizes the selected UTC period from Conversation Memory `signals.jsonl` only, then combines that with current Project Memory for code-backed learning moments and interview questions.
+
+The report includes:
+
+- frequently repeated concepts for the period
+- “다시 보면 좋은 개념” review candidates from explicit confusion/repeated-term/analogy-rejected signals and weak terms updated inside the period
+- code-backed Learning Moments with repo-relative evidence files
+- scan freshness warnings and stale hints
+- safety flags showing that no raw prompt/transcript, profile mutation, weak-term mutation, or persisted report was produced
+
+It intentionally ignores `answers.jsonl` in the MVP aggregation path so the same `why`/answer interaction is not double-counted when both answer memory and signal memory exist.
+
 ### Step 6. Record explicit memory signals
 
 ```bash

@@ -131,5 +131,27 @@ export const conceptRules: ConceptRule[] = [
     evidenceLevel: 'direct',
     reason: 'useMemo/useCallback usage indicates memoization or render optimization.',
     match: includesRule(/\b(useMemo|useCallback)\b/, 'useMemo/useCallback')
+  },
+  {
+    id: 'cli-executable',
+    label: 'CLI executable packaging',
+    aliases: ['cli', 'bin', 'binary', 'executable', 'chmod', 'shebang', 'permission', 'permissions', '실행 권한', '바이너리', '명령어'],
+    connectedConcepts: ['package binary entrypoint', 'file permissions', 'release smoke test'],
+    interviewQuestion: 'npm CLI 패키지에서 bin entrypoint와 실행 권한을 함께 확인해야 하는 이유는 무엇인가요?',
+    evidenceLevel: 'direct',
+    reason: 'CLI bin metadata, shebangs, or executable permission handling indicate package entrypoint behavior.',
+    match(content, file) {
+      const matches: { signal: string; line?: number }[] = [];
+      if (/^#!\/usr\/bin\/env\s+node/m.test(content)) {
+        matches.push({ signal: 'node CLI shebang', line: lineOf(content, /^#!\/usr\/bin\/env\s+node/m) });
+      }
+      if (file === 'package.json' && /"bin"\s*:/.test(content)) {
+        matches.push({ signal: 'package.json bin entrypoint', line: lineOf(content, /"bin"\s*:/) });
+      }
+      if (/\bchmod(?:Sync)?\s*\(|\b0o755\b|\b755\b/.test(content)) {
+        matches.push({ signal: 'executable permission handling', line: lineOf(content, /\bchmod(?:Sync)?\s*\(|\b0o755\b|\b755\b/) });
+      }
+      return matches;
+    }
   }
 ];

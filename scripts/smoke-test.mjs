@@ -238,14 +238,20 @@ async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
 }
 
+async function appendJsonlFile(path, records) {
+  const existing = existsSync(path) ? await readFile(path, 'utf8') : '';
+  const lines = records.map((record) => JSON.stringify(record)).join('\n');
+  await writeFile(path, `${existing}${existing && !existing.endsWith('\n') ? '\n' : ''}${lines}\n`, 'utf8');
+}
+
 try {
   const readme = await readFile(join(repoRoot, 'README.md'), 'utf8');
-  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook doctor', 'contextbook doctor --json', 'contextbook setup --auto --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook hooks smoke', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory hook-suggest', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory preference-history', 'contextbook memory undo-preference-update', 'contextbook memory context --json', 'contextbook memory recover', 'contextbook memory recover --json', 'contextbook memory recover --safe', 'contextbook memory recover --safe --json', 'contextbook memory validate', 'contextbook memory validate --json', 'contextbook memory repair --dry-run', 'contextbook memory repair --dry-run --json', 'contextbook memory repair --yes', 'contextbook memory repair --yes --json', 'contextbook memory rebuild --dry-run', 'contextbook memory rebuild --dry-run --json', 'contextbook memory rebuild --yes', 'contextbook memory rebuild --yes --json', 'contextbook memory backup --dry-run', 'contextbook memory backup --dry-run --json', 'contextbook memory backup --yes', 'contextbook memory backup --yes --json', 'contextbook memory restore --backup-id <id> --dry-run', 'contextbook memory restore --backup-id <id> --dry-run --json', 'contextbook memory restore --backup-id <id> --yes', 'contextbook memory restore --backup-id <id> --yes --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
+  for (const text of ['contextbook setup', 'contextbook setup --dry-run', 'contextbook doctor', 'contextbook doctor --json', 'contextbook setup --auto --dry-run', 'contextbook hooks status', 'contextbook hooks status --json', 'contextbook hooks smoke', 'contextbook project', 'contextbook project --json', 'contextbook learner', 'contextbook learner --json', 'contextbook report', 'contextbook report --json', 'contextbook report --day', 'contextbook report --since 2026-01-01 --until 2026-01-07', 'contextbook memory add-signal', 'contextbook memory capture-prompt', 'contextbook memory hook-suggest', 'contextbook memory signals --json', 'contextbook memory suggest-weak-terms --json', 'contextbook memory suggest-profile-updates --json', 'contextbook memory apply-profile-update', 'contextbook memory apply-preference-signals', 'contextbook memory preference-history', 'contextbook memory undo-preference-update', 'contextbook memory context --json', 'contextbook memory recover', 'contextbook memory recover --json', 'contextbook memory recover --safe', 'contextbook memory recover --safe --json', 'contextbook memory validate', 'contextbook memory validate --json', 'contextbook memory repair --dry-run', 'contextbook memory repair --dry-run --json', 'contextbook memory repair --yes', 'contextbook memory repair --yes --json', 'contextbook memory rebuild --dry-run', 'contextbook memory rebuild --dry-run --json', 'contextbook memory rebuild --yes', 'contextbook memory rebuild --yes --json', 'contextbook memory backup --dry-run', 'contextbook memory backup --dry-run --json', 'contextbook memory backup --yes', 'contextbook memory backup --yes --json', 'contextbook memory restore --backup-id <id> --dry-run', 'contextbook memory restore --backup-id <id> --dry-run --json', 'contextbook memory restore --backup-id <id> --yes', 'contextbook memory restore --backup-id <id> --yes --json', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook install all --dry-run', 'contextbook install codex --dry-run', 'contextbook install codex --codex-path both --dry-run', 'contextbook install claude-code --dry-run']) {
     assert(readme.includes(text), `README missing ${text}`);
   }
 
   const help = run(['--help'], { cwd: repoRoot });
-  for (const text of ['contextbook doctor [--json]', 'contextbook project [--json]', 'contextbook learner [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--mode suggest|auto-safe] [--include-memory-context] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--mode manual|suggest|auto-safe] [--dry-run] [--json]', 'contextbook memory preference-history [--json]', 'contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]', 'contextbook memory context [--json]', 'contextbook memory recover [--safe] [--json]', 'contextbook memory validate [--json]', 'contextbook memory repair (--dry-run|--yes) [--json]', 'contextbook memory rebuild (--dry-run|--yes) [--json]', 'contextbook memory backup (--dry-run|--yes) [--json]', 'contextbook memory restore --backup-id <id> (--dry-run|--yes) [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--auto]', 'contextbook hooks status [--json]', 'contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]', 'contextbook install all [--dry-run] [--hooks] [--auto] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--auto] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks] [--auto]']) {
+  for (const text of ['contextbook doctor [--json]', 'contextbook project [--json]', 'contextbook learner [--json]', 'contextbook report [--day|--week|--since <date> --until <date>] [--json]', 'contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]', 'contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]', 'contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--mode suggest|auto-safe] [--include-memory-context] [--json]', 'contextbook memory signals [--json]', 'contextbook memory suggest-weak-terms [--json]', 'contextbook memory suggest-profile-updates [--json]', 'contextbook memory apply-profile-update --candidate <id|index> [--dry-run] [--json]', 'contextbook memory apply-preference-signals --prompt <text> [--source manual|codex|claude-code] [--mode manual|suggest|auto-safe] [--dry-run] [--json]', 'contextbook memory preference-history [--json]', 'contextbook memory undo-preference-update --entry <id|index> (--dry-run|--yes) [--json]', 'contextbook memory context [--json]', 'contextbook memory recover [--safe] [--json]', 'contextbook memory validate [--json]', 'contextbook memory repair (--dry-run|--yes) [--json]', 'contextbook memory rebuild (--dry-run|--yes) [--json]', 'contextbook memory backup (--dry-run|--yes) [--json]', 'contextbook memory restore --backup-id <id> (--dry-run|--yes) [--json]', 'contextbook profile diff', 'contextbook profile edit', 'contextbook profile reset', 'contextbook setup [--dry-run] [--auto]', 'contextbook hooks status [--json]', 'contextbook hooks smoke --prompt <text> [--platform codex|claude-code|all] [--json]', 'contextbook install all [--dry-run] [--hooks] [--auto] [--codex-path auto|agents|codex|both]', 'contextbook install codex [--dry-run] [--hooks] [--auto] [--codex-path auto|agents|codex|both]', 'contextbook install claude-code [--dry-run] [--hooks] [--auto]']) {
     assert(help.includes(text), `help missing ${text}`);
   }
 
@@ -253,7 +259,11 @@ try {
   git(['config', 'user.email', 'smoke@example.test']);
   git(['config', 'user.name', 'Contextbook Smoke']);
   await writeFile(join(root, 'README.md'), '# Smoke project\n', 'utf8');
-  await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { zustand: '^5.0.0' } }, null, 2), 'utf8');
+  await writeFile(join(root, 'package.json'), JSON.stringify({
+    bin: { 'contextbook-smoke': 'dist/cli.js' },
+    scripts: { build: 'tsc && node -e "require(\'node:fs\').chmodSync(\'dist/cli.js\', 0o755)"' },
+    dependencies: { zustand: '^5.0.0' }
+  }, null, 2), 'utf8');
   await mkdir(join(root, 'src', 'hooks'), { recursive: true });
   await mkdir(join(root, '.fooks', 'sessions'), { recursive: true });
   await writeFile(join(root, '.fooks', 'sessions', 'hidden-runtime.json'), JSON.stringify({ event: 'EventSource should be ignored' }), 'utf8');
@@ -414,6 +424,7 @@ try {
   await writeFile(join(root, 'src', 'hooks', 'large-fixture.ts'), 'x'.repeat(300_001), 'utf8');
   await writeFile(join(root, 'scripts', 'smoke-test.mjs'), 'useEffect(() => { return () => source.close(); }); new EventSource("/support");\n', 'utf8');
   await writeFile(join(root, 'src', 'concepts', 'rules.ts'), 'export const rule = "EventSource useEffect return cleanup WebSocket zustand";\n', 'utf8');
+  await writeFile(join(root, 'src', 'cli.ts'), '#!/usr/bin/env node\nconsole.log("contextbook smoke");\n', 'utf8');
   await writeFile(join(root, 'dist', 'generated.js'), 'export const hidden = "ignored";\n', 'utf8');
   await writeFile(join(root, '.omx', 'state', 'private.json'), '{"signal":"EventSource should be ignored"}\n', 'utf8');
   await writeFile(join(root, 'node_modules', 'ignored-package', 'index.js'), 'new EventSource("ignored");\n', 'utf8');
@@ -550,6 +561,8 @@ try {
   assert(evidence.some((item) => item.source === 'package'), 'missing package evidence');
   assert(evidence.some((item) => item.source === 'file-name' || item.source === 'function-name'), 'missing file/function evidence');
   assert(evidence.some((item) => item.changed === true), 'missing changed-file evidence');
+  assert(evidence.some((item) => item.conceptId === 'cli-executable' && item.file === 'src/cli.ts' && item.signal === 'node CLI shebang'), 'missing CLI shebang concept evidence');
+  assert(evidence.some((item) => item.conceptId === 'cli-executable' && item.file === 'package.json' && item.signal === 'package.json bin entrypoint'), 'missing package bin concept evidence');
   const fileIndex = await readJson(join(root, '.contextbook', 'project', 'file-index.json'));
   assert(fileIndex.schemaVersion === 1, 'file index missing schema version');
   assert(typeof fileIndex.generatedAt === 'string' && !Number.isNaN(Date.parse(fileIndex.generatedAt)), 'file index missing generated timestamp');
@@ -647,6 +660,7 @@ try {
   assert(learn.includes('# Daily Learning Card'), 'learn did not frame output as daily card');
   assert(learn.includes('추천 이유:'), 'learn did not include ranking reasons');
   assert(learn.includes('변경 파일 근거: yes'), 'learn did not include changed-file marker');
+  assert(learn.includes('CLI executable packaging'), 'learn did not include CLI executable packaging from changed CLI/package evidence');
   assert(learn.includes('useEffect cleanup') || learn.includes('SSE'), 'learn did not include expected concepts');
   assert(!learn.includes('docs/private/'), 'learn output included private docs evidence');
   for (const line of learn.split('\n').filter((item) => item.startsWith('근거 파일:'))) {
@@ -661,6 +675,10 @@ try {
   assert(learn.includes('프로젝트 연결:'), 'learn output missing normalized project connection');
   assert(learn.includes('왜 지금 볼 만한가:'), 'learn output missing practical value line');
   assert(!existsSync(join(root, '.contextbook', 'project', 'ranking-reasons.json')), 'learn created a ranking-reasons project memory artifact');
+
+  const cliWhy = run(['why', 'CLI bin 실행 권한 왜 중요해?']);
+  assert(cliWhy.includes('근거: direct') && cliWhy.includes('CLI executable packaging'), 'why did not answer CLI bin question with direct project evidence');
+  assert(cliWhy.includes('src/cli.ts') || cliWhy.includes('package.json'), 'why CLI answer missing concrete evidence file');
 
   const preferencesPath = join(learnerDir, 'preferences.json');
   await writeFile(preferencesPath, JSON.stringify({
@@ -1072,6 +1090,94 @@ try {
   assert(!redactedMemorySignals.recentSignals.flatMap((signal) => signal.evidenceFiles ?? []).some((file) => file.startsWith('/')), 'memory signals redaction fixture leaked absolute evidence path');
   const hiddenFutureEvent = conversationMemory.createConversationEvent({ conceptLabel: 'future hidden fixture', evidenceFiles: ['docs/private/future.md', '/tmp/contextbook/docs/private/absolute-future.md', '/tmp/contextbook/src/future-visible.ts', 'src/a-future.ts', 'src/b-future.ts', 'src/c-future.ts'] });
   assert(hiddenFutureEvent.evidenceFiles.length === 3 && hiddenFutureEvent.evidenceFiles.includes('src/a-future.ts') && hiddenFutureEvent.evidenceFiles.includes('src/b-future.ts') && hiddenFutureEvent.evidenceFiles.includes('src/c-future.ts'), 'future conversation event should filter hidden evidence before basename sanitization, sanitize absolute paths, and cap visible files');
+
+  const reportSignalsBefore = await readFile(join(learnerDir, 'signals.jsonl'), 'utf8');
+  const reportAnswersBefore = await readFile(join(learnerDir, 'answers.jsonl'), 'utf8');
+  const reportWeakTermsBefore = await readFile(join(learnerDir, 'weak-terms.json'), 'utf8');
+  await appendJsonlFile(join(learnerDir, 'signals.jsonl'), [
+    {
+      schemaVersion: 1,
+      kind: 'conversation-memory',
+      signalType: 'feedback.confused',
+      command: 'why',
+      learner: 'default',
+      conceptId: 'cli-executable',
+      conceptLabel: 'CLI executable packaging',
+      evidenceLevel: 'direct',
+      evidenceFiles: ['src/cli.ts', 'docs/private/report-secret.md', '/tmp/contextbook/src/absolute-report.ts'],
+      metadata: { note: 'RAW_REPORT_NOTE_SHOULD_NOT_LEAK', question: 'RAW_REPORT_QUESTION_SHOULD_NOT_LEAK' },
+      recordedAt: '2026-01-03T00:00:00.000Z'
+    },
+    {
+      schemaVersion: 1,
+      kind: 'conversation-memory',
+      signalType: 'term.repeated',
+      command: 'memory.add-signal',
+      learner: 'default',
+      conceptLabel: 'Out Of Range Report Concept',
+      recordedAt: '2025-12-25T00:00:00.000Z'
+    }
+  ]);
+  await appendJsonlFile(join(learnerDir, 'answers.jsonl'), [
+    {
+      schemaVersion: 1,
+      kind: 'conversation-answer',
+      signalType: 'why.answered',
+      command: 'why',
+      learner: 'default',
+      conceptId: 'cli-executable',
+      conceptLabel: 'CLI executable packaging',
+      recordedAt: '2026-01-03T00:00:00.000Z'
+    },
+    {
+      schemaVersion: 1,
+      kind: 'conversation-answer',
+      signalType: 'why.answered',
+      command: 'why',
+      learner: 'default',
+      conceptLabel: 'Answers Only Report Concept',
+      recordedAt: '2026-01-04T00:00:00.000Z'
+    }
+  ]);
+  await writeFile(join(learnerDir, 'weak-terms.json'), JSON.stringify({
+    ...JSON.parse(reportWeakTermsBefore),
+    'in-range weak report term': { state: 'learning', askedCount: 2, updatedAt: '2026-01-04T00:00:00.000Z' },
+    'out-of-range weak report term': { state: 'learning', askedCount: 2, updatedAt: '2025-12-20T00:00:00.000Z' }
+  }, null, 2), 'utf8');
+
+  const weeklyReport = run(['report']);
+  assert(weeklyReport.includes('# Weekly Contextbook Report') && weeklyReport.includes('## 코드 근거가 있는 Learning Moments'), 'weekly report markdown missing expected sections');
+  assert(weeklyReport.includes('signals-only snapshot') && weeklyReport.includes('answers.jsonl is intentionally excluded'), 'weekly report should disclose signals-only MVP source boundary');
+  const dailyReport = run(['report', '--day']);
+  assert(dailyReport.includes('# Daily Contextbook Report'), 'daily report markdown missing daily title');
+  const reportJson = JSON.parse(run(['report', '--since', '2026-01-01', '--until', '2026-01-07', '--json']));
+  assert(reportJson.schemaVersion === 1 && reportJson.period.mode === 'custom' && reportJson.period.start === '2026-01-01T00:00:00.000Z' && reportJson.period.end === '2026-01-08T00:00:00.000Z', 'report json custom period contract invalid');
+  assert(reportJson.period.timezone === 'UTC', 'report json period must be UTC');
+  const reportCliConcept = reportJson.frequentConcepts.find((item) => item.id === 'cli-executable');
+  assert(reportCliConcept && reportCliConcept.count === 1, 'report should aggregate signals.jsonl only and avoid answers.jsonl double counting');
+  assert(reportJson.reviewCandidates.some((item) => item.label === 'CLI executable packaging' && item.reasons.includes('feedback.confused')), 'report missing signal-backed review candidate');
+  assert(reportJson.reviewCandidates.some((item) => item.label === 'in-range weak report term' && item.reasons.includes('weak-term')), 'report missing in-period weak term review candidate');
+  assert(!JSON.stringify(reportJson).includes('out-of-range weak report term') && !JSON.stringify(reportJson).includes('Out Of Range Report Concept'), 'report included out-of-period learner signal');
+  assert(!JSON.stringify(reportJson).includes('Answers Only Report Concept'), 'report included answers.jsonl-only concept');
+  assert(reportJson.codeBackedMoments.some((item) => item.id === 'cli-executable' && item.files.includes('src/cli.ts')), 'report missing code-backed CLI moment');
+  assert(reportJson.interviewQuestions.some((item) => item.concept === 'CLI executable packaging'), 'report missing code-backed interview question');
+  assert(reportJson.freshness.projectScannedAt === scanRunsAfterSecondScan[1].scannedAt && reportJson.freshness.workingTreeChanged === false, 'report freshness should reflect latest clean scan');
+  assert(reportJson.freshness.changedFilesSinceScan === 0, 'report freshness should not report changed files when working tree fingerprint matches latest scan');
+  assert(reportJson.freshness.staleHints.includes('scan-has-warnings'), 'report freshness missing scan warning hint');
+  assert(reportJson.recommendedActions.some((action) => action.command === 'contextbook why "<concept>"'), 'report should not interpolate learner-controlled concept labels into executable recommendations');
+  assert(reportJson.safety.rawPromptIncluded === false && reportJson.safety.rawTranscriptIncluded === false && reportJson.safety.profileMutated === false && reportJson.safety.weakTermsMutated === false && reportJson.safety.persistedReportCreated === false && reportJson.safety.unsafeJudgmentIncluded === false, 'report safety flags invalid');
+  const reportSerialized = JSON.stringify(reportJson);
+  assert(!reportSerialized.includes(root) && !reportSerialized.includes(home), 'report json leaked absolute local path');
+  assert(!reportSerialized.includes('RAW_REPORT_NOTE_SHOULD_NOT_LEAK') && !reportSerialized.includes('RAW_REPORT_QUESTION_SHOULD_NOT_LEAK'), 'report json leaked raw note/question metadata');
+  assertNoHiddenEvidencePaths(reportJson.codeBackedMoments.flatMap((item) => item.files ?? []), 'report code-backed moments leaked hidden/internal evidence path');
+  assert(!existsSync(join(root, '.contextbook', 'reports')), 'report created a persisted report artifact');
+  assert(runExpectFail(['report', '--day', '--week']).includes('Usage: contextbook report'), 'report incompatible flags should show usage');
+  assert(runExpectFail(['report', '--since', '2026-01-01']).includes('Usage: contextbook report'), 'report missing custom bound should show usage');
+  const coreReport = await core.buildReport({ root, learner: 'default', args: ['--since', '2026-01-01', '--until', '2026-01-07'], now: new Date('2026-01-07T12:00:00.000Z') });
+  assert(coreReport.schemaVersion === 1 && coreReport.markdown.includes('# Contextbook Report'), 'core report contract invalid');
+  await writeFile(join(learnerDir, 'signals.jsonl'), reportSignalsBefore, 'utf8');
+  await writeFile(join(learnerDir, 'answers.jsonl'), reportAnswersBefore, 'utf8');
+  await writeFile(join(learnerDir, 'weak-terms.json'), reportWeakTermsBefore, 'utf8');
 
   const memoryContext = JSON.parse(run(['memory', 'context', '--json']));
   for (const key of ['schemaVersion', 'project', 'learnerMemory', 'conversation', 'suggestions', 'freshness', 'recommendedActions', 'safety']) {
