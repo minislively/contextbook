@@ -302,7 +302,7 @@ Memory signals are append-only learning events for explicit feedback such as con
 
 Preference signals also expose an intent/scope/risk/policy contract for agents. A detected slot is not automatically treated as durable memory: task-local or uncertain prompts stay `observe-only`, hook capture stays non-mutating, and explicit `apply-preference-signals --mode auto-safe` is the only path that marks allowlisted preferences as `apply-eligible` and policy-approved for durable writes. Phrase markers are weak evidence, not the write rule; Contextbook records evidence codes instead of storing the raw prompt.
 
-For agent integrations, `contextbook setup` installs platform-specific `UserPromptSubmit` helper scripts. The hook scripts are non-blocking, config activation remains manual/snippet-based so existing user hooks are not overwritten, and only allowlisted low-risk preferences can be applied automatically through backup/audit/undo.
+For agent integrations, `contextbook setup` installs platform-specific `UserPromptSubmit` helper scripts by default. The hook scripts are non-blocking, config activation remains manual/snippet-based so existing user hooks are not overwritten, and only allowlisted low-risk preferences can be applied automatically through backup/audit/undo.
 
 `contextbook memory suggest-weak-terms` reads those signals and returns review candidates such as “event loop may be worth revisiting”. `contextbook memory suggest-profile-updates` turns repeated explanation-format signals into profile update candidates such as “prefer project context first”. Both suggestion commands are read-only: they do not write `weak-terms.json`, do not edit your profile/preferences, and do not label your ability.
 
@@ -472,7 +472,7 @@ The helper files only teach the agent how to use Contextbook and bridge hook con
 
 ### Advanced install options
 
-Use these only when you need platform-specific setup or a specific Codex discovery path:
+Most users should run `contextbook setup`. Use these only when you need platform-specific setup or a specific Codex discovery path:
 
 ```bash
 contextbook install all --dry-run
@@ -484,9 +484,7 @@ contextbook install codex --codex-path codex --dry-run
 contextbook install codex --codex-path both --dry-run
 contextbook install claude-code --dry-run
 contextbook install claude-code
-contextbook install codex --hooks --dry-run       # advanced suggestion-only hook install
-contextbook install claude-code --hooks --dry-run # advanced suggestion-only hook install
-contextbook install all --auto --dry-run          # advanced auto-safe hook install
+contextbook install all --auto --dry-run          # advanced non-interactive platform install
 ```
 
 `--codex-path` values:
@@ -499,7 +497,7 @@ contextbook install all --auto --dry-run          # advanced auto-safe hook inst
 ## Commands
 
 ```bash
-contextbook setup                  # install Codex + Claude Code helper files, hooks, and safe preference automation
+contextbook setup                  # install Codex + Claude Code helpers, hooks, and safe preference automation
 contextbook setup --dry-run        # preview setup writes
 contextbook setup --auto           # non-interactive/bootstrap setup with safe defaults
 npm run release:smoke              # package/install smoke test before npm publish

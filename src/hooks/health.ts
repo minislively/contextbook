@@ -21,7 +21,7 @@ export function buildStatusHealth(input: {
 
   if (input.helperExists && !input.helperCurrent) {
     issues.push({ code: 'HOOK_HELPER_STALE', severity: 'error', message: 'Installed helper differs from the current generated Contextbook helper.' });
-    nextActions.push({ code: 'HOOK_HELPER_STALE', command: input.id === 'codex' ? 'contextbook install codex --hooks' : 'contextbook install claude-code --hooks', reason: 'Regenerate the platform hook helper with a backup.' });
+    nextActions.push({ code: 'HOOK_HELPER_STALE', command: 'contextbook setup', reason: 'Regenerate hook helpers with backups using the default setup path.' });
   }
 
   if (input.helperSmoke === 'failed') {
@@ -65,7 +65,7 @@ export function buildSmokeHealth(input: {
   }
   if (input.helperExists && !input.helperCurrent) {
     issues.push({ code: 'HOOK_HELPER_STALE', severity: 'error', message: 'Helper content differs from the current generated Contextbook helper.' });
-    nextActions.push({ code: 'HOOK_HELPER_STALE', command: input.id === 'codex' ? 'contextbook install codex --hooks' : 'contextbook install claude-code --hooks', reason: 'Regenerate the stale helper before dogfooding.' });
+    nextActions.push({ code: 'HOOK_HELPER_STALE', command: 'contextbook setup', reason: 'Regenerate stale helpers before dogfooding.' });
   }
   if (input.ran && input.exitCode !== 0) {
     issues.push({ code: 'HOOK_SMOKE_FAILED', severity: 'error', message: input.message ?? `Helper exited with ${input.exitCode ?? 'unknown status'}.` });
@@ -73,11 +73,11 @@ export function buildSmokeHealth(input: {
   }
   if (input.ran && !input.outputShapeValid) {
     issues.push({ code: 'HOOK_OUTPUT_SHAPE_INVALID', severity: 'error', message: 'Helper output did not match the expected additional-context shape.' });
-    nextActions.push({ code: 'HOOK_OUTPUT_SHAPE_INVALID', command: input.id === 'codex' ? 'contextbook install codex --hooks' : 'contextbook install claude-code --hooks', reason: 'Regenerate the helper script and retry smoke verification.' });
+    nextActions.push({ code: 'HOOK_OUTPUT_SHAPE_INVALID', command: 'contextbook setup', reason: 'Regenerate helper scripts and retry smoke verification.' });
   }
   if (input.rawPromptDetected) {
     issues.push({ code: 'HOOK_RAW_PROMPT_LEAK', severity: 'error', message: 'Smoke output included the raw prompt text.' });
-    nextActions.push({ code: 'HOOK_RAW_PROMPT_LEAK', command: input.id === 'codex' ? 'contextbook install codex --hooks' : 'contextbook install claude-code --hooks', reason: 'Regenerate the helper and inspect custom modifications before using live hooks.' });
+    nextActions.push({ code: 'HOOK_RAW_PROMPT_LEAK', command: 'contextbook setup', reason: 'Regenerate helpers and inspect custom modifications before using live hooks.' });
   }
   return { status: smokeStatus(input), issues, nextActions: dedupeActions(nextActions) };
 }
