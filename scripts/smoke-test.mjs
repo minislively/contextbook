@@ -1147,9 +1147,17 @@ try {
 
   const weeklyReport = run(['report']);
   assert(weeklyReport.includes('# Weekly Contextbook Report') && weeklyReport.includes('## 코드 근거가 있는 Learning Moments'), 'weekly report markdown missing expected sections');
-  assert(weeklyReport.includes('signals-only snapshot') && weeklyReport.includes('answers.jsonl is intentionally excluded'), 'weekly report should disclose signals-only MVP source boundary');
+  assert(weeklyReport.indexOf('이번 기간에는') < weeklyReport.indexOf('## 바로 할 일'), 'weekly report should lead with human summary before actions');
+  for (const section of ['## 바로 할 일', '## 이번 기간 핵심 개념', '## 다시 보면 좋은 개념', '## 회상/면접 질문', '## 참고 상태']) {
+    assert(weeklyReport.includes(section), `weekly report missing human-readable section ${section}`);
+  }
+  for (const rawTerm of ['weak-term', 'signals-only snapshot', 'answers.jsonl', 'working-tree-changed', 'scan-has-warnings', 'feedback.confused', 'term.repeated', 'analogy.rejected', 'format.requested', 'why.answered', 'learn.generated', 'scan-partial', 'git-unavailable', 'project-not-scanned']) {
+    assert(!weeklyReport.includes(rawTerm), `weekly report leaked internal term ${rawTerm}`);
+  }
+  assert(weeklyReport.includes('복습 후보') && weeklyReport.includes('원문 프롬프트나 대화 전문은 포함하지 않습니다') && weeklyReport.includes('contextbook report --json'), 'weekly report missing humanized review/safety/audit guidance');
   const dailyReport = run(['report', '--day']);
   assert(dailyReport.includes('# Daily Contextbook Report'), 'daily report markdown missing daily title');
+  assert(dailyReport.includes('## 이번 기간 핵심 개념') && !dailyReport.includes('## 이번 주 핵심 개념'), 'daily report should use period-neutral concept heading');
   const reportJson = JSON.parse(run(['report', '--since', '2026-01-01', '--until', '2026-01-07', '--json']));
   assert(reportJson.schemaVersion === 1 && reportJson.period.mode === 'custom' && reportJson.period.start === '2026-01-01T00:00:00.000Z' && reportJson.period.end === '2026-01-08T00:00:00.000Z', 'report json custom period contract invalid');
   assert(reportJson.period.timezone === 'UTC', 'report json period must be UTC');
@@ -1179,7 +1187,17 @@ try {
   await writeFile(reportStaleFixture, 'export const reportStaleFixture = true;\n', 'utf8');
   const staleReportJson = JSON.parse(run(['report', '--json']));
   assert(staleReportJson.freshness.workingTreeChanged === true && staleReportJson.freshness.changedFilesSinceScan > 0, 'report freshness should show current changed files when working tree fingerprint changed');
-  assert(run(['report']).includes('current changed files:'), 'report freshness markdown should use current changed files wording');
+  const staleReport = run(['report']);
+  assert(staleReport.includes('프로젝트 스캔 이후 코드 상태가 달라졌을 수 있습니다') && staleReport.includes('contextbook scan'), 'report freshness markdown should use human scan guidance');
+  assert(!staleReport.includes('current changed files:') && !staleReport.includes('working-tree-changed'), 'report freshness markdown leaked audit freshness wording');
+  const nonGitRoot = await mkdtemp(join(tmpdir(), 'contextbook-report-nongit-'));
+  const nonGitHome = await mkdtemp(join(tmpdir(), 'contextbook-report-nongit-home-'));
+  runIn(nonGitRoot, nonGitHome, ['init']);
+  runIn(nonGitRoot, nonGitHome, ['scan']);
+  const nonGitReport = runIn(nonGitRoot, nonGitHome, ['report']);
+  assert(nonGitReport.includes('Git 상태를 확인하지 못해') && !nonGitReport.includes('git-unavailable'), 'report should humanize unavailable git freshness in markdown');
+  await rm(nonGitRoot, { recursive: true, force: true });
+  await rm(nonGitHome, { recursive: true, force: true });
   await rm(reportStaleFixture, { force: true });
   await writeFile(join(learnerDir, 'signals.jsonl'), reportSignalsBefore, 'utf8');
   await writeFile(join(learnerDir, 'answers.jsonl'), reportAnswersBefore, 'utf8');
