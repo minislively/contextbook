@@ -1,12 +1,12 @@
 # Preflight before npm publish
 
-Preflight is the final safety check before `npm publish`.
+Preflight means: **check the package before you publish it.**
 
-Think of it as: **test the package users will install, not just the source checkout.**
+The goal is simple: make sure users will install a working CLI, and make sure private/runtime files do not enter the npm tarball.
 
-## Required checks
+## Quick command list
 
-Run from the repository root:
+Run these from the repository root:
 
 ```bash
 npm test
@@ -15,30 +15,34 @@ npm pack --dry-run
 npm view contextbook
 ```
 
-Expected result for the first public release:
+For the first public release, expected results are:
 
 - `npm test` passes
 - `npm run release:smoke` returns `ok: true`
-- `npm pack --dry-run` includes only public/runtime files
-- `npm view contextbook` returns `E404` before first publish, meaning the package name is currently unclaimed or inaccessible
+- `npm pack --dry-run` shows only public/runtime files
+- `npm view contextbook` returns `E404` before first publish, which means the package is not visible in the public registry from this environment
 
-## What release smoke verifies
+## Why release smoke exists
 
-`npm run release:smoke` runs in a temporary HOME/project and checks:
+`npm test` checks the source checkout.
 
-- source tests pass
+`npm run release:smoke` checks the thing users will actually install. It builds a tarball, installs it into a temporary global prefix, then runs the packed `contextbook` binary.
+
+It verifies:
+
+- the normal test suite passes
 - `git diff --check` passes
 - `npm pack --dry-run` succeeds
-- a real tarball can be installed with `npm install -g --prefix <temp>`
-- the packed `contextbook --help` works
+- a real tarball installs with `npm install -g --prefix <temp>`
+- `contextbook --help` works from the packed binary
 - `contextbook setup --auto` installs Codex and Claude Code helper files
 - `contextbook hooks status --json` reports helper health without mutating memory
-- `contextbook hooks smoke --json` reports valid helper output and no raw prompt leak
-- `contextbook doctor --json` remains read-only
+- `contextbook hooks smoke --json` returns valid helper output and no raw prompt leak
+- `contextbook doctor --json` stays read-only
 
 ## Private-file check
 
-Before publishing, confirm the tarball does not include private/runtime state:
+Before publishing, check the tarball explicitly:
 
 ```bash
 npm pack --json --dry-run > /tmp/contextbook-pack.json
@@ -53,6 +57,18 @@ if (bad.length > 0) process.exit(1);
 NODE
 ```
 
-## Publish boundary
+`badPrivateFiles` should be an empty array.
 
-Do not run `npm publish` during preflight. Publish is a separate explicit step after the checks are clean.
+## Publish step
+
+Do not mix preflight and publish.
+
+After preflight is clean and npm login is ready:
+
+```bash
+npm whoami
+npm publish
+npm view contextbook version
+```
+
+If `npm whoami` returns `ENEEDAUTH`, log in first with `npm login` or `npm adduser`.
