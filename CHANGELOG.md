@@ -29,9 +29,9 @@ Initial MVP release.
 - Learner profile commands: `profile`, `profile diff`, `profile edit`, `profile reset`.
 - Structured Conversation Memory events for `scan`, `learn`, `why`, and `profile` flows.
 - Conversation Memory summary in `contextbook profile`.
-- `contextbook setup` for explicit Codex/OMX and Claude Code helper installation.
-- `contextbook setup --hooks` and `contextbook install <target> --hooks` for opt-in Codex/Claude Code `UserPromptSubmit` hook helper files that call deterministic prompt signal capture.
-- Advanced platform install commands for Codex and Claude Code.
+- `contextbook setup` for Codex/OMX and Claude Code helper installation, including hook helper files and safe preference automation by default.
+- `contextbook setup --auto` for non-interactive/bootstrap setup with safe defaults.
+- Advanced platform install commands for Codex and Claude Code when users need platform-specific escape hatches.
 - Adapter-ready core exports for `scanProject`, `buildProjectSummary`, `toProjectSummaryJson`, `buildLearnerSummary`, `toLearnerSummaryJson`, `buildLearningMoments`, and `answerWhy`.
 - Adapter-ready weak-term suggestion exports for `weakTermSuggestionsJson` and `buildWeakTermSuggestions`.
 - Adapter-ready profile update candidate exports for `profileUpdateCandidatesJson` and `buildProfileUpdateCandidates`.
