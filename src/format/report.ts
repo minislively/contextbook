@@ -59,7 +59,7 @@ function formatFreshness(report: ReportJson): string {
     '## Freshness',
     `- project scanned at: ${report.freshness.projectScannedAt ?? 'unknown'}`,
     `- working tree changed: ${report.freshness.workingTreeChanged}`,
-    `- changed files since scan: ${report.freshness.changedFilesSinceScan}`,
+    `- current changed files: ${report.freshness.changedFilesSinceScan}`,
     'warnings:',
     warnings,
     '',
