@@ -31,7 +31,10 @@
     "dist",
     "templates",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "docs/README.md",
+    "docs/PREFLIGHT.md",
+    "docs/releases"
   ],
   "license": "MIT"
 }
