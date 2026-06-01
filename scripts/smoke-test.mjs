@@ -1175,6 +1175,12 @@ try {
   assert(runExpectFail(['report', '--since', '2026-01-01']).includes('Usage: contextbook report'), 'report missing custom bound should show usage');
   const coreReport = await core.buildReport({ root, learner: 'default', args: ['--since', '2026-01-01', '--until', '2026-01-07'], now: new Date('2026-01-07T12:00:00.000Z') });
   assert(coreReport.schemaVersion === 1 && coreReport.markdown.includes('# Contextbook Report'), 'core report contract invalid');
+  const reportStaleFixture = join(root, 'src', 'report-stale-fixture.ts');
+  await writeFile(reportStaleFixture, 'export const reportStaleFixture = true;\n', 'utf8');
+  const staleReportJson = JSON.parse(run(['report', '--json']));
+  assert(staleReportJson.freshness.workingTreeChanged === true && staleReportJson.freshness.changedFilesSinceScan > 0, 'report freshness should show current changed files when working tree fingerprint changed');
+  assert(run(['report']).includes('current changed files:'), 'report freshness markdown should use current changed files wording');
+  await rm(reportStaleFixture, { force: true });
   await writeFile(join(learnerDir, 'signals.jsonl'), reportSignalsBefore, 'utf8');
   await writeFile(join(learnerDir, 'answers.jsonl'), reportAnswersBefore, 'utf8');
   await writeFile(join(learnerDir, 'weak-terms.json'), reportWeakTermsBefore, 'utf8');
