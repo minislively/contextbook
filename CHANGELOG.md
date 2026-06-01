@@ -43,3 +43,4 @@ Initial MVP release.
 - Personal learner memory is stored outside the repo.
 - Installer supports `--dry-run`, skips identical files, and backs up changed files before overwrite.
 - Hidden/runtime directories are ignored by the scanner by default.
+- Public docs for preflight and 0.1.0 release notes.

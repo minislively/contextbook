@@ -494,6 +494,11 @@ contextbook install all --auto --dry-run          # advanced non-interactive pla
 - `agents` — write historical `~/.agents/skills/contextbook/SKILL.md` compatibility path
 - `both` — write both paths intentionally
 
+## Documentation
+
+- [Preflight before npm publish](docs/PREFLIGHT.md)
+- [Contextbook 0.1.0 release notes](docs/releases/0.1.0.md)
+
 ## Commands
 
 ```bash
