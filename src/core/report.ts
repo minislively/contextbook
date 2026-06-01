@@ -72,7 +72,7 @@ export async function buildReport(options: ReportBuildOptions = {}): Promise<Rep
 
   const freshness = await reportFreshness(root, scanRuns);
   const recommendedActions = recommendedActionsForReport(reviewCandidates, codeBackedMoments);
-  const summaryLine = summaryLineForReport(codeBackedMoments, frequentConcepts);
+  const summaryLine = summaryLineForReport(codeBackedMoments, frequentConcepts, period);
 
   const report: ReportJson = {
     schemaVersion: 1,
@@ -299,10 +299,17 @@ function recommendedActionsForReport(reviewCandidates: ReportConceptSummary[], m
   return actions;
 }
 
-function summaryLineForReport(moments: ReportConceptSummary[], frequent: ReportConceptSummary[]): string {
+function summaryLineForReport(moments: ReportConceptSummary[], frequent: ReportConceptSummary[], period: ReportPeriod): string {
   const labels = (moments.length ? moments : frequent).slice(0, 3).map((item) => item.label);
-  if (labels.length === 0) return '이번 기간에는 보고서로 요약할 충분한 개념 신호가 아직 없습니다.';
-  return `이번 기간에는 ${labels.join(', ')}이 핵심 학습 흐름이었습니다.`;
+  const phrase = periodPhrase(period);
+  if (labels.length === 0) return `${phrase} 보고서로 요약할 충분한 개념 신호가 아직 없습니다.`;
+  return `${phrase} ${labels.join(', ')}이 핵심 학습 흐름이었습니다.`;
+}
+
+function periodPhrase(period: ReportPeriod): string {
+  if (period.mode === 'day') return '오늘은';
+  if (period.mode === 'week') return '이번 주에는';
+  return '선택한 기간에는';
 }
 
 function reportSafety() {
