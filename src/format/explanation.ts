@@ -110,6 +110,7 @@ function learningMomentValueLine(concept: ConceptRecord, language: LearningCardL
       case 'timer-event-loop': return 'This helps you connect timers in code to scheduling and event-loop behavior.';
       case 'memoization-render': return 'This helps you explain which render cost is being avoided and what can go stale.';
       case 'debounce': return 'This helps you explain why repeated events should not always trigger repeated work.';
+      case 'cli-executable': return 'This helps you explain why a CLI package must connect package metadata, shebangs, and executable file permissions.';
       default: return 'This helps you turn a code signal into a concrete design responsibility you can talk about.';
     }
   }
@@ -124,6 +125,7 @@ function learningMomentValueLine(concept: ConceptRecord, language: LearningCardL
     case 'timer-event-loop': return '코드의 타이머를 event loop scheduling 문제와 연결해서 설명할 수 있습니다.';
     case 'memoization-render': return '어떤 렌더 비용을 줄이는지, 무엇이 stale해질 수 있는지 같이 말할 수 있습니다.';
     case 'debounce': return '반복 이벤트를 매번 처리하지 않는 이유를 불필요한 작업 제어 관점으로 설명할 수 있습니다.';
+    case 'cli-executable': return 'CLI 패키지가 package metadata, shebang, 실행 권한을 모두 맞춰야 실제 명령으로 실행된다는 점을 설명할 수 있습니다.';
     default: return '코드 신호를 “내가 맡은 설계 책임”으로 바꿔 말하는 데 도움이 됩니다.';
   }
 }
@@ -159,6 +161,7 @@ function conceptFocusText(concept: ConceptRecord, language: LearningCardLanguage
     case 'timer-event-loop': return language === 'en' ? 'timers and event-loop scheduling' : 'timer와 event loop scheduling';
     case 'memoization-render': return language === 'en' ? 'memoization and render optimization' : 'memoization과 render optimization';
     case 'debounce': return language === 'en' ? 'event rate control and debounce' : 'event rate control과 debounce';
+    case 'cli-executable': return language === 'en' ? 'CLI package entrypoints and executable permissions' : 'CLI package entrypoint와 실행 권한';
     default: return concept.label;
   }
 }
@@ -177,6 +180,7 @@ function interviewPromptText(concept: ConceptRecord, language: LearningCardLangu
     case 'timer-event-loop': return 'How do timers relate to event-loop scheduling?';
     case 'memoization-render': return 'What rendering cost does memoization reduce here?';
     case 'debounce': return 'How does debounce reduce unnecessary repeated work?';
+    case 'cli-executable': return 'Why should an npm CLI package verify both the bin entrypoint and executable permissions?';
     default: return concept.interviewQuestion;
   }
 }
@@ -307,6 +311,7 @@ function plainExplanation(id: string): string {
     case 'debounce': return '짧은 시간에 같은 일이 계속 들어오면, 마지막 요청만 잠깐 기다렸다가 처리하는 방식입니다.';
     case 'timer-event-loop': return '나중에 실행할 일을 예약하고 이벤트 루프가 순서대로 처리하게 하는 방식입니다.';
     case 'memoization-render': return '같은 계산이나 함수를 다시 만들지 않도록 기억해 렌더 비용을 줄이는 방식입니다.';
+    case 'cli-executable': return '패키지에 명령 이름을 등록해도 실제 파일이 실행 가능한 상태가 아니면 사용자는 명령을 실행할 수 없습니다.';
     default: return '이 개념은 코드에서 반복되는 문제를 설명하기 위한 이름입니다.';
   }
 }
@@ -317,6 +322,7 @@ function developerExplanation(id: string, label: string): string {
     case 'sse': return '`EventSource` 기반 SSE와 async event handling';
     case 'websocket': return 'WebSocket connection lifecycle과 realtime bidirectional communication';
     case 'debounce': return 'debounce, input event handling, rate control';
+    case 'cli-executable': return '`package.json bin`, shebang, executable file mode';
     default: return `\`${label}\``;
   }
 }
@@ -329,6 +335,7 @@ function csExplanation(id: string): string {
     case 'graph-dag': return '그래프 모델링, 의존성, 순서 결정 문제로 연결됩니다.';
     case 'memoization-render': return '캐싱, 참조 동일성, invalidation 문제로 연결됩니다.';
     case 'debounce': return '이벤트가 너무 자주 발생할 때 처리 빈도를 제어하는 scheduling 문제로 볼 수 있습니다.';
+    case 'cli-executable': return '운영체제의 파일 실행 권한과 패키지 매니저가 만드는 command shim/entrypoint 계약으로 연결됩니다.';
     default: return '소프트웨어가 상태, 자원, 시간, 의존성을 관리하는 방식과 연결됩니다.';
   }
 }
@@ -338,6 +345,7 @@ function interviewSentence(id: string, label: string): string {
     case 'use-effect-cleanup': return '컴포넌트 생명주기와 별개로 유지되는 연결이나 구독은 unmount 시 정리하지 않으면 메모리 누수나 stale update가 발생할 수 있어 cleanup에서 해제합니다.';
     case 'sse': return 'SSE는 서버에서 클라이언트로 지속적으로 이벤트를 보내는 단방향 스트림이므로, 화면 생명주기에 맞춰 연결 생성과 종료를 관리해야 합니다.';
     case 'debounce': return 'debounce는 연속 입력을 매번 처리하지 않고 마지막 입력이 잠잠해진 뒤 실행해서 불필요한 요청이나 렌더링을 줄이는 기법입니다.';
+    case 'cli-executable': return 'npm CLI 패키지는 bin entrypoint가 올바른 파일을 가리키고 그 파일이 실행 가능해야 하므로, 빌드와 릴리스 스모크에서 둘 다 검증해야 합니다.';
     default: return `${label}은 구현 선택을 넘어서 코드가 어떤 자원, 상태, 의존성, 시간 흐름을 관리하는지 설명하는 개념입니다.`;
   }
 }
@@ -574,6 +582,7 @@ function practicalTensionLine(id: string, evidenceLevel: EvidenceLevel): string 
     case 'timer-event-loop': return `${prefix}예약된 작업이 언제 실행되는지 착각하면 race condition이나 불필요한 반복 실행을 만들 수 있습니다.`;
     case 'memoization-render': return `${prefix}무엇을 기억하고 언제 버릴지 애매하면 최적화가 stale value나 불필요한 렌더로 바뀔 수 있습니다.`;
     case 'debounce': return `${prefix}반복 입력을 그대로 처리하면 요청·렌더·계산이 불필요하게 폭증할 수 있습니다.`;
+    case 'cli-executable': return `${prefix}빌드는 성공해도 bin 파일 권한이 빠지면 사용자는 \`permission denied\`를 만나고 훅/스모크 테스트도 CLI를 실행하지 못합니다.`;
     default: return `${prefix}이 개념을 놓치면 코드가 관리하는 자원, 상태, 시간, 의존성의 책임 경계가 흐려집니다.`;
   }
 }

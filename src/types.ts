@@ -815,3 +815,68 @@ export interface WhyResult {
   evidenceLevel: EvidenceLevel;
   markdown: string;
 }
+
+export type ReportPeriodMode = 'week' | 'day' | 'custom';
+
+export interface ReportPeriod {
+  label: string;
+  start: string;
+  end: string;
+  timezone: 'UTC';
+  mode: ReportPeriodMode;
+}
+
+export interface ReportConceptSummary {
+  id?: string;
+  label: string;
+  count: number;
+  evidenceLevel?: EvidenceLevel;
+  files: string[];
+  reasons: string[];
+}
+
+export interface ReportInterviewQuestion {
+  concept: string;
+  question: string;
+}
+
+export interface ReportFreshness {
+  projectScannedAt?: string;
+  workingTreeChanged: boolean;
+  changedFilesSinceScan: number;
+  warnings: string[];
+  staleHints: string[];
+}
+
+export interface ReportSafety {
+  rawTranscriptIncluded: false;
+  rawPromptIncluded: false;
+  absolutePathsIncluded: false;
+  hiddenEvidencePathsFiltered: true;
+  profileMutated: false;
+  preferencesMutated: false;
+  weakTermsMutated: false;
+  projectMemoryMutated: false;
+  persistedReportCreated: false;
+  unsafeJudgmentIncluded: false;
+}
+
+export interface ReportJson {
+  schemaVersion: 1;
+  generatedAt: string;
+  period: ReportPeriod;
+  rootName?: string;
+  learner: string;
+  frequentConcepts: ReportConceptSummary[];
+  reviewCandidates: ReportConceptSummary[];
+  codeBackedMoments: ReportConceptSummary[];
+  interviewQuestions: ReportInterviewQuestion[];
+  summaryLine: string;
+  recommendedActions: ProjectRecommendedAction[];
+  freshness: ReportFreshness;
+  safety: ReportSafety;
+}
+
+export interface ReportResult extends ReportJson {
+  markdown: string;
+}
