@@ -6,7 +6,7 @@ export function formatReport(report: ReportJson): string {
     `# ${report.period.label}`,
     report.summaryLine,
     formatRecommendedActions(report),
-    formatFrequentConcepts(report.frequentConcepts),
+    formatFrequentConcepts(report.frequentConcepts, periodNoun(report)),
     formatReviewCandidates(report.reviewCandidates),
     formatCodeBackedMoments(report.codeBackedMoments),
     formatInterviewQuestions(report),
@@ -14,11 +14,11 @@ export function formatReport(report: ReportJson): string {
   ].join('\n\n') + '\n';
 }
 
-function formatFrequentConcepts(concepts: ReportConceptSummary[]): string {
-  if (concepts.length === 0) return '## 이번 기간 핵심 개념\n아직 기간 안에 기록된 개념이 없습니다.';
-  return `## 이번 기간 핵심 개념\n${concepts.map((concept, index) => [
+function formatFrequentConcepts(concepts: ReportConceptSummary[], noun: string): string {
+  if (concepts.length === 0) return `## ${noun} 핵심 개념\n아직 ${periodParticle(noun)} 기록된 개념이 없습니다.`;
+  return `## ${noun} 핵심 개념\n${concepts.map((concept, index) => [
     `${index + 1}. ${concept.label}`,
-    `   - 왜 볼 만함: ${conceptReason(concept, index)}`,
+    `   - 왜 볼 만함: ${conceptReason(concept, index, noun)}`,
     concept.files.length ? `   - 코드 근거: ${concept.files.join(', ')}` : undefined
   ].filter(Boolean).join('\n')).join('\n')}`;
 }
@@ -51,12 +51,22 @@ function formatReferenceStatus(report: ReportJson): string {
   ].join('\n');
 }
 
-function conceptReason(concept: ReportConceptSummary, index: number): string {
-  if (concept.count > 1 && index === 0) return '이번 기간에 가장 자주 반복된 주제입니다.';
-  if (concept.count > 1) return `이번 기간에 ${concept.count}번 기록된 주제입니다.`;
+function conceptReason(concept: ReportConceptSummary, index: number, noun: string): string {
+  if (concept.count > 1 && index === 0) return `${periodParticle(noun)} 가장 자주 반복된 주제입니다.`;
+  if (concept.count > 1) return `${periodParticle(noun)} ${concept.count}번 기록된 주제입니다.`;
   if (concept.evidenceLevel === 'direct') return '현재 코드에서 직접 근거를 찾은 주제입니다.';
   if (concept.evidenceLevel === 'related') return '현재 코드 구조와 연결되는 주제입니다.';
-  return '이번 기간 학습 기록에 등장한 주제입니다.';
+  return `${noun} 학습 기록에 등장한 주제입니다.`;
+}
+
+function periodNoun(report: ReportJson): string {
+  if (report.period.mode === 'day') return '오늘';
+  if (report.period.mode === 'week') return '이번 주';
+  return '선택한 기간';
+}
+
+function periodParticle(noun: string): string {
+  return noun === '오늘' ? '오늘' : `${noun}에`;
 }
 
 function humanReviewReasons(reasons: string[]): string[] {
