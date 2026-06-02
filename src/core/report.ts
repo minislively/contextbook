@@ -59,16 +59,19 @@ export async function buildReport(options: ReportBuildOptions = {}): Promise<Rep
   ]);
 
   const conceptMap = new Map(concepts.map((concept) => [concept.id, concept]));
+  const conceptLabelMap = new Map(concepts.map((concept) => [normalizeConceptLabel(concept.label), concept]));
   const buckets = aggregateSignals(signals, period);
   const frequentConcepts = [...buckets.values()]
     .sort(compareBuckets)
-    .slice(0, 5)
-    .map((bucket) => toReportConcept(bucket, conceptMap));
+    .map((bucket) => toReportConcept(bucket, conceptMap, conceptLabelMap))
+    .filter(isReportableConcept)
+    .slice(0, 5);
 
   const reviewCandidates = reviewBuckets(signals, weakTerms, period, concepts)
     .sort(compareBuckets)
-    .slice(0, 5)
-    .map((bucket) => toReportConcept(bucket, conceptMap));
+    .map((bucket) => toReportConcept(bucket, conceptMap, conceptLabelMap))
+    .filter(isReportableConcept)
+    .slice(0, 5);
 
   const codeBackedMoments = codeBackedConcepts(concepts, buckets)
     .slice(0, 5)
@@ -278,6 +281,11 @@ function isReportableWeakTerm(term: string): boolean {
   return true;
 }
 
+function isReportableConcept(concept: ReportConceptSummary): boolean {
+  if (concept.id || concept.files.length > 0) return true;
+  return isReportableWeakTerm(concept.label);
+}
+
 function addSignalEvent(buckets: Map<string, ConceptBucket>, event: ConversationMemoryEvent, label: string): void {
   const key = conceptKey(event, label);
   const bucket = buckets.get(key) ?? emptyBucket(event.conceptId, label);
@@ -301,8 +309,8 @@ function addManualBucket(buckets: Map<string, ConceptBucket>, key: string, id: s
   buckets.set(key, bucket);
 }
 
-function toReportConcept(bucket: ConceptBucket, conceptMap: Map<string, ConceptRecord>): ReportConceptSummary {
-  const concept = bucket.id ? conceptMap.get(bucket.id) : undefined;
+function toReportConcept(bucket: ConceptBucket, conceptMap: Map<string, ConceptRecord>, conceptLabelMap: Map<string, ConceptRecord>): ReportConceptSummary {
+  const concept = bucket.id ? conceptMap.get(bucket.id) : conceptLabelMap.get(normalizeConceptLabel(bucket.label));
   if (concept) return conceptToReportConcept(concept, bucket, [...bucket.reasons]);
   return {
     id: bucket.id,
