@@ -25,6 +25,13 @@ export interface ReportBuildOptions extends ContextbookRuntimeOptions {
   now?: Date;
 }
 
+export interface ReportActionTarget {
+  source: 'reviewCandidates' | 'codeBackedMoments' | 'frequentConcepts';
+  index: number;
+  label: string;
+  id?: string;
+}
+
 interface ConceptBucket {
   id?: string;
   label: string;
@@ -76,7 +83,7 @@ export async function buildReport(options: ReportBuildOptions = {}): Promise<Rep
     .slice(0, 5);
 
   const freshness = await reportFreshness(root, scanRuns);
-  const recommendedActions = recommendedActionsForReport(reviewCandidates, codeBackedMoments);
+  const recommendedActions = recommendedActionsForReport({ period, frequentConcepts, reviewCandidates, codeBackedMoments });
   const summaryLine = summaryLineForReport(codeBackedMoments, frequentConcepts, period);
 
   const report: ReportJson = {
@@ -430,14 +437,63 @@ async function reportFreshness(root: string, scanRuns: Awaited<ReturnType<typeof
   };
 }
 
-function recommendedActionsForReport(reviewCandidates: ReportConceptSummary[], moments: ReportConceptSummary[]): ProjectRecommendedAction[] {
-  const concept = reviewCandidates[0] ?? moments[0];
+function recommendedActionsForReport(report: Pick<ReportJson, 'period' | 'reviewCandidates' | 'codeBackedMoments' | 'frequentConcepts'>): ProjectRecommendedAction[] {
+  const target = selectReportActionTarget(report, 1);
   const actions: ProjectRecommendedAction[] = [];
-  if (concept) {
-    actions.push({ command: 'contextbook why "<concept>"', reason: `${concept.label} 복습 후보를 프로젝트 근거와 면접 문장으로 다시 확인합니다.` });
+  if (target) {
+    actions.push({
+      command: ['contextbook', 'why', '--from-report', String(target.index), ...reportPeriodCommandArgs(report.period)].join(' '),
+      reason: `${target.label} 복습 후보를 프로젝트 근거와 면접 문장으로 다시 확인합니다.`,
+      actionKind: 'why-from-report',
+      targetIndex: target.index,
+      targetLabel: target.label,
+      targetId: target.id
+    });
   }
   actions.push({ command: 'contextbook learn', reason: '최근 코드에서 다음 learning moment를 다시 추천받습니다.' });
   return actions;
+}
+
+export function selectReportActionTarget(report: Pick<ReportJson, 'reviewCandidates' | 'codeBackedMoments' | 'frequentConcepts'>, targetIndex: number): ReportActionTarget | undefined {
+  if (!Number.isSafeInteger(targetIndex) || targetIndex < 1) return undefined;
+  const targets = reportActionTargets(report);
+  return targets[targetIndex - 1];
+}
+
+export function reportActionTargetCount(report: Pick<ReportJson, 'reviewCandidates' | 'codeBackedMoments' | 'frequentConcepts'>): number {
+  return reportActionTargets(report).length;
+}
+
+function reportActionTargets(report: Pick<ReportJson, 'reviewCandidates' | 'codeBackedMoments' | 'frequentConcepts'>): ReportActionTarget[] {
+  const targets: ReportActionTarget[] = [];
+  const seen = new Set<string>();
+  const append = (source: ReportActionTarget['source'], concepts: ReportConceptSummary[]) => {
+    for (const concept of concepts) {
+      const key = concept.id ? `id:${concept.id}` : `label:${concept.label.trim().toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      targets.push({
+        source,
+        index: targets.length + 1,
+        label: concept.label,
+        id: concept.id
+      });
+    }
+  };
+  append('reviewCandidates', report.reviewCandidates);
+  append('codeBackedMoments', report.codeBackedMoments);
+  append('frequentConcepts', report.frequentConcepts);
+  return targets;
+}
+
+function reportPeriodCommandArgs(period: ReportPeriod): string[] {
+  if (period.mode === 'day') return ['--day'];
+  if (period.mode === 'custom') return ['--since', period.start.slice(0, 10), '--until', displayInclusiveEndDate(period)];
+  return [];
+}
+
+function displayInclusiveEndDate(period: ReportPeriod): string {
+  return new Date(Date.parse(period.end) - DAY_MS).toISOString().slice(0, 10);
 }
 
 function summaryLineForReport(moments: ReportConceptSummary[], frequent: ReportConceptSummary[], period: ReportPeriod): string {

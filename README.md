@@ -261,6 +261,7 @@ contextbook report --since 2026-01-01 --until 2026-01-07
 contextbook report --json
 contextbook report --save
 contextbook report --json --save
+contextbook why --from-report 1
 ```
 
 `contextbook report` is a read-only daily/weekly learning log by default. It summarizes the selected UTC period from Conversation Memory `signals.jsonl` only, then combines that with current Project Memory for code-backed learning moments and interview questions.
@@ -277,7 +278,7 @@ A typical Markdown report includes:
 이번 주에는 useEffect cleanup / lifecycle, SSE / async event handling, CLI executable packaging이 핵심 학습 흐름이었습니다.
 
 ## 바로 할 일
-- `contextbook why "<concept>"` — 복습 후보를 프로젝트 근거와 면접 문장으로 다시 확인합니다.
+- `contextbook why --from-report 1` — 복습 후보를 프로젝트 근거와 면접 문장으로 다시 확인합니다.
 - `contextbook learn` — 최근 코드에서 다음 learning moment를 다시 추천받습니다.
 
 ## 이번 주 핵심 개념
@@ -308,6 +309,8 @@ The report includes:
 - recall/interview questions derived from code-backed concepts
 - human-readable scan freshness guidance and stale hints
 - safety guidance showing that no raw prompt/transcript, profile mutation, or weak-term mutation was produced, and whether an explicit `--save` artifact was created
+
+Use `contextbook why --from-report <index>` to answer the indexed report review target without copying a potentially unsafe concept label into your shell. Period flags keep the target bound to the same report window, for example `contextbook why --from-report 1 --day` or `contextbook why --from-report 1 --since 2026-01-01 --until 2026-01-07`.
 
 Freshness note: `workingTreeChanged` in `--json` means the current Git-state fingerprint differs from the latest scan fingerprint. If `changedFilesSinceScan` is `0`, the Markdown explains that the scan came from a different Git state but there are no additional current uncommitted changed files. Use `contextbook scan` to refresh Project Memory when you want the report to match the current tree exactly.
 
@@ -580,6 +583,7 @@ contextbook project                # inspect existing project memory
 contextbook project --json         # inspect project memory as structured agent context
 contextbook learner                # inspect learner memory
 contextbook learner --json         # inspect learner memory as structured agent context
+contextbook why --from-report 1    # answer the top report review target safely
 contextbook memory add-signal --type feedback.confused --concept "event loop" --note "too abstract"
 contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual
 contextbook memory capture-prompt --prompt <text> --source manual --json

@@ -136,6 +136,10 @@ export interface ProjectFileIndexSummary {
 export interface ProjectRecommendedAction {
   command: string;
   reason: string;
+  actionKind?: string;
+  targetIndex?: number;
+  targetLabel?: string;
+  targetId?: string;
 }
 
 export interface ProjectSummarySafety {
