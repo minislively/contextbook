@@ -1197,7 +1197,7 @@ try {
   for (const rawTerm of ['weak-term', 'signals-only snapshot', 'answers.jsonl', 'working-tree-changed', 'scan-has-warnings', 'feedback.confused', 'term.repeated', 'analogy.rejected', 'format.requested', 'why.answered', 'learn.generated', 'scan-partial', 'git-unavailable', 'project-not-scanned']) {
     assert(!weeklyReport.includes(rawTerm), `weekly report leaked internal term ${rawTerm}`);
   }
-  assert(weeklyReport.includes('복습 후보') && weeklyReport.includes('기본 보고서는 읽기 전용') && weeklyReport.includes('원문 프롬프트나 대화 전문은 포함하지 않습니다') && weeklyReport.includes('contextbook report --json'), 'weekly report missing humanized review/safety/audit guidance');
+  assert(weeklyReport.includes('복습 후보: 최근 다시 물어본 개념') && weeklyReport.includes('코드 근거 있음') && weeklyReport.includes('기본 보고서는 읽기 전용') && weeklyReport.includes('원문 프롬프트나 대화 전문은 포함하지 않습니다') && weeklyReport.includes('contextbook report --json'), 'weekly report missing humanized review/safety/audit guidance');
   assert(!weeklyReport.includes('번 기록된 주제입니다'), 'weekly report should not expose raw burst count wording');
   const dailyReport = run(['report', '--day']);
   assert(dailyReport.includes('# Daily Contextbook Report'), 'daily report markdown missing daily title');

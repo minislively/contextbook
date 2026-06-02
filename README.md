@@ -287,7 +287,7 @@ A typical Markdown report includes:
    - 코드 근거: scripts/smoke-test.mjs
 
 ## 다시 보면 좋은 개념
-- cli executable packaging — 복습 후보
+- CLI executable packaging — 복습 후보: 최근 다시 물어본 개념, 코드 근거 있음
 
 ## 코드 근거가 있는 Learning Moments
 - CLI executable packaging — src/cli.ts, package.json

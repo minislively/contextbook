@@ -41,7 +41,7 @@ function formatFrequentConcepts(concepts: ReportConceptSummary[], noun: string):
 
 function formatReviewCandidates(concepts: ReportConceptSummary[]): string {
   if (concepts.length === 0) return '## 다시 보면 좋은 개념\n아직 복습 후보로 볼 만한 기간 내 신호가 없습니다.';
-  return `## 다시 보면 좋은 개념\n${bullet(concepts.map((concept) => `${concept.label} — ${humanReviewReasons(concept.reasons).join(', ')}`))}`;
+  return `## 다시 보면 좋은 개념\n${bullet(concepts.map((concept) => `${concept.label} — ${reviewReasonSummary(concept)}`))}`;
 }
 
 function formatCodeBackedMoments(concepts: ReportConceptSummary[]): string {
@@ -91,6 +91,14 @@ function periodParticle(noun: string): string {
   return noun === '오늘' ? '오늘' : `${noun}에`;
 }
 
+function reviewReasonSummary(concept: ReportConceptSummary): string {
+  const reasons = humanReviewReasons(concept.reasons);
+  if (concept.reasons.includes('weak-term') && concept.files.length > 0) {
+    reasons.push('코드 근거 있음');
+  }
+  return [...new Set(reasons)].sort().join(', ');
+}
+
 function humanReviewReasons(reasons: string[]): string[] {
   const mapped = reasons.map((reason) => {
     switch (reason) {
@@ -107,7 +115,7 @@ function humanReviewReasons(reasons: string[]): string[] {
       case 'learn.generated':
         return '학습 카드에 나온 개념';
       case 'weak-term':
-        return '복습 후보';
+        return '복습 후보: 최근 다시 물어본 개념';
       default:
         return '복습 후보';
     }
