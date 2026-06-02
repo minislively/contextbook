@@ -4,6 +4,7 @@ import { bullet } from './markdown.js';
 export function formatReport(report: ReportJson): string {
   return [
     `# ${report.period.label}`,
+    formatPeriodRange(report),
     report.summaryLine,
     formatRecommendedActions(report),
     formatFrequentConcepts(report.frequentConcepts, periodNoun(report)),
@@ -12,6 +13,21 @@ export function formatReport(report: ReportJson): string {
     formatInterviewQuestions(report),
     formatReferenceStatus(report)
   ].join('\n\n') + '\n';
+}
+
+
+function formatPeriodRange(report: ReportJson): string {
+  const start = report.period.start.slice(0, 10);
+  const end = displayEndDate(report);
+  const range = start === end ? start : `${start} ~ ${end}`;
+  return `기간: ${range} (${report.period.timezone})`;
+}
+
+function displayEndDate(report: ReportJson): string {
+  if (report.period.mode === 'day' || report.period.mode === 'custom') {
+    return new Date(Date.parse(report.period.end) - 1).toISOString().slice(0, 10);
+  }
+  return report.period.end.slice(0, 10);
 }
 
 function formatFrequentConcepts(concepts: ReportConceptSummary[], noun: string): string {

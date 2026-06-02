@@ -270,6 +270,8 @@ A typical Markdown report includes:
 ```md
 # Weekly Contextbook Report
 
+기간: 2026-05-26 ~ 2026-06-02 (UTC)
+
 이번 주에는 useEffect cleanup / lifecycle, SSE / async event handling, CLI executable packaging이 핵심 학습 흐름이었습니다.
 
 ## 바로 할 일
