@@ -22,7 +22,7 @@ Usage:
   contextbook doctor [--json]
   contextbook project [--json]
   contextbook learner [--json]
-  contextbook report [--day|--week|--since <date> --until <date>] [--json]
+  contextbook report [--day|--week|--since <date> --until <date>] [--json] [--save]
   contextbook memory add-signal --type <type> [--concept <concept>] [--note <note>]
   contextbook memory capture-prompt --prompt <text> [--source manual|codex|claude-code] [--json]
   contextbook memory hook-suggest --prompt <text> [--source manual|codex|claude-code] [--mode suggest|auto-safe] [--include-memory-context] [--json]

@@ -259,11 +259,13 @@ contextbook report --week
 contextbook report --day
 contextbook report --since 2026-01-01 --until 2026-01-07
 contextbook report --json
+contextbook report --save
+contextbook report --json --save
 ```
 
-`contextbook report` is a read-only daily/weekly learning log. It summarizes the selected UTC period from Conversation Memory `signals.jsonl` only, then combines that with current Project Memory for code-backed learning moments and interview questions.
+`contextbook report` is a read-only daily/weekly learning log by default. It summarizes the selected UTC period from Conversation Memory `signals.jsonl` only, then combines that with current Project Memory for code-backed learning moments and interview questions.
 
-The default Markdown is optimized for a person reviewing their learning history. Weekly, daily, and custom-period reports use period-aware Korean copy such as `이번 주에는`, `오늘은`, and `선택한 기간에는`, while `--json` keeps the stable audit contract for agents and debugging.
+The default Markdown is optimized for a person reviewing their learning history. Weekly, daily, and custom-period reports use period-aware Korean copy such as `이번 주에는`, `오늘은`, and `선택한 기간에는`, while `--json` keeps the stable audit contract for agents and debugging. Add `--save` only when you want an explicit local artifact under `.contextbook/reports`.
 
 A typical Markdown report includes:
 
@@ -294,6 +296,7 @@ A typical Markdown report includes:
 
 ## 참고 상태
 - 최근 스캔은 현재 Git 상태와 다른 시점에 만들어졌습니다. 현재 미커밋 변경 파일은 없지만, 정확도를 위해 필요하면 `contextbook scan`을 다시 실행하세요.
+- 기본 보고서는 읽기 전용이며 `.contextbook/reports`에 파일을 만들지 않습니다. 저장하려면 `contextbook report --save`를 사용하세요.
 - 자세한 감사 정보와 원본 코드 값은 `contextbook report --json`에서 확인할 수 있습니다.
 ```
 
@@ -304,13 +307,13 @@ The report includes:
 - code-backed Learning Moments with repo-relative evidence files
 - recall/interview questions derived from code-backed concepts
 - human-readable scan freshness guidance and stale hints
-- safety guidance showing that no raw prompt/transcript, profile mutation, weak-term mutation, or persisted report was produced
+- safety guidance showing that no raw prompt/transcript, profile mutation, or weak-term mutation was produced, and whether an explicit `--save` artifact was created
 
 Freshness note: `workingTreeChanged` in `--json` means the current Git-state fingerprint differs from the latest scan fingerprint. If `changedFilesSinceScan` is `0`, the Markdown explains that the scan came from a different Git state but there are no additional current uncommitted changed files. Use `contextbook scan` to refresh Project Memory when you want the report to match the current tree exactly.
 
 `--json` is the audit/detail surface. It preserves fields such as `period`, `freshness.workingTreeChanged`, `freshness.changedFilesSinceScan`, `freshness.staleHints`, and `safety`, while default Markdown avoids raw internal codes like `working-tree-changed`.
 
-It intentionally ignores `answers.jsonl` in the MVP aggregation path so the same `why`/answer interaction is not double-counted when both answer memory and signal memory exist. The default report remains read-only and does not create `.contextbook/reports`; a future explicit save flag should preserve that default safety boundary.
+It intentionally ignores `answers.jsonl` in the MVP aggregation path so the same `why`/answer interaction is not double-counted when both answer memory and signal memory exist. The default report remains read-only and does not create `.contextbook/reports`. `contextbook report --save` writes the rendered Markdown to `.contextbook/reports/<timestamp>-<period>.md`; `contextbook report --json --save` writes JSON to `.contextbook/reports/<timestamp>-<period>.json` and returns a `savedReport` object with the repo-relative path.
 
 ### Step 6. Record explicit memory signals
 
