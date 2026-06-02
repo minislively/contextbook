@@ -1219,6 +1219,19 @@ try {
   assert(!backtickedReportCommands.some((command) => command.includes('Malicious')), 'report markdown executable commands must not include malicious learner label');
   const fallbackTarget = core.selectReportActionTarget({ ...coreReport, reviewCandidates: [] }, 1);
   assert(fallbackTarget?.source === 'codeBackedMoments' && fallbackTarget.label === coreReport.codeBackedMoments[0].label, 'report action target should fall back from review candidates to code-backed moments');
+  const weakOnlyActionTarget = core.selectReportActionTarget({
+    ...coreReport,
+    reviewCandidates: [{
+      label: 'weak-only report action noise',
+      count: 1,
+      rawCount: 1,
+      episodeCount: 1,
+      score: 5,
+      files: [],
+      reasons: ['weak-term']
+    }]
+  }, 1);
+  assert(weakOnlyActionTarget?.source === 'codeBackedMoments' && weakOnlyActionTarget.label === coreReport.codeBackedMoments[0].label, 'report action target should skip weak-term-only label noise when code-backed moments exist');
   const labelOnlyProjectWhy = await core.answerWhyTarget({ label: 'SSE / async event handling' }, { root, learner: 'default' });
   assert(labelOnlyProjectWhy.evidenceLevel === 'direct' && labelOnlyProjectWhy.markdown.includes('src/hooks/useWorkflowSSE.ts'), 'why report target resolver should preserve project-backed lookup for label-only targets');
   const whyFromReport = run(['why', '--from-report', '1', '--since', '2026-01-01', '--until', '2026-01-07']);

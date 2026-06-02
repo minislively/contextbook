@@ -469,6 +469,7 @@ function reportActionTargets(report: Pick<ReportJson, 'reviewCandidates' | 'code
   const seen = new Set<string>();
   const append = (source: ReportActionTarget['source'], concepts: ReportConceptSummary[]) => {
     for (const concept of concepts) {
+      if (!isActionableReportConcept(concept)) continue;
       const key = concept.id ? `id:${concept.id}` : `label:${concept.label.trim().toLowerCase()}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -484,6 +485,11 @@ function reportActionTargets(report: Pick<ReportJson, 'reviewCandidates' | 'code
   append('codeBackedMoments', report.codeBackedMoments);
   append('frequentConcepts', report.frequentConcepts);
   return targets;
+}
+
+function isActionableReportConcept(concept: ReportConceptSummary): boolean {
+  if (concept.id || concept.files.length > 0) return true;
+  return !concept.reasons.every((reason) => reason === 'weak-term');
 }
 
 function reportPeriodCommandArgs(period: ReportPeriod): string[] {
