@@ -28,8 +28,11 @@ export interface ReportBuildOptions extends ContextbookRuntimeOptions {
 interface ConceptBucket {
   id?: string;
   label: string;
-  count: number;
+  rawCount: number;
+  episodeCount: number;
+  score: number;
   reasons: Set<string>;
+  episodeKeys: Set<string>;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -51,18 +54,18 @@ export async function buildReport(options: ReportBuildOptions = {}): Promise<Rep
   const conceptMap = new Map(concepts.map((concept) => [concept.id, concept]));
   const buckets = aggregateSignals(signals, period);
   const frequentConcepts = [...buckets.values()]
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .sort(compareBuckets)
     .slice(0, 5)
     .map((bucket) => toReportConcept(bucket, conceptMap));
 
   const reviewCandidates = reviewBuckets(signals, weakTerms, period)
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .sort(compareBuckets)
     .slice(0, 5)
     .map((bucket) => toReportConcept(bucket, conceptMap));
 
   const codeBackedMoments = codeBackedConcepts(concepts, buckets)
     .slice(0, 5)
-    .map((concept) => conceptToReportConcept(concept, buckets.get(concept.id)?.count ?? concept.signals.length, ['code evidence']));
+    .map((concept) => conceptToReportConcept(concept, buckets.get(concept.id) ?? conceptFallbackBucket(concept), ['code evidence']));
 
   const interviewQuestions = codeBackedMoments
     .map((item) => {
@@ -235,11 +238,7 @@ function aggregateSignals(signals: Record<string, unknown>[], period: ReportPeri
     if (!event || !inPeriod(event.recordedAt, period)) continue;
     const label = conceptLabel(event);
     if (!label) continue;
-    const key = event.conceptId ?? label.toLowerCase();
-    const bucket = buckets.get(key) ?? { id: event.conceptId, label, count: 0, reasons: new Set<string>() };
-    bucket.count += 1;
-    bucket.reasons.add(event.signalType);
-    buckets.set(key, bucket);
+    addSignalEvent(buckets, event, label);
   }
   return buckets;
 }
@@ -252,29 +251,48 @@ function reviewBuckets(signals: Record<string, unknown>[], weakTerms: Record<str
     if (event.signalType !== 'feedback.confused' && event.signalType !== 'term.repeated' && event.signalType !== 'analogy.rejected') continue;
     const label = conceptLabel(event);
     if (!label) continue;
-    addBucket(buckets, event.conceptId ?? label.toLowerCase(), event.conceptId, label, event.signalType);
+    addSignalEvent(buckets, event, label);
   }
   for (const [term, record] of Object.entries(weakTerms)) {
     if (!inPeriod(record.updatedAt, period)) continue;
-    addBucket(buckets, term.toLowerCase(), undefined, term, 'weak-term');
+    addManualBucket(buckets, normalizeConceptLabel(term), undefined, term, 'weak-term', 5);
   }
   return [...buckets.values()];
 }
 
-function addBucket(buckets: Map<string, ConceptBucket>, key: string, id: string | undefined, label: string, reason: string): void {
-  const bucket = buckets.get(key) ?? { id, label, count: 0, reasons: new Set<string>() };
-  bucket.count += 1;
+function addSignalEvent(buckets: Map<string, ConceptBucket>, event: ConversationMemoryEvent, label: string): void {
+  const key = conceptKey(event, label);
+  const bucket = buckets.get(key) ?? emptyBucket(event.conceptId, label);
+  bucket.rawCount += 1;
+  bucket.reasons.add(event.signalType);
+  const episodeKey = signalEpisodeKey(event, key);
+  if (shouldAddEpisode(bucket, event, episodeKey)) {
+    bucket.episodeKeys.add(episodeStorageKey(bucket, event, episodeKey));
+    bucket.episodeCount += 1;
+    bucket.score += signalWeight(event.signalType);
+  }
+  buckets.set(key, bucket);
+}
+
+function addManualBucket(buckets: Map<string, ConceptBucket>, key: string, id: string | undefined, label: string, reason: string, score: number): void {
+  const bucket = buckets.get(key) ?? emptyBucket(id, label);
+  bucket.rawCount += 1;
+  bucket.episodeCount += 1;
+  bucket.score += score;
   bucket.reasons.add(reason);
   buckets.set(key, bucket);
 }
 
 function toReportConcept(bucket: ConceptBucket, conceptMap: Map<string, ConceptRecord>): ReportConceptSummary {
   const concept = bucket.id ? conceptMap.get(bucket.id) : undefined;
-  if (concept) return conceptToReportConcept(concept, bucket.count, [...bucket.reasons]);
+  if (concept) return conceptToReportConcept(concept, bucket, [...bucket.reasons]);
   return {
     id: bucket.id,
     label: bucket.label,
-    count: bucket.count,
+    count: bucket.episodeCount,
+    rawCount: bucket.rawCount,
+    episodeCount: bucket.episodeCount,
+    score: bucket.score,
     files: [],
     reasons: [...bucket.reasons].sort()
   };
@@ -284,7 +302,9 @@ function codeBackedConcepts(concepts: ConceptRecord[], buckets: Map<string, Conc
   return [...concepts]
     .filter((concept) => concept.evidenceLevel !== 'general')
     .sort((a, b) => {
-      const countDelta = (buckets.get(b.id)?.count ?? 0) - (buckets.get(a.id)?.count ?? 0);
+      const scoreDelta = ((buckets.get(b.id)?.score ?? 0) + 2) - ((buckets.get(a.id)?.score ?? 0) + 2);
+      if (scoreDelta !== 0) return scoreDelta;
+      const countDelta = (buckets.get(b.id)?.episodeCount ?? 0) - (buckets.get(a.id)?.episodeCount ?? 0);
       if (countDelta !== 0) return countDelta;
       const changedDelta = Number(b.signals.some((signal) => signal.changed)) - Number(a.signals.some((signal) => signal.changed));
       if (changedDelta !== 0) return changedDelta;
@@ -292,15 +312,85 @@ function codeBackedConcepts(concepts: ConceptRecord[], buckets: Map<string, Conc
     });
 }
 
-function conceptToReportConcept(concept: ConceptRecord, count: number, reasons: string[]): ReportConceptSummary {
+function conceptToReportConcept(concept: ConceptRecord, bucket: ConceptBucket, reasons: string[]): ReportConceptSummary {
   return {
     id: concept.id,
     label: concept.label,
-    count,
+    count: bucket.episodeCount,
+    rawCount: bucket.rawCount,
+    episodeCount: bucket.episodeCount,
+    score: bucket.score + 2,
     evidenceLevel: concept.evidenceLevel,
     files: rankEvidenceForDisplay(concept.signals).visibleFiles,
     reasons: [...new Set(reasons)].sort()
   };
+}
+
+function emptyBucket(id: string | undefined, label: string): ConceptBucket {
+  return { id, label, rawCount: 0, episodeCount: 0, score: 0, reasons: new Set<string>(), episodeKeys: new Set<string>() };
+}
+
+function conceptFallbackBucket(concept: ConceptRecord): ConceptBucket {
+  return { id: concept.id, label: concept.label, rawCount: 0, episodeCount: 0, score: 0, reasons: new Set<string>(), episodeKeys: new Set<string>() };
+}
+
+function compareBuckets(a: ConceptBucket, b: ConceptBucket): number {
+  return b.score - a.score || b.episodeCount - a.episodeCount || a.label.localeCompare(b.label);
+}
+
+function conceptKey(event: ConversationMemoryEvent, label: string): string {
+  return event.conceptId ?? normalizeConceptLabel(label);
+}
+
+function normalizeConceptLabel(label: string): string {
+  return label.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function signalEpisodeKey(event: ConversationMemoryEvent, key: string): string {
+  const day = event.recordedAt?.slice(0, 10) ?? 'unknown-day';
+  if (isAutomaticSignal(event.signalType)) {
+    return `${key}:${event.signalType}:${event.command ?? ''}:${day}`;
+  }
+  return `${key}:${event.signalType}:${day}`;
+}
+
+function shouldAddEpisode(bucket: ConceptBucket, event: ConversationMemoryEvent, episodeKey: string): boolean {
+  if (isAutomaticSignal(event.signalType)) return !bucket.episodeKeys.has(episodeKey);
+  return explicitEpisodeCount(bucket, episodeKey) < 2;
+}
+
+function episodeStorageKey(bucket: ConceptBucket, event: ConversationMemoryEvent, episodeKey: string): string {
+  if (isAutomaticSignal(event.signalType)) return episodeKey;
+  return `${episodeKey}:${explicitEpisodeCount(bucket, episodeKey) + 1}`;
+}
+
+function explicitEpisodeCount(bucket: ConceptBucket, episodeKey: string): number {
+  return [...bucket.episodeKeys].filter((key) => key.startsWith(`${episodeKey}:`)).length;
+}
+
+function isAutomaticSignal(signalType: string): boolean {
+  return signalType === 'why.answered' || signalType === 'learn.generated' || signalType === 'scan.completed';
+}
+
+function signalWeight(signalType: string): number {
+  switch (signalType) {
+    case 'feedback.confused':
+      return 8;
+    case 'analogy.rejected':
+      return 6;
+    case 'term.repeated':
+      return 5;
+    case 'format.requested':
+      return 3;
+    case 'feedback.positive':
+    case 'analogy.accepted':
+      return 2;
+    case 'why.answered':
+    case 'learn.generated':
+      return 1;
+    default:
+      return 0;
+  }
 }
 
 function toEvent(value: Record<string, unknown>): ConversationMemoryEvent | undefined {

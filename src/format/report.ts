@@ -71,8 +71,11 @@ function formatReferenceStatus(report: ReportJson): string {
 }
 
 function conceptReason(concept: ReportConceptSummary, index: number, noun: string): string {
-  if (concept.count > 1 && index === 0) return `${periodParticle(noun)} 가장 자주 반복된 주제입니다.`;
-  if (concept.count > 1) return `${periodParticle(noun)} ${concept.count}번 기록된 주제입니다.`;
+  if (concept.reasons.includes('feedback.confused')) return '최근 헷갈린 기록이 있어 먼저 복습하면 좋습니다.';
+  if (concept.reasons.includes('analogy.rejected')) return '비유가 잘 맞지 않았던 개념이라 다시 정리하면 좋습니다.';
+  if (concept.reasons.includes('term.repeated')) return '반복해서 다시 나온 용어라 복습 후보입니다.';
+  if (concept.count > 1 && index === 0) return `${periodParticle(noun)} 여러 번 다시 나온 핵심 주제입니다.`;
+  if (concept.count > 1) return `${periodParticle(noun)} 여러 번 다시 나온 주제입니다.`;
   if (concept.evidenceLevel === 'direct') return '현재 코드에서 직접 근거를 찾은 주제입니다.';
   if (concept.evidenceLevel === 'related') return '현재 코드 구조와 연결되는 주제입니다.';
   return `${noun} 학습 기록에 등장한 주제입니다.`;

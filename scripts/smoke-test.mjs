@@ -1108,6 +1108,15 @@ try {
       metadata: { note: 'RAW_REPORT_NOTE_SHOULD_NOT_LEAK', question: 'RAW_REPORT_QUESTION_SHOULD_NOT_LEAK' },
       recordedAt: '2026-01-03T00:00:00.000Z'
     },
+    ...Array.from({ length: 100 }, () => ({
+      schemaVersion: 1,
+      kind: 'conversation-memory',
+      signalType: 'learn.generated',
+      command: 'learn',
+      learner: 'default',
+      conceptLabel: 'Noisy Automatic Report Concept',
+      recordedAt: '2026-01-03T12:00:00.000Z'
+    })),
     {
       schemaVersion: 1,
       kind: 'conversation-memory',
@@ -1155,6 +1164,7 @@ try {
     assert(!weeklyReport.includes(rawTerm), `weekly report leaked internal term ${rawTerm}`);
   }
   assert(weeklyReport.includes('복습 후보') && weeklyReport.includes('기본 보고서는 읽기 전용') && weeklyReport.includes('원문 프롬프트나 대화 전문은 포함하지 않습니다') && weeklyReport.includes('contextbook report --json'), 'weekly report missing humanized review/safety/audit guidance');
+  assert(!weeklyReport.includes('번 기록된 주제입니다'), 'weekly report should not expose raw burst count wording');
   const dailyReport = run(['report', '--day']);
   assert(dailyReport.includes('# Daily Contextbook Report'), 'daily report markdown missing daily title');
   assert(/기간: \d{4}-\d{2}-\d{2} \(UTC\)/.test(dailyReport) && dailyReport.includes('오늘은') && dailyReport.includes('## 오늘 핵심 개념') && !dailyReport.includes('## 이번 주 핵심 개념'), 'daily report should use daily period labels and date range');
@@ -1162,7 +1172,11 @@ try {
   assert(reportJson.schemaVersion === 1 && reportJson.period.mode === 'custom' && reportJson.period.start === '2026-01-01T00:00:00.000Z' && reportJson.period.end === '2026-01-08T00:00:00.000Z', 'report json custom period contract invalid');
   assert(reportJson.period.timezone === 'UTC', 'report json period must be UTC');
   const reportCliConcept = reportJson.frequentConcepts.find((item) => item.id === 'cli-executable');
-  assert(reportCliConcept && reportCliConcept.count === 1, 'report should aggregate signals.jsonl only and avoid answers.jsonl double counting');
+  const noisyAutomaticConcept = reportJson.frequentConcepts.find((item) => item.label === 'Noisy Automatic Report Concept');
+  assert(reportCliConcept && reportCliConcept.count === 1 && reportCliConcept.episodeCount === 1 && reportCliConcept.rawCount === 1 && reportCliConcept.score > 1, 'report should expose episode/raw/score fields and avoid answers.jsonl double counting');
+  assert(noisyAutomaticConcept && noisyAutomaticConcept.rawCount === 100 && noisyAutomaticConcept.episodeCount === 1 && noisyAutomaticConcept.count === 1 && noisyAutomaticConcept.score === 1, 'report should collapse same-day automatic signal bursts into one episode while preserving rawCount');
+  assert(reportJson.frequentConcepts.findIndex((item) => item.id === 'cli-executable') < reportJson.frequentConcepts.findIndex((item) => item.label === 'Noisy Automatic Report Concept'), 'explicit friction should outrank raw automatic bursts in frequent concepts');
+  assert(reportJson.summaryLine.includes('CLI executable packaging') && !reportJson.summaryLine.includes('Noisy Automatic Report Concept'), 'summary should use weighted/deduped concepts instead of raw automatic burst leader');
   assert(reportJson.reviewCandidates.some((item) => item.label === 'CLI executable packaging' && item.reasons.includes('feedback.confused')), 'report missing signal-backed review candidate');
   assert(reportJson.reviewCandidates.some((item) => item.label === 'in-range weak report term' && item.reasons.includes('weak-term')), 'report missing in-period weak term review candidate');
   assert(!JSON.stringify(reportJson).includes('out-of-range weak report term') && !JSON.stringify(reportJson).includes('Out Of Range Report Concept'), 'report included out-of-period learner signal');
@@ -1182,7 +1196,7 @@ try {
   assert(runExpectFail(['report', '--day', '--week']).includes('Usage: contextbook report'), 'report incompatible flags should show usage');
   assert(runExpectFail(['report', '--since', '2026-01-01']).includes('Usage: contextbook report'), 'report missing custom bound should show usage');
   const coreReport = await core.buildReport({ root, learner: 'default', args: ['--since', '2026-01-01', '--until', '2026-01-07'], now: new Date('2026-01-07T12:00:00.000Z') });
-  assert(coreReport.schemaVersion === 1 && coreReport.markdown.includes('# Contextbook Report') && coreReport.markdown.includes('기간: 2026-01-01 ~ 2026-01-07 (UTC)') && coreReport.markdown.includes('선택한 기간에는') && coreReport.markdown.includes('## 선택한 기간 핵심 개념'), 'core report contract invalid');
+  assert(coreReport.schemaVersion === 1 && coreReport.markdown.includes('# Contextbook Report') && coreReport.markdown.includes('기간: 2026-01-01 ~ 2026-01-07 (UTC)') && coreReport.markdown.includes('선택한 기간에는') && coreReport.markdown.includes('## 선택한 기간 핵심 개념') && coreReport.codeBackedMoments.some((item) => item.id === 'cli-executable' && typeof item.rawCount === 'number' && typeof item.episodeCount === 'number' && typeof item.score === 'number'), 'core report contract invalid');
   const lastScanRunPath = join(root, '.contextbook', 'project', 'scan-runs.jsonl');
   const originalScanRunsForCleanTree = (await readFile(lastScanRunPath, 'utf8')).trimEnd().split('\n');
   const scanRunsForCleanTree = [...originalScanRunsForCleanTree];
