@@ -1118,6 +1118,24 @@ try {
       evidenceLevel: 'general',
       recordedAt: '2026-01-04T00:00:00.000Z'
     },
+    {
+      schemaVersion: 1,
+      kind: 'conversation-memory',
+      signalType: 'term.repeated',
+      command: 'why',
+      learner: 'default',
+      conceptLabel: '--help',
+      recordedAt: '2026-01-04T00:00:00.000Z'
+    },
+    {
+      schemaVersion: 1,
+      kind: 'conversation-memory',
+      signalType: 'term.repeated',
+      command: 'why',
+      learner: 'default',
+      conceptLabel: 'cli bin 실행 권한 왜 중요해?',
+      recordedAt: '2026-01-04T00:00:00.000Z'
+    },
     ...Array.from({ length: 100 }, () => ({
       schemaVersion: 1,
       kind: 'conversation-memory',
@@ -1193,6 +1211,7 @@ try {
   assert(reportCliConcept && reportCliConcept.count === 1 && reportCliConcept.episodeCount === 1 && reportCliConcept.rawCount === 1 && reportCliConcept.score > 1, 'report should expose episode/raw/score fields and avoid answers.jsonl double counting');
   assert(noisyAutomaticConcept && noisyAutomaticConcept.rawCount === 100 && noisyAutomaticConcept.episodeCount === 1 && noisyAutomaticConcept.count === 1 && noisyAutomaticConcept.score === 1, 'report should collapse same-day automatic signal bursts into one episode while preserving rawCount');
   assert(reportJson.frequentConcepts.findIndex((item) => item.id === 'cli-executable') < reportJson.frequentConcepts.findIndex((item) => item.label === 'Noisy Automatic Report Concept'), 'explicit friction should outrank raw automatic bursts in frequent concepts');
+  assert(!reportJson.frequentConcepts.some((item) => item.label === '--help' || item.label === 'cli bin 실행 권한 왜 중요해?'), 'report should filter command/question-shaped label noise from frequent concepts');
   assert(reportJson.summaryLine.includes('CLI executable packaging') && !reportJson.summaryLine.includes('Noisy Automatic Report Concept'), 'summary should use weighted/deduped concepts instead of raw automatic burst leader');
   assert(reportJson.reviewCandidates.some((item) => item.label === 'CLI executable packaging' && item.reasons.includes('feedback.confused')), 'report missing signal-backed review candidate');
   assert(reportJson.reviewCandidates.some((item) => item.label === 'in-range weak report term' && item.reasons.includes('weak-term')), 'report missing in-period weak term review candidate');
