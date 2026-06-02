@@ -1,10 +1,11 @@
-import { basename } from 'node:path';
+import { basename, join, relative } from 'node:path';
+import { writeFile } from 'node:fs/promises';
 import { formatReport } from '../format/report.js';
 import { rankEvidenceForDisplay } from '../format/evidence.js';
 import { gitWorkingTreeState } from '../scan/git-diff.js';
-import { readJsonl } from '../storage/fs-utils.js';
+import { ensureDir, readJsonl } from '../storage/fs-utils.js';
 import { learnerPaths, readWeakTerms } from '../storage/user-store.js';
-import { readConcepts, readFileIndex, readScanRuns } from '../storage/project-store.js';
+import { projectPaths, readConcepts, readFileIndex, readScanRuns } from '../storage/project-store.js';
 import type {
   ConceptRecord,
   ContextbookRuntimeOptions,
@@ -15,7 +16,8 @@ import type {
   ReportJson,
   ReportPeriod,
   ReportPeriodMode,
-  ReportResult
+  ReportResult,
+  SavedReportArtifact
 } from '../types.js';
 
 export interface ReportBuildOptions extends ContextbookRuntimeOptions {
@@ -115,8 +117,9 @@ export function resolveReportPeriod(args: string[], now = new Date()): ReportPer
   return period('Weekly Contextbook Report', start, endNow, 'week');
 }
 
-export function parseReportArgs(args: string[]): { json: boolean; mode: ReportPeriodMode; since?: string; until?: string } {
+export function parseReportArgs(args: string[]): { json: boolean; save: boolean; mode: ReportPeriodMode; since?: string; until?: string } {
   let json = false;
+  let save = false;
   let mode: ReportPeriodMode = 'week';
   let explicitPeriodFlag: ReportPeriodMode | undefined;
   let since: string | undefined;
@@ -126,6 +129,8 @@ export function parseReportArgs(args: string[]): { json: boolean; mode: ReportPe
     const arg = args[index];
     if (arg === '--json') {
       json = true;
+    } else if (arg === '--save') {
+      save = true;
     } else if (arg === '--week') {
       if (explicitPeriodFlag || since || until) throw new Error(reportUsage());
       explicitPeriodFlag = 'week';
@@ -147,11 +152,57 @@ export function parseReportArgs(args: string[]): { json: boolean; mode: ReportPe
     }
   }
   if (mode === 'custom' && (!since || !until)) throw new Error(reportUsage());
-  return { json, mode, since, until };
+  return { json, save, mode, since, until };
 }
 
 export function reportUsage(): string {
-  return 'Usage: contextbook report [--day|--week|--since <date> --until <date>] [--json]';
+  return 'Usage: contextbook report [--day|--week|--since <date> --until <date>] [--json] [--save]';
+}
+
+export async function saveReportArtifact(result: ReportResult, options: { root?: string; json?: boolean } = {}): Promise<{ report: ReportResult; artifact: SavedReportArtifact }> {
+  const root = options.root ?? process.cwd();
+  const format = options.json ? 'json' : 'markdown';
+  const persistedReport = withPersistedReportSafety(result);
+  const reportsDir = projectPaths(root).reports;
+  await ensureDir(reportsDir);
+  const filename = reportArtifactFilename(persistedReport, format);
+  const path = join(reportsDir, filename);
+  const content = format === 'json'
+    ? `${JSON.stringify(stripMarkdown(persistedReport), null, 2)}\n`
+    : persistedReport.markdown;
+  await writeFile(path, content, 'utf8');
+  return {
+    report: persistedReport,
+    artifact: {
+      path: relative(root, path).split('\\').join('/'),
+      format
+    }
+  };
+}
+
+function withPersistedReportSafety(result: ReportResult): ReportResult {
+  const report = {
+    ...result,
+    safety: {
+      ...result.safety,
+      persistedReportCreated: true
+    }
+  };
+  return {
+    ...report,
+    markdown: formatReport(report)
+  };
+}
+
+function stripMarkdown(result: ReportResult): ReportJson {
+  const { markdown: _markdown, ...json } = result;
+  return json;
+}
+
+function reportArtifactFilename(report: ReportResult, format: 'markdown' | 'json'): string {
+  const stamp = report.generatedAt.replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  const extension = format === 'json' ? 'json' : 'md';
+  return `${stamp}-${report.period.mode}.${extension}`;
 }
 
 function period(label: string, start: Date, end: Date, mode: ReportPeriodMode): ReportPeriod {

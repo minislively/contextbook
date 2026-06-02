@@ -21,6 +21,7 @@ export const projectPaths = (root = projectRoot()) => {
     evidence: join(base, 'project', 'evidence.jsonl'),
     fileIndex: join(base, 'project', 'file-index.json'),
     scanRuns: join(base, 'project', 'scan-runs.jsonl'),
+    reports: join(base, 'reports'),
     backups: join(base, 'backups'),
     backupManifest: (backupId: string) => join(base, 'backups', backupId, 'manifest.json'),
     learnPrompt: join(base, 'prompts', 'learn.md'),

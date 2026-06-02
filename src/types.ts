@@ -857,7 +857,7 @@ export interface ReportSafety {
   preferencesMutated: false;
   weakTermsMutated: false;
   projectMemoryMutated: false;
-  persistedReportCreated: false;
+  persistedReportCreated: boolean;
   unsafeJudgmentIncluded: false;
 }
 
@@ -875,6 +875,11 @@ export interface ReportJson {
   recommendedActions: ProjectRecommendedAction[];
   freshness: ReportFreshness;
   safety: ReportSafety;
+}
+
+export interface SavedReportArtifact {
+  path: string;
+  format: 'markdown' | 'json';
 }
 
 export interface ReportResult extends ReportJson {

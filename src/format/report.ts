@@ -62,6 +62,9 @@ function formatReferenceStatus(report: ReportJson): string {
   return [
     '## 참고 상태',
     ...humanFreshnessLines(report),
+    report.safety.persistedReportCreated
+      ? '- 이 보고서는 `.contextbook/reports`에 저장된 복습 아티팩트입니다.'
+      : '- 기본 보고서는 읽기 전용이며 `.contextbook/reports`에 파일을 만들지 않습니다. 저장하려면 `contextbook report --save`를 사용하세요.',
     '- 이 보고서는 안전한 학습 신호만 읽으며, 원문 프롬프트나 대화 전문은 포함하지 않습니다.',
     '- 자세한 감사 정보와 원본 코드 값은 `contextbook report --json`에서 확인할 수 있습니다.'
   ].join('\n');
