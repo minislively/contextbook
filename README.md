@@ -263,15 +263,52 @@ contextbook report --json
 
 `contextbook report` is a read-only daily/weekly learning log. It summarizes the selected UTC period from Conversation Memory `signals.jsonl` only, then combines that with current Project Memory for code-backed learning moments and interview questions.
 
+The default Markdown is optimized for a person reviewing their learning history. Weekly, daily, and custom-period reports use period-aware Korean copy such as `이번 주에는`, `오늘은`, and `선택한 기간에는`, while `--json` keeps the stable audit contract for agents and debugging.
+
+A typical Markdown report includes:
+
+```md
+# Weekly Contextbook Report
+
+이번 주에는 useEffect cleanup / lifecycle, SSE / async event handling, CLI executable packaging이 핵심 학습 흐름이었습니다.
+
+## 바로 할 일
+- `contextbook why "<concept>"` — 복습 후보를 프로젝트 근거와 면접 문장으로 다시 확인합니다.
+- `contextbook learn` — 최근 코드에서 다음 learning moment를 다시 추천받습니다.
+
+## 이번 주 핵심 개념
+1. useEffect cleanup / lifecycle
+   - 왜 볼 만함: 이번 주에 가장 자주 반복된 주제입니다.
+   - 코드 근거: scripts/smoke-test.mjs
+
+## 다시 보면 좋은 개념
+- cli executable packaging — 복습 후보
+
+## 코드 근거가 있는 Learning Moments
+- CLI executable packaging — src/cli.ts, package.json
+
+## 회상/면접 질문
+1. npm CLI 패키지에서 bin entrypoint와 실행 권한을 함께 확인해야 하는 이유는 무엇인가요?
+
+## 참고 상태
+- 최근 스캔은 현재 Git 상태와 다른 시점에 만들어졌습니다. 현재 미커밋 변경 파일은 없지만, 정확도를 위해 필요하면 `contextbook scan`을 다시 실행하세요.
+- 자세한 감사 정보와 원본 코드 값은 `contextbook report --json`에서 확인할 수 있습니다.
+```
+
 The report includes:
 
-- frequently repeated concepts for the period
+- frequently repeated concepts for the selected period
 - “다시 보면 좋은 개념” review candidates from explicit confusion/repeated-term/analogy-rejected signals and weak terms updated inside the period
 - code-backed Learning Moments with repo-relative evidence files
-- scan freshness warnings and stale hints
-- safety flags showing that no raw prompt/transcript, profile mutation, weak-term mutation, or persisted report was produced
+- recall/interview questions derived from code-backed concepts
+- human-readable scan freshness guidance and stale hints
+- safety guidance showing that no raw prompt/transcript, profile mutation, weak-term mutation, or persisted report was produced
 
-It intentionally ignores `answers.jsonl` in the MVP aggregation path so the same `why`/answer interaction is not double-counted when both answer memory and signal memory exist.
+Freshness note: `workingTreeChanged` in `--json` means the current Git-state fingerprint differs from the latest scan fingerprint. If `changedFilesSinceScan` is `0`, the Markdown explains that the scan came from a different Git state but there are no additional current uncommitted changed files. Use `contextbook scan` to refresh Project Memory when you want the report to match the current tree exactly.
+
+`--json` is the audit/detail surface. It preserves fields such as `period`, `freshness.workingTreeChanged`, `freshness.changedFilesSinceScan`, `freshness.staleHints`, and `safety`, while default Markdown avoids raw internal codes like `working-tree-changed`.
+
+It intentionally ignores `answers.jsonl` in the MVP aggregation path so the same `why`/answer interaction is not double-counted when both answer memory and signal memory exist. The default report remains read-only and does not create `.contextbook/reports`; a future explicit save flag should preserve that default safety boundary.
 
 ### Step 6. Record explicit memory signals
 
