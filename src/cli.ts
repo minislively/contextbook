@@ -42,6 +42,7 @@ Usage:
   contextbook memory restore --backup-id <id> (--dry-run|--yes) [--json]
   contextbook learn
   contextbook why "<question>"
+  contextbook why --from-report <index> [--day|--week|--since <date> --until <date>]
   contextbook profile
   contextbook profile diff
   contextbook profile edit

@@ -7,6 +7,11 @@ import { readConcepts } from '../storage/project-store.js';
 import { ensureLearnerStore, readPreferences, readWeakTerms } from '../storage/user-store.js';
 import type { ContextbookRuntimeOptions, WhyResult } from '../types.js';
 
+export interface WhyTarget {
+  label: string;
+  id?: string;
+}
+
 export async function answerWhy(question: string, options: ContextbookRuntimeOptions = {}): Promise<WhyResult> {
   const trimmedQuestion = question.trim();
   if (!trimmedQuestion) throw new Error('Usage: contextbook why "<question>"');
@@ -17,6 +22,29 @@ export async function answerWhy(question: string, options: ContextbookRuntimeOpt
   const concepts = await readConcepts(root);
   const concept = findConceptForQuestion(trimmedQuestion, concepts);
   const fallback = concept ? undefined : inferGeneralConcept(trimmedQuestion);
+  return answerResolvedWhy(trimmedQuestion, concept, fallback, learner);
+}
+
+export async function answerWhyTarget(target: WhyTarget, options: ContextbookRuntimeOptions = {}): Promise<WhyResult> {
+  const trimmedQuestion = target.label.trim();
+  if (!trimmedQuestion) throw new Error('Usage: contextbook why --from-report <index> [--day|--week|--since <date> --until <date>]');
+
+  const root = options.root ?? process.cwd();
+  const learner = options.learner ?? 'default';
+  await ensureLearnerStore(learner);
+  const concepts = await readConcepts(root);
+  const concept = (target.id ? concepts.find((item) => item.id === target.id) : undefined)
+    ?? findConceptForQuestion(trimmedQuestion, concepts);
+  const fallback = concept ? undefined : inferGeneralConcept(trimmedQuestion);
+  return answerResolvedWhy(trimmedQuestion, concept, fallback, learner);
+}
+
+async function answerResolvedWhy(
+  trimmedQuestion: string,
+  concept: Awaited<ReturnType<typeof readConcepts>>[number] | undefined,
+  fallback: ReturnType<typeof inferGeneralConcept> | undefined,
+  learner: string
+): Promise<WhyResult> {
   const label = concept?.label ?? fallback?.label ?? trimmedQuestion;
   const evidenceLevel = concept?.evidenceLevel ?? 'general';
   const preferences = await readPreferences(learner);

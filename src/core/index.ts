@@ -10,9 +10,9 @@ export { formatMemoryValidateSummary, validateMemory } from './memory-validate.j
 export { buildDoctor, formatDoctorMarkdown } from './doctor.js';
 export { buildProjectSummary, toProjectSummaryJson } from './project.js';
 export { rankLearningMoments } from './ranking.js';
-export { buildReport, parseReportArgs, reportUsage, resolveReportPeriod, saveReportArtifact } from './report.js';
+export { buildReport, parseReportArgs, reportActionTargetCount, reportUsage, resolveReportPeriod, saveReportArtifact, selectReportActionTarget } from './report.js';
 export { scanProject } from './scan.js';
-export { answerWhy } from './why.js';
+export { answerWhy, answerWhyTarget } from './why.js';
 export { addExplicitMemorySignal, conversationMemoryMarkdown, memorySignalsJson } from '../learner/conversation-memory.js';
 export { applyPreferenceSignals, formatApplyPreferenceSignalsSummary, planPreferenceSignals } from '../learner/preference-signals-apply.js';
 export { formatPreferenceHistorySummary, formatUndoPreferenceUpdateSummary, preferenceHistoryJson, undoPreferenceUpdate } from '../learner/preference-history.js';
