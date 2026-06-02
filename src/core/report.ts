@@ -2,6 +2,7 @@ import { basename, join, relative } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { formatReport } from '../format/report.js';
 import { rankEvidenceForDisplay } from '../format/evidence.js';
+import { conceptRules } from '../concepts/rules.js';
 import { gitWorkingTreeState } from '../scan/git-diff.js';
 import { ensureDir, readJsonl } from '../storage/fs-utils.js';
 import { learnerPaths, readWeakTerms } from '../storage/user-store.js';
@@ -312,6 +313,20 @@ function addManualBucket(buckets: Map<string, ConceptBucket>, key: string, id: s
 function toReportConcept(bucket: ConceptBucket, conceptMap: Map<string, ConceptRecord>, conceptLabelMap: Map<string, ConceptRecord>): ReportConceptSummary {
   const concept = bucket.id ? conceptMap.get(bucket.id) : conceptLabelMap.get(normalizeConceptLabel(bucket.label));
   if (concept) return conceptToReportConcept(concept, bucket, [...bucket.reasons]);
+  const metadata = conceptRuleForLabel(bucket.label);
+  if (metadata) {
+    return {
+      id: metadata.id,
+      label: metadata.label,
+      count: bucket.episodeCount,
+      rawCount: bucket.rawCount,
+      episodeCount: bucket.episodeCount,
+      score: bucket.score,
+      evidenceLevel: metadata.evidenceLevel,
+      files: [],
+      reasons: [...bucket.reasons].sort()
+    };
+  }
   return {
     id: bucket.id,
     label: bucket.label,
@@ -322,6 +337,11 @@ function toReportConcept(bucket: ConceptBucket, conceptMap: Map<string, ConceptR
     files: [],
     reasons: [...bucket.reasons].sort()
   };
+}
+
+function conceptRuleForLabel(label: string) {
+  const normalized = normalizeConceptLabel(label);
+  return conceptRules.find((rule) => normalizeConceptLabel(rule.label) === normalized || rule.aliases.some((alias) => normalizeConceptLabel(alias) === normalized));
 }
 
 function codeBackedConcepts(concepts: ConceptRecord[], buckets: Map<string, ConceptBucket>): ConceptRecord[] {
@@ -507,7 +527,8 @@ function reportActionTargets(report: Pick<ReportJson, 'reviewCandidates' | 'code
 }
 
 function isActionableReportConcept(concept: ReportConceptSummary): boolean {
-  if (concept.id || concept.files.length > 0) return true;
+  if (concept.files.length > 0) return true;
+  if (concept.id && concept.evidenceLevel !== 'general') return true;
   return !concept.reasons.every((reason) => reason === 'weak-term');
 }
 

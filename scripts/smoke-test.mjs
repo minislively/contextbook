@@ -1180,6 +1180,7 @@ try {
     ...JSON.parse(reportWeakTermsBefore),
     'in-range weak report term': { state: 'learning', askedCount: 2, updatedAt: '2026-01-04T00:00:00.000Z' },
     'sse / async event handling': { state: 'learning', askedCount: 2, updatedAt: '2026-01-04T00:00:00.000Z' },
+    'debounce / event rate control': { state: 'learning', askedCount: 2, updatedAt: '2026-01-04T00:00:00.000Z' },
     '--help': { state: 'learning', askedCount: 2, updatedAt: '2026-01-04T00:00:00.000Z' },
     'cli bin 실행 권한 왜 중요해?': { state: 'learning', askedCount: 2, updatedAt: '2026-01-04T00:00:00.000Z' },
     'out-of-range weak report term': { state: 'learning', askedCount: 2, updatedAt: '2025-12-20T00:00:00.000Z' }
@@ -1216,6 +1217,7 @@ try {
   assert(reportJson.reviewCandidates.some((item) => item.label === 'CLI executable packaging' && item.reasons.includes('feedback.confused')), 'report missing signal-backed review candidate');
   assert(reportJson.reviewCandidates.some((item) => item.label === 'in-range weak report term' && item.reasons.includes('weak-term')), 'report missing in-period weak term review candidate');
   assert(reportJson.reviewCandidates.some((item) => item.id === 'sse' && item.label === 'SSE / async event handling' && item.reasons.includes('weak-term')), 'report should canonicalize weak terms that match project concepts');
+  assert(reportJson.reviewCandidates.some((item) => item.id === 'debounce' && item.label === 'Debounce / event rate control' && item.evidenceLevel === 'general'), 'report should canonicalize static concept-rule weak terms without inventing code evidence');
   assert(!reportJson.reviewCandidates.some((item) => item.label === '--help' || item.label === 'cli bin 실행 권한 왜 중요해?'), 'report should filter command/question-shaped weak-term noise from review candidates');
   assert(!JSON.stringify(reportJson).includes('out-of-range weak report term') && !JSON.stringify(reportJson).includes('Out Of Range Report Concept'), 'report included out-of-period learner signal');
   assert(!JSON.stringify(reportJson).includes('Answers Only Report Concept'), 'report included answers.jsonl-only concept');
