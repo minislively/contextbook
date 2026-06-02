@@ -311,7 +311,7 @@ The report includes:
 
 Freshness note: `workingTreeChanged` in `--json` means the current Git-state fingerprint differs from the latest scan fingerprint. If `changedFilesSinceScan` is `0`, the Markdown explains that the scan came from a different Git state but there are no additional current uncommitted changed files. Use `contextbook scan` to refresh Project Memory when you want the report to match the current tree exactly.
 
-`--json` is the audit/detail surface. It preserves fields such as `period`, `freshness.workingTreeChanged`, `freshness.changedFilesSinceScan`, `freshness.staleHints`, and `safety`, while default Markdown avoids raw internal codes like `working-tree-changed`.
+`--json` is the audit/detail surface. It preserves fields such as `period`, `freshness.workingTreeChanged`, `freshness.changedFilesSinceScan`, `freshness.staleHints`, and `safety`, while default Markdown avoids raw internal codes like `working-tree-changed`. Report concept `count` is the human-facing episode/display count after report-time dedupe; `rawCount` keeps the original append-only signal count, `episodeCount` mirrors `count`, and `score` explains weighted ranking.
 
 It intentionally ignores `answers.jsonl` in the MVP aggregation path so the same `why`/answer interaction is not double-counted when both answer memory and signal memory exist. The default report remains read-only and does not create `.contextbook/reports`. `contextbook report --save` writes the rendered Markdown to `.contextbook/reports/<timestamp>-<period>.md`; `contextbook report --json --save` writes JSON to `.contextbook/reports/<timestamp>-<period>.json` and returns a `savedReport` object with the repo-relative path.
 

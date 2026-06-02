@@ -829,7 +829,14 @@ export interface ReportPeriod {
 export interface ReportConceptSummary {
   id?: string;
   label: string;
+  /** Human-facing display count after report-time episode collapsing. */
   count: number;
+  /** Raw append-only signal records before report-time collapsing. */
+  rawCount: number;
+  /** Collapsed report-time learning episodes; equal to count. */
+  episodeCount: number;
+  /** Weighted report ranking score. */
+  score: number;
   evidenceLevel?: EvidenceLevel;
   files: string[];
   reasons: string[];
