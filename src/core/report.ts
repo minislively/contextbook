@@ -65,7 +65,7 @@ export async function buildReport(options: ReportBuildOptions = {}): Promise<Rep
     .slice(0, 5)
     .map((bucket) => toReportConcept(bucket, conceptMap));
 
-  const reviewCandidates = reviewBuckets(signals, weakTerms, period)
+  const reviewCandidates = reviewBuckets(signals, weakTerms, period, concepts)
     .sort(compareBuckets)
     .slice(0, 5)
     .map((bucket) => toReportConcept(bucket, conceptMap));
@@ -250,8 +250,9 @@ function aggregateSignals(signals: Record<string, unknown>[], period: ReportPeri
   return buckets;
 }
 
-function reviewBuckets(signals: Record<string, unknown>[], weakTerms: Record<string, { updatedAt: string }>, period: ReportPeriod): ConceptBucket[] {
+function reviewBuckets(signals: Record<string, unknown>[], weakTerms: Record<string, { updatedAt: string }>, period: ReportPeriod, concepts: ConceptRecord[]): ConceptBucket[] {
   const buckets = new Map<string, ConceptBucket>();
+  const conceptsByLabel = new Map(concepts.map((concept) => [normalizeConceptLabel(concept.label), concept]));
   for (const signal of signals) {
     const event = toEvent(signal);
     if (!event || !inPeriod(event.recordedAt, period)) continue;
@@ -262,9 +263,19 @@ function reviewBuckets(signals: Record<string, unknown>[], weakTerms: Record<str
   }
   for (const [term, record] of Object.entries(weakTerms)) {
     if (!inPeriod(record.updatedAt, period)) continue;
-    addManualBucket(buckets, normalizeConceptLabel(term), undefined, term, 'weak-term', 5);
+    if (!isReportableWeakTerm(term)) continue;
+    const concept = conceptsByLabel.get(normalizeConceptLabel(term));
+    addManualBucket(buckets, concept?.id ?? normalizeConceptLabel(term), concept?.id, concept?.label ?? term, 'weak-term', 5);
   }
   return [...buckets.values()];
+}
+
+function isReportableWeakTerm(term: string): boolean {
+  const trimmed = term.trim();
+  if (!trimmed) return false;
+  if (/^-{1,2}[A-Za-z0-9][\w-]*(?:\s|$)/.test(trimmed)) return false;
+  if (/[?？]$/.test(trimmed)) return false;
+  return true;
 }
 
 function addSignalEvent(buckets: Map<string, ConceptBucket>, event: ConversationMemoryEvent, label: string): void {
