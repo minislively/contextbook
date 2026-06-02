@@ -1147,7 +1147,7 @@ try {
 
   const weeklyReport = run(['report']);
   assert(weeklyReport.includes('# Weekly Contextbook Report') && weeklyReport.includes('## 코드 근거가 있는 Learning Moments'), 'weekly report markdown missing expected sections');
-  assert(weeklyReport.indexOf('이번 주에는') < weeklyReport.indexOf('## 바로 할 일'), 'weekly report should lead with period-specific human summary before actions');
+  assert(/기간: \d{4}-\d{2}-\d{2} ~ \d{4}-\d{2}-\d{2} \(UTC\)/.test(weeklyReport) && weeklyReport.indexOf('기간:') < weeklyReport.indexOf('이번 주에는') && weeklyReport.indexOf('이번 주에는') < weeklyReport.indexOf('## 바로 할 일'), 'weekly report should lead with period range and period-specific human summary before actions');
   for (const section of ['## 바로 할 일', '## 이번 주 핵심 개념', '## 다시 보면 좋은 개념', '## 회상/면접 질문', '## 참고 상태']) {
     assert(weeklyReport.includes(section), `weekly report missing human-readable section ${section}`);
   }
@@ -1157,7 +1157,7 @@ try {
   assert(weeklyReport.includes('복습 후보') && weeklyReport.includes('원문 프롬프트나 대화 전문은 포함하지 않습니다') && weeklyReport.includes('contextbook report --json'), 'weekly report missing humanized review/safety/audit guidance');
   const dailyReport = run(['report', '--day']);
   assert(dailyReport.includes('# Daily Contextbook Report'), 'daily report markdown missing daily title');
-  assert(dailyReport.includes('오늘은') && dailyReport.includes('## 오늘 핵심 개념') && !dailyReport.includes('## 이번 주 핵심 개념'), 'daily report should use daily period labels');
+  assert(/기간: \d{4}-\d{2}-\d{2} \(UTC\)/.test(dailyReport) && dailyReport.includes('오늘은') && dailyReport.includes('## 오늘 핵심 개념') && !dailyReport.includes('## 이번 주 핵심 개념'), 'daily report should use daily period labels and date range');
   const reportJson = JSON.parse(run(['report', '--since', '2026-01-01', '--until', '2026-01-07', '--json']));
   assert(reportJson.schemaVersion === 1 && reportJson.period.mode === 'custom' && reportJson.period.start === '2026-01-01T00:00:00.000Z' && reportJson.period.end === '2026-01-08T00:00:00.000Z', 'report json custom period contract invalid');
   assert(reportJson.period.timezone === 'UTC', 'report json period must be UTC');
@@ -1182,7 +1182,7 @@ try {
   assert(runExpectFail(['report', '--day', '--week']).includes('Usage: contextbook report'), 'report incompatible flags should show usage');
   assert(runExpectFail(['report', '--since', '2026-01-01']).includes('Usage: contextbook report'), 'report missing custom bound should show usage');
   const coreReport = await core.buildReport({ root, learner: 'default', args: ['--since', '2026-01-01', '--until', '2026-01-07'], now: new Date('2026-01-07T12:00:00.000Z') });
-  assert(coreReport.schemaVersion === 1 && coreReport.markdown.includes('# Contextbook Report') && coreReport.markdown.includes('선택한 기간에는') && coreReport.markdown.includes('## 선택한 기간 핵심 개념'), 'core report contract invalid');
+  assert(coreReport.schemaVersion === 1 && coreReport.markdown.includes('# Contextbook Report') && coreReport.markdown.includes('기간: 2026-01-01 ~ 2026-01-07 (UTC)') && coreReport.markdown.includes('선택한 기간에는') && coreReport.markdown.includes('## 선택한 기간 핵심 개념'), 'core report contract invalid');
   const lastScanRunPath = join(root, '.contextbook', 'project', 'scan-runs.jsonl');
   const originalScanRunsForCleanTree = (await readFile(lastScanRunPath, 'utf8')).trimEnd().split('\n');
   const scanRunsForCleanTree = [...originalScanRunsForCleanTree];
