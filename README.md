@@ -4,11 +4,19 @@
 
 Contextbook turns your codebase and learning conversations into a personalized knowledge book. It helps you turn real project work into CS/development concepts you can understand, remember, and explain.
 
-## What is Contextbook?
+## Why Contextbook?
 
-Contextbook is not a generic code explainer.
+Developers do not learn concepts in a vacuum. They meet them while touching real code: an `EventSource`, a `useEffect` cleanup, a Zustand store, a graph-shaped `nodes`/`edges` model, or a cache invalidation bug.
 
-Most tools answer:
+Contextbook exists because those learning moments usually disappear into git diffs, chat sessions, and generic study notes. It turns local project evidence and learning conversations into a small learning loop:
+
+```txt
+scan the code -> find learning moments -> ask why -> review what keeps coming back
+```
+
+This is why Contextbook is not another generic code explainer.
+
+Most code explainers answer:
 
 > What does this function do?
 
@@ -20,11 +28,61 @@ Contextbook answers:
 
 It is built for developers who have used things like `useEffect` cleanup, SSE, WebSocket, Zustand, Context API, graph/DAG structures, cache invalidation, or resource lifecycle in real projects but want clearer words for them.
 
-## The core idea: three kinds of memory
+## Quickstart
 
-Contextbook separates project facts from personal learning signals.
+```bash
+npm install -g contextbook
+contextbook setup
 
-### 1. Project Memory
+cd your-project
+contextbook init
+contextbook scan
+contextbook learn
+contextbook why "cleanup 왜 해야 돼?"
+contextbook report
+```
+
+The first useful loop is intentionally short:
+
+1. `scan` finds project evidence.
+2. `learn` suggests 1-3 concepts worth learning from the current repo/diff.
+3. `why` explains a concept with an evidence level and project files.
+4. `report` turns recent learning signals into review prompts.
+
+After `contextbook setup`, coding agents can use the same local CLI:
+
+| Environment | Learning moments | Concept question |
+| --- | --- | --- |
+| Claude Code | `/learn` | `/why "cleanup 왜 해야 돼?"` |
+| Codex/OMX | `$learn` | `$why "cleanup 왜 해야 돼?"` |
+
+In these examples, `cleanup 왜 해야 돼?` is just the question text. Replace it with any concept or question, such as `SSE`, `stale closure`, or `Zustand 상태관리 왜 써?`.
+
+## What Contextbook gives you
+
+- **Learning moments** from the code you just touched.
+- **Project-grounded why answers** with `direct`, `related`, or `general` evidence.
+- **Personal learning memory** for preferences, weak terms, and review history.
+- **Conversation memory** as structured learning events, not raw chat transcripts by default.
+- **Agent-friendly context** so Codex, OMX, Claude Code, or another assistant can read the same memory safely.
+
+## The memory model
+
+Contextbook separates project facts from personal learning signals. That boundary is the product: project evidence should be shareable with the repo, while learner memory should stay personal.
+
+| Memory | Stored where | Stores | Does not store |
+| --- | --- | --- | --- |
+| Project Memory | `.contextbook/` | project evidence, concepts, file index, scan runs | personal learner data |
+| Learner Memory | `~/.contextbook/learners/default/` | preferences, weak terms, answer history, profile update history | project code |
+| Conversation Memory | `signals.jsonl` under learner memory | structured learning events such as `scan.completed`, `learn.generated`, `why.answered` | raw chat transcripts by default |
+
+The practical rule is simple:
+
+- **Project Memory** answers “what does this repo show?”
+- **Learner Memory** answers “how does this person prefer to learn?”
+- **Conversation Memory** answers “what learning interactions keep repeating?”
+
+### Project Memory
 
 Project Memory lives inside the repository:
 
@@ -50,7 +108,7 @@ It stores what Contextbook found in this project:
 - file/function/hook names
 - concept evidence such as `EventSource`, `useEffect` cleanup, `zustand`, `nodes` + `edges`
 
-### 2. Learner Memory
+### Learner Memory
 
 Learner Memory lives outside the repository:
 
@@ -76,11 +134,21 @@ It stores how you learn:
 
 This is intentionally outside the repo so personal learning data is not committed with project code.
 
-### 3. Conversation Memory
+### Conversation Memory
 
 Conversation Memory is the append-only event layer under learner memory. It records structured learning interactions such as `scan.completed`, `learn.generated`, `why.answered`, and profile commands.
 
 This is not a raw chat transcript. v0.1 stores only small, inspectable events: command, concept/question when relevant, evidence level, evidence files, and safe metadata. It does not silently judge the user, infer personality traits, or auto-update the learner profile.
+
+## Evidence-aware learning
+
+Memory products can sound magical, so Contextbook keeps the evidence visible.
+
+- `direct` — direct evidence was found in this project.
+- `related` — related structure was found, but not the exact concept.
+- `general` — no project evidence was found; the answer is general guidance.
+
+Learner preferences can change the shape of an answer, but they do not change the evidence level. If Contextbook cannot find project evidence, it should say so instead of pretending.
 
 ## Step-by-step workflow
 
