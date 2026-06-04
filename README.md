@@ -38,7 +38,7 @@ cd your-project
 contextbook init
 contextbook scan
 contextbook learn
-contextbook why "cleanup 왜 해야 돼?"
+contextbook why "why does cleanup matter?"
 contextbook report
 ```
 
@@ -53,10 +53,10 @@ After `contextbook setup`, coding agents can use the same local CLI:
 
 | Environment | Learning moments | Concept question |
 | --- | --- | --- |
-| Claude Code | `/learn` | `/why "cleanup 왜 해야 돼?"` |
-| Codex/OMX | `$learn` | `$why "cleanup 왜 해야 돼?"` |
+| Claude Code | `/learn` | `/why "why does cleanup matter?"` |
+| Codex/OMX | `$learn` | `$why "why does cleanup matter?"` |
 
-In these examples, `cleanup 왜 해야 돼?` is just the question text. Replace it with any concept or question, such as `SSE`, `stale closure`, or `Zustand 상태관리 왜 써?`.
+In these examples, `why does cleanup matter?` is just the question text. Replace it with any concept or question, such as `SSE`, `stale closure`, or `why use Zustand for state management?`.
 
 ## What Contextbook gives you
 
@@ -184,10 +184,10 @@ Agent command shortcuts after setup:
 
 | Environment | Learning moments | Concept question | General runbook |
 | --- | --- | --- | --- |
-| Claude Code | `/learn` | `/why "cleanup 왜 해야 돼?"` | Contextbook skill |
-| Codex/OMX | `$learn` | `$why "cleanup 왜 해야 돼?"` | `$contextbook` |
+| Claude Code | `/learn` | `/why "why does cleanup matter?"` | Contextbook skill |
+| Codex/OMX | `$learn` | `$why "why does cleanup matter?"` | `$contextbook` |
 
-In these examples, `cleanup 왜 해야 돼?` is just the question text. It is not a cleanup command. Replace it with any concept or question, such as `SSE`, `stale closure`, or `Zustand 상태관리 왜 써?`.
+In these examples, `why does cleanup matter?` is just the question text. It is not a cleanup command. Replace it with any concept or question, such as `SSE`, `stale closure`, or `why use Zustand for state management?`.
 
 Short aliases (`learn`, `why`) are conservative: if Contextbook finds an unrelated existing user command/skill with that name, setup skips that short alias instead of overwriting it. Resolve the collision and rerun setup/install, or use the general Contextbook skill/runbook where available. During upgrades, setup removes only exact historical Contextbook-generated `contextbook-learn` / `contextbook-why` aliases; user-modified files are preserved.
 
@@ -200,7 +200,7 @@ contextbook setup --auto
 contextbook hooks status
 contextbook hooks status --json
 contextbook doctor --json
-contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json
+contextbook hooks smoke --prompt "why does cleanup matter?" --json
 ```
 
 This creates hook scripts and guide snippets, but it does not silently edit your existing Codex/Claude hook settings. The setup hook helper runs `contextbook memory hook-suggest --mode auto-safe` and may apply only policy-approved low-risk style preferences through the reversible `apply-preference-signals --mode auto-safe` path. It never auto-applies profile updates, weak-term updates, learner judgments, restore/repair/recover actions, or raw prompt storage:
@@ -226,7 +226,7 @@ Each platform also reports stable issue codes such as `HOOK_HELPER_MISSING`, `HO
 
 Claude Code officially supports `UserPromptSubmit` additional context via hook stdout/JSON. Codex hook context behavior can vary by installed Codex runtime, so treat Codex hook context as best-effort and verify it with `/hooks` or a live local prompt before relying on it.
 
-Use `contextbook doctor --json` to inspect Project Memory, Learner Memory, hook setup, and whether project memory may be stale in one read-only report. Use `contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json` after `contextbook setup` to inspect generated helper output locally. A healthy smoke result reports `status: "live-smoke-ok"`, `outputShapeValid: true`, `helperCurrent: true`, and `rawPromptDetected: false` without mutating learner/project memory.
+Use `contextbook doctor --json` to inspect Project Memory, Learner Memory, hook setup, and whether project memory may be stale in one read-only report. Use `contextbook hooks smoke --prompt "why does cleanup matter?" --json` after `contextbook setup` to inspect generated helper output locally. A healthy smoke result reports `status: "live-smoke-ok"`, `outputShapeValid: true`, `helperCurrent: true`, and `rawPromptDetected: false` without mutating learner/project memory.
 
 ### Release smoke test
 
@@ -334,45 +334,45 @@ contextbook why --from-report 1
 
 `contextbook report` is a read-only daily/weekly learning log by default. It summarizes the selected UTC period from Conversation Memory `signals.jsonl` only, then combines that with current Project Memory for code-backed learning moments and interview questions.
 
-The default Markdown is optimized for a person reviewing their learning history. Weekly, daily, and custom-period reports use period-aware Korean copy such as `이번 주에는`, `오늘은`, and `선택한 기간에는`, while `--json` keeps the stable audit contract for agents and debugging. Add `--save` only when you want an explicit local artifact under `.contextbook/reports`.
+The default Markdown is optimized for a person reviewing their learning history. Weekly, daily, and custom-period reports use period-aware copy such as `this week`, `today`, and `the selected period`, while `--json` keeps the stable audit contract for agents and debugging. Add `--save` only when you want an explicit local artifact under `.contextbook/reports`.
 
 A typical Markdown report includes:
 
 ```md
 # Weekly Contextbook Report
 
-기간: 2026-05-26 ~ 2026-06-02 (UTC)
+Period: 2026-05-26 ~ 2026-06-02 (UTC)
 
-이번 주에는 useEffect cleanup / lifecycle, SSE / async event handling, CLI executable packaging이 핵심 학습 흐름이었습니다.
+This week, the main learning flow was useEffect cleanup / lifecycle, SSE / async event handling, and CLI executable packaging.
 
-## 바로 할 일
-- `contextbook why --from-report 1` — 복습 후보를 프로젝트 근거와 면접 문장으로 다시 확인합니다.
-- `contextbook learn` — 최근 코드에서 다음 learning moment를 다시 추천받습니다.
+## Next actions
+- `contextbook why --from-report 1` — Review the top candidate with project evidence and an interview-ready sentence.
+- `contextbook learn` — Ask for the next learning moments from recent code.
 
-## 이번 주 핵심 개념
+## Top concepts this week
 1. useEffect cleanup / lifecycle
-   - 왜 볼 만함: 이번 주에 가장 자주 반복된 주제입니다.
-   - 코드 근거: scripts/smoke-test.mjs
+   - Why it is worth reviewing: this was the most repeated topic this week.
+   - Code evidence: scripts/smoke-test.mjs
 
-## 다시 보면 좋은 개념
-- CLI executable packaging — 복습 후보: 최근 다시 물어본 개념, 코드 근거 있음
+## Concepts worth revisiting
+- CLI executable packaging — Review candidate: recently asked again, with code evidence.
 
-## 코드 근거가 있는 Learning Moments
+## Code-backed Learning Moments
 - CLI executable packaging — src/cli.ts, package.json
 
-## 회상/면접 질문
-1. npm CLI 패키지에서 bin entrypoint와 실행 권한을 함께 확인해야 하는 이유는 무엇인가요?
+## Recall / interview questions
+1. Why should an npm CLI package verify both its bin entrypoint and executable permissions?
 
-## 참고 상태
-- 최근 스캔은 현재 Git 상태와 다른 시점에 만들어졌습니다. 현재 미커밋 변경 파일은 없지만, 정확도를 위해 필요하면 `contextbook scan`을 다시 실행하세요.
-- 기본 보고서는 읽기 전용이며 `.contextbook/reports`에 파일을 만들지 않습니다. 저장하려면 `contextbook report --save`를 사용하세요.
-- 자세한 감사 정보와 원본 코드 값은 `contextbook report --json`에서 확인할 수 있습니다.
+## Notes
+- The latest scan was generated from a different Git state. There are no current uncommitted changed files, but run `contextbook scan` again if you want the report to match the current tree exactly.
+- The default report is read-only and does not write files under `.contextbook/reports`. Use `contextbook report --save` when you want a local artifact.
+- Use `contextbook report --json` for audit details and raw structured values.
 ```
 
 The report includes:
 
 - frequently repeated concepts for the selected period
-- “다시 보면 좋은 개념” review candidates from explicit confusion/repeated-term/analogy-rejected signals and weak terms updated inside the period
+- “concepts worth revisiting” review candidates from explicit confusion/repeated-term/analogy-rejected signals and weak terms updated inside the period
 - code-backed Learning Moments with repo-relative evidence files
 - recall/interview questions derived from code-backed concepts
 - human-readable scan freshness guidance and stale hints
@@ -390,8 +390,8 @@ It intentionally ignores `answers.jsonl` in the MVP aggregation path so the same
 
 ```bash
 contextbook memory add-signal --type feedback.confused --concept "event loop" --note "too abstract"
-contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual
-contextbook memory hook-suggest --prompt "cleanup 왜 해야 돼?" --source codex --json
+contextbook memory capture-prompt --prompt "this is too abstract" --source manual
+contextbook memory hook-suggest --prompt "why does cleanup matter?" --source codex --json
 contextbook memory signals
 contextbook memory suggest-weak-terms
 contextbook memory suggest-profile-updates
@@ -408,15 +408,15 @@ contextbook memory backup --yes
 contextbook memory restore --backup-id <id> --dry-run
 contextbook memory restore --backup-id <id> --yes
 # or, for agents:
-contextbook memory capture-prompt --prompt "내 프로젝트에 빗대서 설명해줘" --source codex --json
-contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual --json
+contextbook memory capture-prompt --prompt "explain it using my project context" --source codex --json
+contextbook memory capture-prompt --prompt "this is too abstract" --source manual --json
 contextbook memory signals --json
 contextbook memory suggest-weak-terms --json
 contextbook memory suggest-profile-updates --json
 contextbook memory apply-profile-update --candidate <id|index> --dry-run
 contextbook memory apply-profile-update --candidate <id|index> --dry-run --json
-contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --mode auto-safe --dry-run
-contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --mode auto-safe --dry-run --json
+contextbook memory apply-preference-signals --prompt "Going forward, explain things simply using my project context." --mode auto-safe --dry-run
+contextbook memory apply-preference-signals --prompt "Going forward, explain things simply using my project context." --mode auto-safe --dry-run --json
 contextbook memory preference-history --json
 contextbook memory undo-preference-update --entry 1 --dry-run --json
 contextbook memory context --json
@@ -483,22 +483,22 @@ Example:
 
 ## 1. useEffect cleanup / lifecycle
 
-근거 수준: direct
-근거 파일: src/hooks/useWorkflowSSE.ts
+Evidence level: direct
+Evidence files: src/hooks/useWorkflowSSE.ts
 
-추천 이유:
-- 변경 파일 근거: 최근 변경된 파일에서 이 개념 신호가 발견됐습니다.
-- 직접 근거: 프로젝트에서 직접적인 코드 신호를 찾았습니다.
+Why this is worth learning:
+- Changed-file evidence: this concept signal appears in a recently changed file.
+- Direct evidence: Contextbook found a direct code signal in this project.
 
-이 프로젝트에서는 EventSource 연결을 만들고 있기 때문에 cleanup이 중요합니다.
+In this project, cleanup matters because the code creates an EventSource connection.
 
-연결되는 개념:
+Related concepts:
 - useEffect cleanup
 - resource lifecycle
 - memory leak
 
-면접 질문:
-React에서 SSE 연결을 사용할 때 cleanup이 필요한 이유는 무엇인가요?
+Interview question:
+Why does a React component that uses an SSE connection need cleanup?
 ```
 
 The recommendation reasons are computed locally at learn time. Contextbook does not create a separate ranking history file or call an external ranking API.
@@ -506,36 +506,36 @@ The recommendation reasons are computed locally at learn time. Contextbook does 
 ### Step 8. Ask why a concept matters
 
 ```bash
-contextbook why "cleanup 왜 해야 돼?"
+contextbook why "why does cleanup matter?"
 ```
 
 `why` chooses the visible answer shape from the question while keeping stable evidence markers.
 A casual question reads like a short explanation:
 
 ```md
-근거: direct · src/hooks/useWorkflowSSE.ts
+Evidence: direct · src/hooks/useWorkflowSSE.ts
 
-이 프로젝트에서는 `useEffect + return cleanup` 신호가 보여서 `useEffect cleanup / lifecycle`을 코드 맥락으로 설명할 수 있습니다.
+This project shows a `useEffect + return cleanup` signal, so `useEffect cleanup / lifecycle` can be explained from the code context.
 
-핵심은 “열어둔 연결, 타이머, 구독은 다 쓰고 나면 닫아야 합니다”는 점입니다.
+The core idea is: connections, timers, and subscriptions should be closed when they are no longer needed.
 
-개발자 말로는 `useEffect cleanup`과 component lifecycle입니다.
+In developer terms, this is `useEffect cleanup` and component lifecycle.
 
-CS로 넓히면 resource lifecycle 관점입니다.
+In CS terms, it is a resource lifecycle problem.
 
-면접에서는 이렇게 말하면 됩니다:
-컴포넌트 생명주기와 별개로 유지되는 연결이나 구독은 unmount 시 정리하지 않으면 메모리 누수나 stale update가 발생할 수 있어 cleanup에서 해제합니다.
+Interview-ready sentence:
+Connections or subscriptions can outlive the component that created them, so cleanup on unmount prevents memory leaks and stale updates.
 
-근거 파일:
+Evidence files:
 - src/hooks/useWorkflowSSE.ts
 ```
 
 If you ask for a shape, Contextbook switches without adding more commands:
 
 ```bash
-contextbook why "cleanup 쉽게 설명해줘"      # plain-first
-contextbook why "cleanup 정리해줘"          # structured sections
-contextbook why "cleanup 면접 답변으로"     # interview answer first
+contextbook why "explain cleanup simply"      # plain-first
+contextbook why "summarize cleanup"          # structured sections
+contextbook why "explain cleanup as an interview answer"     # interview answer first
 ```
 
 This is the key Contextbook output: project-grounded explanation → plain language → developer term → CS concept → interview sentence, without forcing a rigid section dump. Recent low-risk learning signals can tighten the length or shift the opening order, but evidence markers stay stable. If evidence is `general`, Contextbook leads with that uncertainty before giving general guidance.
@@ -594,13 +594,13 @@ Advanced/debug commands:
 ```bash
 contextbook project --json
 contextbook learner --json
-contextbook memory capture-prompt --prompt "내 프로젝트에 빗대서 설명해줘" --source codex --json
-contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual --json
+contextbook memory capture-prompt --prompt "explain it using my project context" --source codex --json
+contextbook memory capture-prompt --prompt "this is too abstract" --source manual --json
 contextbook memory signals --json
 contextbook memory suggest-weak-terms --json
 contextbook memory suggest-profile-updates --json
 contextbook memory apply-profile-update --candidate <id|index> --dry-run
-contextbook memory apply-preference-signals --prompt "앞으로 한국어로, 내 프로젝트 기준으로 쉽게 설명해줘." --mode auto-safe --dry-run
+contextbook memory apply-preference-signals --prompt "Going forward, explain things simply using my project context." --mode auto-safe --dry-run
 ```
 
 The helper files only teach the agent how to use Contextbook and bridge hook context. They do not call external APIs, launch agent sessions, edit hook config automatically, or require API keys.
@@ -642,7 +642,7 @@ contextbook setup --dry-run        # preview setup writes
 contextbook setup --auto           # non-interactive/bootstrap setup with safe defaults
 npm run release:smoke              # package/install smoke test before npm publish
 contextbook hooks status           # read-only hook helper/config diagnostic with health states
-contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json  # verify helper output shape/read-only safety
+contextbook hooks smoke --prompt "why does cleanup matter?" --json  # verify helper output shape/read-only safety
 contextbook doctor                 # read-only project/learner/hooks setup report
 contextbook doctor --json          # inspect setup as structured agent context
 contextbook init                   # initialize .contextbook and learner memory
@@ -653,7 +653,7 @@ contextbook learner                # inspect learner memory
 contextbook learner --json         # inspect learner memory as structured agent context
 contextbook why --from-report 1    # answer the top report review target safely
 contextbook memory add-signal --type feedback.confused --concept "event loop" --note "too abstract"
-contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source manual
+contextbook memory capture-prompt --prompt "this is too abstract" --source manual
 contextbook memory capture-prompt --prompt <text> --source manual --json
 contextbook memory signals                     # inspect recent learner/conversation signals
 contextbook memory signals --json              # inspect recent signals as structured agent context
@@ -730,7 +730,7 @@ const profileCandidates = await profileUpdateCandidatesJson('default');
 // await applyProfileUpdateCandidate({ candidateRef: profileCandidates.candidates[0].id, dryRun: true });
 const memoryContext = await buildMemoryContext({ root: process.cwd(), learner: 'default' });
 const learn = await buildLearningMoments({ root: process.cwd() });
-const why = await answerWhy('cleanup 왜 해야 돼?', { root: process.cwd() });
+const why = await answerWhy('why does cleanup matter?', { root: process.cwd() });
 
 console.log(project.markdown);
 console.log(projectJson.topConcepts);

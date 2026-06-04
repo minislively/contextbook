@@ -26,7 +26,7 @@ export function buildStatusHealth(input: {
 
   if (input.helperSmoke === 'failed') {
     issues.push({ code: 'HOOK_SMOKE_FAILED', severity: 'error', message: input.message ?? 'The installed helper failed its local smoke test.' });
-    nextActions.push({ code: 'HOOK_SMOKE_FAILED', command: 'contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json', reason: 'Inspect local helper output and stderr.' });
+    nextActions.push({ code: 'HOOK_SMOKE_FAILED', command: 'contextbook hooks smoke --prompt "why does cleanup matter?" --json', reason: 'Inspect local helper output and stderr.' });
   }
 
   if (input.helperExists && input.helperCurrent && !enabled) {
@@ -36,7 +36,7 @@ export function buildStatusHealth(input: {
 
   if (enabled && input.helperCurrent && input.helperSmoke === 'ok') {
     issues.push({ code: 'HOOK_TRUST_REVIEW_NEEDED', severity: 'info', message: 'Config is detected and helper smoke passes; run a smoke prompt or your agent trust/review flow before dogfooding.' });
-    nextActions.push({ code: 'HOOK_SMOKE_VERIFY', command: 'contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json', reason: 'Verify the helper output shape without mutating memory.' });
+    nextActions.push({ code: 'HOOK_SMOKE_VERIFY', command: 'contextbook hooks smoke --prompt "why does cleanup matter?" --json', reason: 'Verify the helper output shape without mutating memory.' });
   }
 
   if (input.contextbookBinary === 'missing') {
@@ -69,7 +69,7 @@ export function buildSmokeHealth(input: {
   }
   if (input.ran && input.exitCode !== 0) {
     issues.push({ code: 'HOOK_SMOKE_FAILED', severity: 'error', message: input.message ?? `Helper exited with ${input.exitCode ?? 'unknown status'}.` });
-    nextActions.push({ code: 'HOOK_SMOKE_FAILED', command: 'contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json', reason: 'Inspect the smoke result previews.' });
+    nextActions.push({ code: 'HOOK_SMOKE_FAILED', command: 'contextbook hooks smoke --prompt "why does cleanup matter?" --json', reason: 'Inspect the smoke result previews.' });
   }
   if (input.ran && !input.outputShapeValid) {
     issues.push({ code: 'HOOK_OUTPUT_SHAPE_INVALID', severity: 'error', message: 'Helper output did not match the expected additional-context shape.' });

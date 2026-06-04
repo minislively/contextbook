@@ -73,7 +73,7 @@ function deprecatedCodexFiles(homeDir: string, mode: CodexSkillPathMode = 'auto'
     {
       path: join(root, 'contextbook-why', 'SKILL.md'),
       description: 'Deprecated Contextbook namespaced skill alias for why answers',
-      removeIfContentMatches: [legacyCodexWhySkillContent('contextbook-why')]
+      removeIfContentMatches: [legacyCodexWhySkillContent('contextbook-why'), legacyCodexWhySkillContentKoExample('contextbook-why')]
     }
   ]);
 }
@@ -215,7 +215,7 @@ Use this skill when the user asks why a concept, pattern, or code behavior matte
 
 ## Workflow
 
-1. Treat text after the skill name as the question. For example, in \`$why "cleanup 왜 해야 돼?"\`, \`cleanup 왜 해야 돼?\` is the question text, not a cleanup command.
+1. Treat text after the skill name as the question. For example, in \`$why "why does cleanup matter?"\`, \`why does cleanup matter?\` is the question text, not a cleanup command.
 2. Prefer deterministic local evidence over generic explanation.
 3. Run:
    \`\`\`bash
@@ -226,6 +226,31 @@ Use this skill when the user asks why a concept, pattern, or code behavior matte
 `;
 }
 
+
+
+function legacyCodexWhySkillContentKoExample(name: string): string {
+  const oldQuestion = 'cleanup \uC65C \uD574\uC57C \uB3FC?';
+  return `---
+name: ${name}
+description: Answer why a development or CS concept matters in this repository using Contextbook project evidence.
+---
+
+# Contextbook Why
+
+Use this skill when the user asks why a concept, pattern, or code behavior matters in this project.
+
+## Workflow
+
+1. Treat text after the skill name as the question. For example, in \`$why "${oldQuestion}"\`, \`${oldQuestion}\` is the question text, not a cleanup command.
+2. Prefer deterministic local evidence over generic explanation.
+3. Run:
+   \`\`\`bash
+   contextbook why "<question>"
+   \`\`\`
+4. Preserve the evidence level, natural project-grounded explanation, and evidence files; do not force old visible atom headings.
+5. If Contextbook says evidence is \`general\`, do not imply the concept was found directly in the project.
+`;
+}
 
 function codexWhySkillContent(): string {
   return `---
@@ -240,7 +265,7 @@ Use this skill when the user asks why a concept, pattern, or code behavior matte
 
 ## Workflow
 
-1. Treat text after the skill name as the question. For example, in \`$why "cleanup 왜 해야 돼?"\`, \`cleanup 왜 해야 돼?\` is the question text, not a cleanup command.
+1. Treat text after the skill name as the question. For example, in \`$why "why does cleanup matter?"\`, \`why does cleanup matter?\` is the question text, not a cleanup command.
 2. Prefer deterministic local evidence over generic explanation.
 3. Run:
    \`\`\`bash
@@ -313,12 +338,12 @@ Use the local \`contextbook\` CLI to turn this repository's code evidence into p
 - \`contextbook memory suggest-weak-terms --json\` — inspect suggestion-only weak-term review candidates without mutating learner memory.
 - \`contextbook memory suggest-profile-updates --json\` — inspect suggestion-only profile update candidates without editing profile/preferences.
 - \`contextbook memory apply-profile-update --candidate <id|index> --dry-run\` — preview an explicit preferences-only profile candidate before any write.
-- \`contextbook memory apply-preference-signals --prompt "한국어로 쉽게 설명해줘" --source codex --mode auto-safe --dry-run\` — preview allowlisted preference writes from an explicit prompt with reversible auto-safe policy.
+- \`contextbook memory apply-preference-signals --prompt "explain it simply in English" --source codex --mode auto-safe --dry-run\` — preview allowlisted preference writes from an explicit prompt with reversible auto-safe policy.
 - \`contextbook memory add-signal --type feedback.confused --concept "event loop"\` — record explicit feedback only.
-- \`contextbook memory capture-prompt --prompt "뭔소리야 너무 추상적임" --source codex --json\` — deterministically capture explicit prompt feedback without storing the raw prompt.
-- \`contextbook memory hook-suggest --prompt "앞으로 한국어로 짧게 설명해줘" --source codex --json\` — produce hook-safe suggestion context with setup-managed auto-safe preference policy.
+- \`contextbook memory capture-prompt --prompt "this is too abstract" --source codex --json\` — deterministically capture explicit prompt feedback without storing the raw prompt.
+- \`contextbook memory hook-suggest --prompt "Going forward, explain things briefly in English" --source codex --json\` — produce hook-safe suggestion context with setup-managed auto-safe preference policy.
 - \`contextbook learn\` — produce 1-3 learning moments.
-- \`contextbook why "cleanup 왜 해야 돼?"\` — answer with natural project-grounded prose, stable evidence markers, and evidence files.
+- \`contextbook why "why does cleanup matter?"\` — answer with natural project-grounded prose, stable evidence markers, and evidence files.
 - \`contextbook profile\` — inspect the learner profile.
 `;
 }
