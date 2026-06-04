@@ -10,7 +10,7 @@ contextbook setup
 contextbook init
 contextbook scan
 contextbook learn
-contextbook why "cleanup 왜 해야 돼?"
+contextbook why "why does cleanup matter?"
 ```
 
 ## What to read first

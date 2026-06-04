@@ -292,7 +292,7 @@ function nextActions(project: DoctorProjectStatus, learner: DoctorLearnerStatus,
   if (hooks.status === 'missing') actions.push({ command: 'contextbook setup', reason: 'Install Codex and Claude Code helper files, including hook helpers.' });
   for (const action of hooks.overallHealth.nextActions) actions.push({ command: action.command, reason: `${action.code}: ${action.reason}` });
   if (hooks.status === 'helpers-installed') actions.push({ command: 'contextbook hooks status', reason: 'Review generated hook config snippets and trust settings.' });
-  if (hooks.status !== 'missing') actions.push({ command: 'contextbook hooks smoke --prompt "cleanup 왜 해야 돼?" --json', reason: 'Verify hook helper output locally without writing memory.' });
+  if (hooks.status !== 'missing') actions.push({ command: 'contextbook hooks smoke --prompt "why does cleanup matter?" --json', reason: 'Verify hook helper output locally without writing memory.' });
   if (project.scanned && learner.initialized) actions.push({ command: 'contextbook memory context --json', reason: 'Show compact AI-readable memory context.' });
   return dedupeActions(actions);
 }
